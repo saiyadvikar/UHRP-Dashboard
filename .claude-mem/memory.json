@@ -1,0 +1,203 @@
+{
+  "project": "Ultra HRP Dashboard",
+  "project_dir": "c:/Users/User/Desktop/UHRP Intervention/Ultra HRP Dashboard",
+  "created_at": "2026-09-29T21:24:00Z",
+  "observations": [
+    {
+      "id": "obs-001",
+      "timestamp": "2026-09-29T12:00:00Z",
+      "type": "decision",
+      "title": "Adoption of Sample 2 visual styling",
+      "content": "Replaced original slate blue styling with Sample 2 palette: canvas #fcf1f4, card border #f1d7df, table header #1e2538, neon pink #ff2a6d accent stripes."
+    },
+    {
+      "id": "obs-002",
+      "timestamp": "2026-09-29T12:10:00Z",
+      "type": "protocol",
+      "title": "Severe Anemia 4-Tier Clinical Status",
+      "content": "Updated clinical status calculation: Resolved (>11.0 g/dL), Mild (10.0-10.9), Moderate (7.0-9.9), Severe (<7.0). Retained Missed 2+ ANC and Not Seen by MO cards."
+    },
+    {
+      "id": "obs-003",
+      "timestamp": "2026-09-29T12:20:00Z",
+      "type": "change",
+      "title": "Anemia Clinical Management in Line List and Sparkline",
+      "content": "Extracted Iron Sucrose doses (Cols 34-38), BT units (Col 39), Inj FCM (Col 40), and FCM Facility (Col 41). Added Inj. Iron Sucrose subtitle to Hb sparkline and Anemia Clinical Management bar to drawer."
+    },
+    {
+      "id": "obs-004",
+      "timestamp": "2026-09-29T12:30:00Z",
+      "type": "change",
+      "title": "Expansion Drawer Visual Compaction",
+      "content": "Reduced drawer vertical padding to 0.75rem, streamlined attendance chips, added Sample 2 pink border accent while preserving 100% of patient data."
+    },
+    {
+      "id": "obs-005",
+      "timestamp": "2026-09-29T12:35:00Z",
+      "type": "change",
+      "title": "Clean Hb Sparkline X-Axis",
+      "content": "Removed dates from X-axis, leaving clean Visit 1 through Visit 12 labels to eliminate visual redundancy with the attendance chips above."
+    },
+    {
+      "id": "obs-006",
+      "timestamp": "2026-09-29T12:45:00Z",
+      "type": "change",
+      "title": "MO Checkup Status Analytics Charts",
+      "content": "Added Block-wise MO Checkup Status stacked bar chart and Risk Factor-wise MO Checkup Status grouped bar chart in the Interactive Analytics section."
+    },
+    {
+      "id": "obs-007",
+      "timestamp": "2026-09-29T12:50:00Z",
+      "type": "change",
+      "title": "Removal of LR Admission Hemoglobin Section",
+      "content": "Completely removed the Labor Room (LR) Admission Hemoglobin Status KPI cards, filter listeners, and obsolete CSS."
+    },
+    {
+      "id": "obs-008",
+      "timestamp": "2026-09-29T21:24:00Z",
+      "type": "decision",
+      "title": "Installation of claude-mem skill",
+      "content": "Installed claude-mem persistent memory system from GitHub into .agents/skills/claude-mem/ with companion skills (mem-search, how-it-works, timeline-report, learn-codebase, smart-explore, make-plan) and seeded project memory in .claude-mem/."
+    },
+    {
+      "id": "obs-009",
+      "timestamp": "2026-09-30T10:45:00Z",
+      "type": "cleanup",
+      "title": "Cleaned unused workspace files",
+      "content": "Removed non-build scripts and screenshots (generate_sop_pdf.py, README_Dashboard.txt, Sample 1.jpg, Sample 2.jpg, test_*.py, UHRP_Dashboard_SOP.pdf) while preserving .agents/skills/ and .claude-mem/."
+    },
+    {
+      "id": "obs-010",
+      "timestamp": "2026-09-30T10:46:00Z",
+      "type": "clinical",
+      "title": "GDM Cohort Refinement & Correction",
+      "content": "Updated GDM filtering in update_dashboard.py to include only GDM cases associated with the other 6 UHRP risk factors OR on medical nutrition therapy (MNT)/treatment in Col AT (GDM Mangement == Yes). Total UHRP cohort refined to 1,745 patients with exactly 201 GDM cases."
+    },
+    {
+      "id": "obs-011",
+      "timestamp": "2026-09-30T10:47:00Z",
+      "type": "feature",
+      "title": "Delivery Facility & Reclassified Distribution",
+      "content": "Mapped facility name from Col AC of delivery tracking line list into patient delivery facility, delivery date from Col AD, and delivery places reclassified into Home, in transit, PHC, CHC, CH, DH, Medical College, and Private hospitals for the Delivery Place donut chart."
+    },
+    {
+      "id": "obs-012",
+      "timestamp": "2026-09-30T10:48:00Z",
+      "type": "feature",
+      "title": "PIH Management Regimen Added to Drawer",
+      "content": "Extracted PIH management from Col AR (Labetalol, Methyldopa, MgSO4, etc.) in update_dashboard.py and rendered a dedicated PIH Clinical Management bar in the drawer for PIH mothers."
+    },
+    {
+      "id": "obs-013",
+      "timestamp": "2026-09-30T10:49:00Z",
+      "type": "chart",
+      "title": "Iron Sucrose Doses Plotted as Crosses on Hb Sparkline",
+      "content": "Mapped Iron Sucrose dose dates to corresponding visit indexes and plotted them as small purple crosses on the 12-visit Hb sparkline without printing dates on the graph."
+    },
+    {
+      "id": "obs-014",
+      "timestamp": "2026-09-30T10:50:00Z",
+      "type": "ui",
+      "title": "Anemia Management Restricted to SA and SC",
+      "content": "Restricted the Anemia Clinical Management bar in the expansion drawer strictly to Severe Anemia and Sickle Cell Disease tabs, hiding it for all other risk factor tabs."
+    },
+    {
+      "id": "obs-015",
+      "timestamp": "2026-09-30T10:51:00Z",
+      "type": "ui",
+      "title": "Removed Drawer MO Banner",
+      "content": "Removed the Medical Officer Examination banner from the expansion drawer; MO status is highlighted directly in the linelist table Complications column."
+    },
+    {
+      "id": "obs-016",
+      "timestamp": "2026-09-30T10:52:00Z",
+      "type": "chart",
+      "title": "Horizontal Stacked Sidebars for MO Checkup Status",
+      "content": "Converted both Block-wise and Risk Factor-wise MO Checkup Status charts into horizontal stacked sidebars (horizontal: true, stacked: true) using consistent emerald (#10b981) and pink (#ff2a6d) colors."
+    },
+    {
+      "id": "obs-017",
+      "timestamp": "2026-09-30T10:53:00Z",
+      "type": "cleanup",
+      "title": "Removed 3 Obsolete Analytics Charts",
+      "content": "Removed Year-wise UHRP Registration, Comparative UHRP Identification (Same Period), and Teenage Pregnancy Age-wise Distribution treemap from both app.js and HTML."
+    },
+    {
+      "id": "obs-018",
+      "timestamp": "2026-09-30T13:10:00Z",
+      "type": "feature",
+      "title": "Last update badge added beside Dashboard title",
+      "content": "Added generation date 'Last update on DD-MM-YYYY' badge beside 'UHRP Care Dashboard' in header, styled with white pill badge, subtle border and slate text. Dynamically populated from DASHBOARD_DATA.gen_date."
+    },
+    {
+      "id": "obs-019",
+      "timestamp": "2026-09-30T13:15:00Z",
+      "type": "clinical",
+      "title": "GDM Treatment Inclusion (Cols AT, AX, AY, AZ) & Dedicated Drawer Regimen",
+      "content": "Expanded GDM qualification to inspect Col AT (GDM Management), Col AX (On MNT), Col AY (On Metformin), and Col AZ (On Insulin). Cohort now qualifies 498 GDM cases (2,042 total UHRP). Added GDM Clinical Management bar in patient expansion drawer displaying MNT, Metformin, and Insulin badges."
+    },
+    {
+      "id": "obs-020",
+      "timestamp": "2026-09-30T13:20:00Z",
+      "type": "ui",
+      "title": "Anemia Clinical Management visibility for Other Risk Factors",
+      "content": "Updated Anemia Clinical Management bar visibility logic: kept for other risk factors (LSCS, PIH, GDM, Teenage, BOH) if the mother was managed for Anemia (received Iron Sucrose doses, Inj FCM, or Blood Transfusion). For mothers who were not anemic and not managed, the bar is cleanly omitted."
+    },
+    {
+      "id": "obs-021",
+      "timestamp": "2026-09-30T14:00:00Z",
+      "type": "ui",
+      "title": "Renamed Interactive Analytics to Charts",
+      "content": "Renamed main navigation switcher button, section header, and subtitles from 'Interactive Analytics & Visualizations' to 'Charts'."
+    },
+    {
+      "id": "obs-022",
+      "timestamp": "2026-09-30T14:02:00Z",
+      "type": "chart",
+      "title": "UHRP Clinical Management Status Charts added on top of Charts section",
+      "content": "Added Risk Factor-wise and Block-wise Clinical Management Status horizontal stacked bar charts on top of other charts in Charts section. Visualizes Severe Anemia (Yes if given iron sucrose, FCM, or BT: 198 Yes / 13 No, 93.8%) and PIH (Yes if on labetalol or any drug: 200 Yes / 32 No, 86.2%), designed for future addition of Sickle Cell and GDM. Formatted with Sample 2 emerald (#10b981) and neon pink (#ff2a6d)."
+    },
+    {
+      "id": "obs-023",
+      "timestamp": "2026-10-02T16:00:00Z",
+      "type": "feature",
+      "title": "ANC Linelist Integration in Total ANC Registered card",
+      "content": "Added ANC Linelist viewing capability to the Total ANC Registered card with 17,475 raw ANC records, linked with 12-visit tracking, high-risk detection, and client-side pagination."
+    },
+    {
+      "id": "obs-024",
+      "timestamp": "2026-10-02T16:10:00Z",
+      "type": "clinical",
+      "title": "Moderate Anemia data extraction from HRP Linelist Col AG",
+      "content": "Extracted Col AG (If moderate anemia (Yes/No)) with 4,506 records and mapped all management information (Cols AI-AM Iron Sucrose doses, Col AN Blood Transfusion units, Col AO Inj FCM, Col AP FCM facility). Added Moderate Anemia card to top risk grid and clinical status tracking."
+    },
+    {
+      "id": "obs-025",
+      "timestamp": "2026-10-02T16:20:00Z",
+      "type": "ui",
+      "title": "Modern KPI card aesthetics and Moderate Anemia KPI above GA filter",
+      "content": "Redesigned all KPI cards across the dashboard with modern 9px border-radius, compact padding, and subtle gradients. Added Moderate Anemia KPI along with Resolved (> 11.0) and Mild (10.0-10.9) Anemia KPIs directly above Gestational Age filter."
+    },
+    {
+      "id": "obs-026",
+      "timestamp": "2026-10-02T16:25:00Z",
+      "type": "ux",
+      "title": "Default Undelivered filter selected upon dashboard opening",
+      "content": "Configured delivery filter dropdown to default select Undelivered (delivery-filter = '0') upon opening dashboard, showing only undelivered mothers initially."
+    },
+    {
+      "id": "obs-027",
+      "timestamp": "2026-10-02T16:30:00Z",
+      "type": "ui",
+      "title": "Protocols and counselling guidance moved to Section 3",
+      "content": "Removed protocol banner from main linelist screen and created a dedicated Section 3 ('Protocols & Counselling') with NHM protocols and Hindi counselling guidance cards for all risk factors."
+    },
+    {
+      "id": "obs-028",
+      "timestamp": "2026-10-03T02:50:00Z",
+      "type": "feature",
+      "title": "ANC 12-visit tracking, layout restructuring, and UHRP KPI refinement",
+      "content": "Updated update_dashboard.py to parse all 12 ANC visits, Hb, BP, urine albumin, and MO status for 17,475 ANC mothers into data.js. Reordered MA before SA in top risk grid. Removed moderate/resolved/mild KPIs from ANC tab. Hid clinical management charts on excluded tabs. Fixed MO checkup chart for ANC tab. Added developer credit to header and removed export options. Excluded MA from ALL UHRP cohort KPI cards with percentage against total ANC registered. Updated Location column with Village, Subcenter, Block, renamed Complication to Risk Factor, and removed yrs suffix from Age."
+    }
+  ]
+}
