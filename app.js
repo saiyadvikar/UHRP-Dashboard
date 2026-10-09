@@ -562,33 +562,44 @@ document.addEventListener('DOMContentLoaded', () => {
         const hbArr = p.hb_v || [];
         const bpArr = p.bp_v || [];
         const dateArr = p.v_dates || [];
-        let lastIdx = -1;
+
+        // Loop backwards from latest visit (11 down to 0) to find the latest valid attended visit date
         for (let i = 11; i >= 0; i--) {
-            const hb = (hbArr[i] !== undefined && hbArr[i] !== null && !isNaN(hbArr[i]));
-            const bp = (bpArr[i] && typeof bpArr[i] === 'string' && bpArr[i].includes('/'));
-            const dt = (dateArr[i] && typeof dateArr[i] === 'string' && dateArr[i] !== '-' && dateArr[i] !== 'None' && dateArr[i] !== 'nan');
-            if (hb || bp || dt) {
-                lastIdx = i;
-                break;
+            const hasData = (hbArr[i] !== undefined && hbArr[i] !== null && !isNaN(hbArr[i])) ||
+                            (bpArr[i] && typeof bpArr[i] === 'string' && bpArr[i].includes('/')) ||
+                            (dateArr[i] && typeof dateArr[i] === 'string' && dateArr[i] !== '-' && dateArr[i] !== 'None' && dateArr[i] !== 'nan');
+            if (hasData) {
+                if (dateArr[i] && dateArr[i] !== '-' && dateArr[i] !== 'None' && dateArr[i] !== 'nan') {
+                    const parsed = parseDate(dateArr[i]);
+                    if (parsed && !isNaN(parsed.getTime())) return parsed;
+                }
             }
         }
 
-        if (lastIdx !== -1 && dateArr[lastIdx] && dateArr[lastIdx] !== '-' && dateArr[lastIdx] !== 'None') {
-            const parsed = new Date(dateArr[lastIdx].split(' ')[0]);
-            if (!isNaN(parsed.getTime())) return parsed;
+        // Fallback: If no visit date recorded with Hb/BP, try latest valid date in dateArr
+        for (let i = 11; i >= 0; i--) {
+            if (dateArr[i] && dateArr[i] !== '-' && dateArr[i] !== 'None' && dateArr[i] !== 'nan') {
+                const parsed = parseDate(dateArr[i]);
+                if (parsed && !isNaN(parsed.getTime())) return parsed;
+            }
         }
 
-        let baseDate = null;
+        // Fallback to LMP date
         if (p.lmp && p.lmp !== '-' && p.lmp !== 'N/A') {
-            baseDate = new Date(p.lmp.split(' ')[0]);
-        } else if (p.m && p.m.includes('-')) {
-            baseDate = new Date(`${p.m}-15`);
+            const parsedLmp = parseDate(p.lmp);
+            if (parsedLmp && !isNaN(parsedLmp.getTime())) return parsedLmp;
         }
 
-        return baseDate;
+        // Fallback to registration month
+        if (p.m && p.m.includes('-')) {
+            const parsedMonth = parseDate(`${p.m}-15`);
+            if (parsedMonth && !isNaN(parsedMonth.getTime())) return parsedMonth;
+        }
+
+        return null;
     }
 
-    // Detect 2+ Consecutive Missed ANC Visits / No ANC visit in last 3 months from dashboard generation date
+    // Detect 2+ Consecutive Missed ANC Visits / No ANC visit in last 70 days from reference date
     function checkConsecutiveMissedAnc(p) {
         const hbArr = p.hb_v || [];
         const bpArr = p.bp_v || [];
@@ -626,24 +637,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 70-Day Lookback Criteria: Check if undelivered (del === 0) and last ANC visit date was > 70 days ago from reference date
+        const isDelivered = (p.del === 1 || (p.del_date && p.del_date !== '-'));
+        const isAbortion = (p.del === 2 || p.is_abortion === 1);
+
+        // 70-Day Lookback Criteria: Strictly for currently pregnant mothers (del === 0)
         let noVisitInLast70Days = false;
-        if (p.del === 0) {
+        let daysSinceLastVisit = null;
+        if (!isDelivered && !isAbortion) {
             const lastAncDate = getPatientLastAncDateObject(p);
             if (lastAncDate) {
-                const today = new Date();
-                const diffMs = today.getTime() - lastAncDate.getTime();
-                const diffDays = diffMs / (1000 * 60 * 60 * 24);
-                if (diffDays > 70) { // last 70 days if visit not done
+                const refDate = parseDate(DASHBOARD_DATA.gen_date) || new Date();
+                const diffMs = refDate.getTime() - lastAncDate.getTime();
+                daysSinceLastVisit = Math.round(diffMs / (1000 * 60 * 60 * 24));
+                if (daysSinceLastVisit > 70) { // Gap of > 70 days without ANC visit
                     noVisitInLast70Days = true;
                 }
             }
         }
 
+        const hasMissed = (!isDelivered && !isAbortion) && (maxConsecutive >= 2 || noVisitInLast70Days);
+
         return {
-            hasMissed: (maxConsecutive >= 2 || noVisitInLast70Days),
+            hasMissed,
             maxConsecutive,
             noVisitInLast70Days,
+            daysSinceLastVisit,
             visitStatus,
             firstAttended,
             lastAttended
@@ -1255,9 +1273,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function isEddOverdue(eddDateStr, delDateStr, isDelivered) {
         if (isDelivered === 1 || (delDateStr && delDateStr !== '-')) return false;
         if (!eddDateStr || eddDateStr === '-') return false;
-        const edd = new Date(eddDateStr);
-        if (isNaN(edd.getTime())) return false;
-        const today = new Date();
+        const edd = parseDate(eddDateStr);
+        if (!edd || isNaN(edd.getTime())) return false;
+        const today = parseDate(DASHBOARD_DATA.gen_date) || new Date();
         today.setHours(0, 0, 0, 0);
         return edd < today;
     }
@@ -1273,8 +1291,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let valB = b[col] || '';
 
             if (col === 'lmp' || col === 'edd' || col === 'del_date') {
-                const dateA = new Date(valA !== '-' ? valA : '1970-01-01');
-                const dateB = new Date(valB !== '-' ? valB : '1970-01-01');
+                const dateA = parseDate(valA) || new Date(0);
+                const dateB = parseDate(valB) || new Date(0);
                 return (dateA - dateB) * dir;
             }
             if (col === 'ga') {
@@ -1935,7 +1953,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.innerHTML = pagePatients.map(p => {
             const ancCheck = checkConsecutiveMissedAnc(p);
             const missedBadgeHtml = ancCheck.hasMissed 
-                ? `<br><span class="badge-missed-anc" title="2+ Consecutive ANC Visits Missed or No Visit in Last 70 Days">⚠️ 2+ ANC Missed</span>` 
+                ? `<br><span class="badge-missed-anc" title="${ancCheck.daysSinceLastVisit ? `No ANC visit in last ${ancCheck.daysSinceLastVisit} days (Threshold: > 70 days)` : '2+ Consecutive ANC Visits Missed'}">⚠️ 2+ ANC Missed</span>`
                 : '';
 
             const isMoSeen = hasMoVisit(p);
@@ -2143,7 +2161,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         riskTagsHtml += `<span style="background:#e0f2fe; color:#0369a1; font-size:0.68rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:6px;">🩺 MO Pending</span>`;
                     }
                     if (ancCheck.hasMissed) {
-                        riskTagsHtml += `<span style="background:#fef3c7; color:#b45309; font-size:0.68rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:6px;">⚠️ 2+ Missed</span>`;
+                        riskTagsHtml += `<span style="background:#fef3c7; color:#b45309; font-size:0.68rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:6px;" title="${ancCheck.daysSinceLastVisit ? `No visit in last ${ancCheck.daysSinceLastVisit} days` : '2+ Consecutive ANC Visits Missed'}">⚠️ 2+ Missed</span>`;
                     }
 
                     return `
@@ -2604,9 +2622,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return '-';
         }
 
-        const lmpDate = new Date(p.lmp.split(' ')[0]);
-        const visitDate = new Date(rawVisitDate.split(' ')[0]);
-        if (isNaN(lmpDate.getTime()) || isNaN(visitDate.getTime())) return '-';
+        const lmpDate = parseDate(p.lmp);
+        const visitDate = parseDate(rawVisitDate);
+        if (!lmpDate || !visitDate || isNaN(lmpDate.getTime()) || isNaN(visitDate.getTime())) return '-';
 
         const diffMs = visitDate.getTime() - lmpDate.getTime();
         const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
@@ -2743,16 +2761,17 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let i = 0; i < 12; i++) {
                 const vdStr = vDates[i];
                 if (vdStr && vdStr !== '-' && vdStr !== 'None' && vdStr !== 'nan') {
-                    const parsed = new Date(vdStr.split(' ')[0]).getTime();
-                    if (!isNaN(parsed)) {
-                        validVisits.push({ index: i, time: parsed });
+                    const parsed = parseDate(vdStr);
+                    if (parsed && !isNaN(parsed.getTime())) {
+                        validVisits.push({ index: i, time: parsed.getTime() });
                     }
                 }
             }
 
             const dosesPerVisit = {};
             const doseMappings = patient.is_doses.map(doseStr => {
-                const doseTime = new Date(doseStr.split(' ')[0]).getTime();
+                const parsedDose = parseDate(doseStr);
+                const doseTime = parsedDose ? parsedDose.getTime() : 0;
                 let bestIdx = 0;
                 let minDiff = Infinity;
                 if (validVisits.length > 0) {
@@ -3296,7 +3315,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="modal-vitals-item">
                     <span class="modal-vitals-label">ANC Attendance Alert</span>
                     <span class="modal-vitals-val" style="color:${ancCheck.hasMissed ? '#ea580c' : '#059669'}; font-size:0.9rem;">
-                        ${ancCheck.hasMissed ? '⚠️ 2+ Consecutive Missed Visits' : '✓ Regular Follow-up'}
+                        ${ancCheck.hasMissed ? `⚠️ Missed 2+ ANC Visits${ancCheck.daysSinceLastVisit ? ` (${ancCheck.daysSinceLastVisit}d since last visit)` : ''}` : '✓ Regular Follow-up'}
                     </span>
                 </div>
             </div>
