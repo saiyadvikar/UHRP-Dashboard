@@ -1,3 +1,46 @@
+# ==============================================================================
+# UHRP Dashboard — .gitignore
+# Prevents raw sensitive patient data and developer files from being pushed to Git
+# ==============================================================================
+
+# Raw Patient Data Directories (Excel line lists, delivery reports, etc.)
+ANC line list/
+Actual line list/
+Delivery linelist/
+HRP line list/
+Location Hirarchy/
+
+# Raw data file formats
+*.xlsx
+*.xls
+*.csv
+
+# AI agent caches, memories, and skills
+.agents/
+.claude-mem/
+
+# Python bytecode and execution caches
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Temporary scratch and inspection scripts
 scratch/
+inspect_anc.py
+
+# Reference zips, backups, and design mockups
+reference/
+*.zip
+Sample dashboard.jpg
+
+# Standalone build (if ever generated locally)
+UHRP_Dashboard_Standalone.html
+
+# Operating System and IDE files
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+.vscode/
+.idea/

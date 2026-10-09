@@ -989,19 +989,13 @@ def main():
     except Exception as e:
         print(f"  WARNING: Could not generate SOP PDF: {e}")
 
-    try:
-        import build_standalone_html
-        build_standalone_html.build_standalone()
-    except Exception as e:
-        print(f"  WARNING: Could not generate Standalone HTML: {e}")
-
     elapsed = time.time() - start_time
     print(f"\n{'='*60}")
-    print(f"  SUCCESS — Dashboard data, SOP PDF & Standalone HTML updated!")
-    print(f"  Data Output: {output_path}")
-    print(f"  HTML Output: {os.path.join(WORKSPACE, 'index.html')}")
-    print(f"  SOP Output:  {os.path.join(WORKSPACE, 'UHRP_Dashboard_SOP.pdf')}")
-    print(f"  UHRP cohort: {len(patients_list)}")
+    print(f"  SUCCESS — Dashboard data (data.js) & SOP PDF updated!")
+    print(f"  Data Output:    {output_path}")
+    print(f"  Dashboard Page: {os.path.join(WORKSPACE, 'index.html')}")
+    print(f"  SOP Output:     {os.path.join(WORKSPACE, 'UHRP_Dashboard_SOP.pdf')}")
+    print(f"  UHRP cohort:    {len(patients_list)}")
     print(f"  ANC denominators: {anc_counts}")
     print(f"  Time: {elapsed:.1f}s")
     print(f"{'='*60}")
