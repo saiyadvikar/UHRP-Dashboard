@@ -408,12 +408,12 @@ def build_sop_pdf(output_path=None):
     story.append(Paragraph("Step 1: Ingesting New Monthly Data", h2_style))
     story.append(Paragraph("1. Place newly exported monthly Excel sheets into <code>HRP line list/</code>, <code>ANC line list/</code>, and <code>Ultra HRP delivery linelist/</code>.", bullet_style))
     story.append(Paragraph("2. Run the update script from PowerShell / Command Prompt: <code>python update_dashboard.py</code>", bullet_style))
-    story.append(Paragraph("3. The script automatically processes Excel rows, generates <code>data.js</code>, compiles <code>UHRP_Dashboard_Standalone.html</code>, and updates this documentation PDF.", bullet_style))
+    story.append(Paragraph("3. The script automatically processes Excel rows, generates <code>data.js</code>, compiles <code>index.html</code>, and updates this documentation PDF.", bullet_style))
 
     story.append(Paragraph("Step 2: Modifying Styling or Layout", h2_style))
-    story.append(Paragraph("1. Edit <code>style.css</code> (colors, glass blur, responsive queries) or <code>index.html</code> (markup structure).", bullet_style))
+    story.append(Paragraph("1. Edit <code>style.css</code> (colors, glass blur, responsive queries) or <code>template.html</code> (markup structure).", bullet_style))
     story.append(Paragraph("2. Compile the standalone file: <code>python build_standalone_html.py</code>", bullet_style))
-    story.append(Paragraph("3. Open <code>UHRP_Dashboard_Standalone.html</code> in any web browser to verify changes.", bullet_style))
+    story.append(Paragraph("3. Open <code>index.html</code> in any web browser to verify changes.", bullet_style))
 
     story.append(Paragraph("Step 3: Adding a New Risk Factor or Indicator", h2_style))
     story.append(Paragraph("1. In <code>update_dashboard.py</code>: Add flag in patient extraction dict (e.g. <code>'rh_neg': 0|1</code>).", bullet_style))

@@ -999,12 +999,85 @@ def main():
     print(f"\n{'='*60}")
     print(f"  SUCCESS — Dashboard data, SOP PDF & Standalone HTML updated!")
     print(f"  Data Output: {output_path}")
-    print(f"  HTML Output: {os.path.join(WORKSPACE, 'UHRP_Dashboard_Standalone.html')}")
+    print(f"  HTML Output: {os.path.join(WORKSPACE, 'index.html')}")
     print(f"  SOP Output:  {os.path.join(WORKSPACE, 'UHRP_Dashboard_SOP.pdf')}")
     print(f"  UHRP cohort: {len(patients_list)}")
     print(f"  ANC denominators: {anc_counts}")
     print(f"  Time: {elapsed:.1f}s")
     print(f"{'='*60}")
+
+    # Automatically push updated files to GitHub
+    git_push_updates()
+
+def git_push_updates():
+    """Automatically stages, commits, and pushes updated dashboard files to GitHub."""
+    import subprocess
+    print(f"\n{'='*60}")
+    print("  AUTOMATIC GITHUB REPOSITORY SYNC")
+    print(f"{'='*60}")
+    try:
+        # Check if git is installed and directory is inside a git repository
+        git_check = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=WORKSPACE,
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        if git_check.returncode != 0:
+            print("  INFO: Not a git repository or git command not found. Skipping auto-push.")
+            return
+
+        # Stage updated project files
+        print("  Staging updated dashboard project files (git add .)...")
+        subprocess.run(["git", "add", "."], cwd=WORKSPACE, check=True, capture_output=True, text=True)
+
+        # Check if there are changes to commit
+        status_proc = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=WORKSPACE,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+
+        has_changes = bool(status_proc.stdout.strip())
+        now_str = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
+
+        if has_changes:
+            commit_msg = f"Auto-update UHRP dashboard data: {now_str}"
+            print(f"  Committing changes: '{commit_msg}'...")
+            subprocess.run(
+                ["git", "commit", "-m", commit_msg],
+                cwd=WORKSPACE,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            print("  Commit successful.")
+        else:
+            print("  No new local file changes to commit. Checking remote sync status...")
+
+        # Push to remote repository
+        print("  Pushing to GitHub (origin)...")
+        push_proc = subprocess.run(
+            ["git", "push", "origin", "HEAD"],
+            cwd=WORKSPACE,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=120
+        )
+        print("  SUCCESS: Project files successfully pushed to GitHub!")
+
+    except subprocess.TimeoutExpired:
+        print("  WARNING: Git push timed out after 120s. Please check network connectivity.")
+    except subprocess.CalledProcessError as e:
+        err_msg = e.stderr.strip() if e.stderr else str(e)
+        print(f"  WARNING: Git auto-push encountered an issue: {err_msg}")
+        print("  You can push manually anytime using: git push")
+    except Exception as e:
+        print(f"  WARNING: Git auto-push error: {e}")
 
 if __name__ == "__main__":
     main()
