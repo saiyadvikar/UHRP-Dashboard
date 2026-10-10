@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
             yearSelect.value = hasAll ? 'All' : (yearSelect.options[0]?.value || 'All');
         }
         document.getElementById(elementIds.block).value = 'All';
-        document.getElementById(elementIds.delivery).value = '0';
+        document.getElementById(elementIds.delivery).value = 'All';
         document.getElementById(elementIds.searchInput).value = '';
         const mgmtSelect = document.getElementById(elementIds.mgmtStatus);
         if (mgmtSelect) mgmtSelect.value = 'All';
@@ -428,9 +428,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return DASHBOARD_DATA.patients.filter(p => {
             if (yearVal !== 'All' && p.y !== yearVal) return false;
-            if (blockVal !== 'All' && p.b.toLowerCase() !== blockVal.toLowerCase()) return false;
-            if (phcVal !== 'All' && p.phc.toLowerCase() !== phcVal.toLowerCase()) return false;
-            if (subVal !== 'All' && p.sub.toLowerCase() !== subVal.toLowerCase()) return false;
+            if (blockVal !== 'All' && (p.b || '').toLowerCase() !== blockVal.toLowerCase()) return false;
+            if (phcVal !== 'All' && (p.phc || '').toLowerCase() !== phcVal.toLowerCase()) return false;
+            if (subVal !== 'All' && (p.sub || '').toLowerCase() !== subVal.toLowerCase()) return false;
             if (delVal !== 'All') {
                 if (delVal === 'abortion') {
                     if (p.del !== 2 && p.is_abortion !== 1) return false;
