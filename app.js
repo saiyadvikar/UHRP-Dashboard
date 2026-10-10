@@ -396,15 +396,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const hasAll = Array.from(yearSelect.options).some(o => o.value === 'All');
             yearSelect.value = hasAll ? 'All' : (yearSelect.options[0]?.value || 'All');
         }
-        document.getElementById(elementIds.block).value = 'All';
-        document.getElementById(elementIds.delivery).value = 'All';
-        document.getElementById(elementIds.searchInput).value = '';
+        const blockSelect = document.getElementById(elementIds.block);
+        if (blockSelect) blockSelect.value = 'All';
+
+        const delSelect = document.getElementById(elementIds.delivery);
+        if (delSelect) delSelect.value = 'All';
+
+        const searchInput = document.getElementById(elementIds.searchInput);
+        if (searchInput) searchInput.value = '';
+
         const mgmtSelect = document.getElementById(elementIds.mgmtStatus);
         if (mgmtSelect) mgmtSelect.value = 'All';
 
+        // Rebuild cascading hierarchy options and reset them to 'All'
         updatePhcDropdown('All');
-        updateSubcenterDropdown('All', 'All');
+        const phcSelect = document.getElementById(elementIds.phc);
+        if (phcSelect) phcSelect.value = 'All';
 
+        updateSubcenterDropdown('All', 'All');
+        const subSelect = document.getElementById(elementIds.subcenter);
+        if (subSelect) subSelect.value = 'All';
+
+        // Clear active KPI, Trimester, Visit and Sort states
         sortState = { col: null, dir: 'asc' };
         kpiFilter = null;
         trimesterFilter = null;
@@ -432,7 +445,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (phcVal !== 'All' && (p.phc || '').toLowerCase() !== phcVal.toLowerCase()) return false;
             if (subVal !== 'All' && (p.sub || '').toLowerCase() !== subVal.toLowerCase()) return false;
             if (delVal !== 'All') {
-                if (delVal === 'abortion') {
+                if (delVal === 'death') {
+                    const isDead = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
+                    if (!isDead) return false;
+                } else if (delVal === 'abortion') {
                     if (p.del !== 2 && p.is_abortion !== 1) return false;
                 } else {
                     if (String(p.del) !== delVal) return false;
@@ -465,7 +481,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (phcVal !== 'All' && (p.phc || '').toLowerCase() !== phcVal.toLowerCase()) return false;
             if (subVal !== 'All' && (p.sub || '').toLowerCase() !== subVal.toLowerCase()) return false;
             if (delVal !== 'All') {
-                if (delVal === 'abortion') {
+                if (delVal === 'death') {
+                    const isDead = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
+                    if (!isDead) return false;
+                } else if (delVal === 'abortion') {
                     if (p.del !== 2 && p.is_abortion !== 1) return false;
                 } else {
                     if (String(p.del) !== delVal) return false;
@@ -1970,8 +1989,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const isDelivered = p.del === 1 || (p.del_date && p.del_date !== '-');
             const isOverdue = isEddOverdue(p.edd, p.del_date, p.del);
 
+            const isMaternalDeath = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
+
             let delStatusBadge = '';
-            if (p.del === 2 || p.is_abortion === 1) {
+            if (isMaternalDeath) {
+                const deathDateStr = (p.mat && p.mat.includes('(')) ? p.mat.replace(/^Yes\s*\(?|\)?$/gi, '').trim() : '';
+                const deathCauseStr = p.mat_dir ? ` • Cause: ${p.mat_dir}` : '';
+                delStatusBadge = `<span class="badge-death" style="background:#450a0a; color:#fecaca; border:1px solid #dc2626; font-size:0.68rem; font-weight:800; padding:0.2rem 0.5rem; border-radius:12px; display:inline-block;" title="Maternal Death${deathDateStr ? ' on ' + deathDateStr : ''}${p.mat_place ? ' at ' + p.mat_place : ''}${deathCauseStr}">🖤 Maternal Death${deathDateStr ? ' (' + deathDateStr + ')' : ''}</span>`;
+            } else if (p.del === 2 || p.is_abortion === 1) {
                 delStatusBadge = `<span class="badge-abortion" style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; font-size:0.68rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:12px; display:inline-block;">⚠️ ${p.d || 'Abortion'}</span>`;
             } else if (isDelivered) {
                 delStatusBadge = `<span class="badge-delivered">Delivered (${p.d || 'Facility'})</span>`;
@@ -2040,6 +2065,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <div class="dprofile-item full-span"><span class="dprofile-label">Complications / Risk</span><span class="dprofile-val" style="color:#b91c1c; font-weight:700;">${p.f || '-'}</span></div>
                                     </div>
                                 </div>
+
+                                ${isMaternalDeath ? `
+                                <div class="drawer-death-bar" style="background:#450a0a; color:#fecaca; border:1.5px solid #dc2626; border-radius:8px; padding:0.5rem 0.85rem; margin-bottom:0.6rem; font-size:0.82rem; line-height:1.5;">
+                                    🖤 <strong>Maternal Death:</strong> ${(p.mat && p.mat.includes('(')) ? p.mat.replace(/^Yes\s*\(?|\)?$/gi, '').trim() : 'Reported'}
+                                    ${p.mat_place ? ` | 🏥 <strong>Facility/Place:</strong> <strong style="color:#ffffff;">${p.mat_place}</strong>` : ''}
+                                    ${p.mat_dir ? ` | ⚠️ <strong>Direct Cause:</strong> <strong style="color:#fca5a5;">${p.mat_dir}</strong>` : ''}
+                                    ${p.mat_indir ? ` | ℹ️ <strong>Indirect Cause:</strong> ${p.mat_indir}` : ''}
+                                </div>
+                                ` : ''}
 
                                 <div class="drawer-location-bar">
                                     📍 <strong>Facility Hierarchy:</strong> Block: <strong>${p.b}</strong> | PHC: <strong>${p.phc}</strong> | Subcenter: <strong>${p.sub}</strong> | Village: <strong>${cleanV}</strong>
@@ -2154,6 +2188,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Risk tags
                     let riskTagsHtml = '';
+                    const isCardDeath = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
+                    if (isCardDeath) {
+                        const deathDateStr = (p.mat && p.mat.includes('(')) ? p.mat.replace(/^Yes\s*\(?|\)?$/gi, '').trim() : '';
+                        riskTagsHtml += `<span style="background:#450a0a; color:#fecaca; border:1px solid #dc2626; font-size:0.68rem; font-weight:800; padding:0.15rem 0.45rem; border-radius:6px;">🖤 Maternal Death${deathDateStr ? ' (' + deathDateStr + ')' : ''}</span>`;
+                    }
                     if (p.f) {
                         riskTagsHtml += `<span style="background:#fee2e2; color:#991b1b; font-size:0.68rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:6px;">${p.f}</span>`;
                     }
@@ -3084,6 +3123,9 @@ document.addEventListener('DOMContentLoaded', () => {
             'Blood Transfusion': p.bt || 'No',
             'Iron Sucrose Doses': (p.is_doses && p.is_doses.length > 0) ? p.is_doses.join(', ') : 'None',
             'Maternal Death': p.mat || 'No',
+            'Place of Maternal Death': p.mat_place || '',
+            'Direct Cause of Maternal Death': p.mat_dir || '',
+            'Indirect Cause of Maternal Death': p.mat_indir || '',
             'Neonatal Death': p.nnd || 'No'
         }));
 
@@ -3376,9 +3418,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const hasAnyMgmt = isAnemiaDone || isPihDone || isGdmDone;
         const needsMgmt = hasAnemiaRisk || hasPihRisk || hasGdmRisk;
-        const isMgmtPending = needsMgmt && !hasAnyMgmt;
+        const isModalDeath = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
 
         bodyEl.innerHTML = `
+            ${isModalDeath ? `
+            <div style="background:#450a0a; color:#fecaca; border:1.5px solid #dc2626; border-radius:10px; padding:0.65rem 0.85rem; margin-bottom:0.6rem; font-size:0.82rem; line-height:1.5;">
+                🖤 <strong>Maternal Death:</strong> ${(p.mat && p.mat.includes('(')) ? p.mat.replace(/^Yes\s*\(?|\)?$/gi, '').trim() : 'Reported'}
+                ${p.mat_place ? ` | 🏥 <strong>Place:</strong> <strong style="color:#ffffff;">${p.mat_place}</strong>` : ''}
+                ${p.mat_dir ? ` | ⚠️ <strong>Direct Cause:</strong> <strong style="color:#fca5a5;">${p.mat_dir}</strong>` : ''}
+                ${p.mat_indir ? ` | ℹ️ <strong>Indirect Cause:</strong> ${p.mat_indir}` : ''}
+            </div>
+            ` : ''}
             <!-- Overall Clinical Management Status Highlight (Green for Done, Red for Pending) -->
             <div style="border-radius:10px; padding:0.65rem 0.85rem; margin-bottom:0.6rem; display:flex; align-items:center; justify-content:space-between; ${hasAnyMgmt ? 'background:#ecfdf5; border:1.5px solid #10b981;' : (isMgmtPending ? 'background:#fef2f2; border:1.5px solid #ef4444;' : 'background:#f8fafc; border:1px solid #cbd5e1;')}">
                 <div style="display:flex; align-items:center; gap:0.55rem;">

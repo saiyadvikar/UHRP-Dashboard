@@ -264,6 +264,8 @@ def load_delivery_linelist(del_dir):
         bp_adm_idx = headers.index('BP At Admission') if 'BP At Admission' in headers else 20
         hb_adm_idx = headers.index('HB on LR admission') if 'HB on LR admission' in headers else 27
         del_date_idx = headers.index('Date of Delivery') if 'Date of Delivery' in headers else 34
+        mat_death_indices = [i for i, h in enumerate(headers) if h and 'maternal death' in str(h).lower()]
+        mat_death_idx = mat_death_indices[0] if mat_death_indices else 57
 
         delivery_map = {}
         count = 0
@@ -277,6 +279,7 @@ def load_delivery_linelist(del_dir):
                     bp_adm = str(r[bp_adm_idx] or '').strip() if bp_adm_idx < len(r) else ''
                     raw_hb = r[hb_adm_idx] if hb_adm_idx < len(r) else None
                     raw_del_date = r[del_date_idx] if del_date_idx < len(r) else None
+                    raw_mat_death = str(r[mat_death_idx] or '').strip().lower() if mat_death_idx < len(r) else ''
 
                     hb_val = None
                     if raw_hb is not None and str(raw_hb).strip() not in ('', '-', 'None', 'nan'):
@@ -295,7 +298,8 @@ def load_delivery_linelist(del_dir):
                         'fac_name': fac_name,
                         'del_date': del_date_str,
                         'hb_lr': hb_val,
-                        'bp_adm': bp_adm if bp_adm not in ('', '-', 'None', 'nan') else ''
+                        'bp_adm': bp_adm if bp_adm not in ('', '-', 'None', 'nan') else '',
+                        'mat_death': (raw_mat_death == 'yes')
                     }
                     count += 1
         wb.close()
@@ -434,9 +438,16 @@ def main():
     )
     df_hrp['is_gdm'] = df_hrp['is_gdm_raw'] & (df_hrp['has_other_6'] | df_hrp['gdm_on_treatment'])
 
+    # Maternal death in HRP (Cols BR, BS, BT, BU)
+    mat_cols = [c for c in ['Maternal Death Date', 'Place of Maternal Death', 'Direct Cause of Maternal Death', 'Indirect Cause of Maternal Death'] if c in df_hrp.columns]
+    df_hrp['is_mat_death'] = False
+    for mc in mat_cols:
+        df_hrp['is_mat_death'] = df_hrp['is_mat_death'] | (~df_hrp[mc].isna() & ~df_hrp[mc].astype(str).str.strip().str.lower().isin(['', 'nan', 'none', 'nat', '-']))
+
     df_hrp['is_uhrp_severe'] = (
         df_hrp['is_severe_anemia'] | df_hrp['is_pih'] | df_hrp['is_gdm'] |
-        df_hrp['is_lscs'] | df_hrp['is_sickle'] | df_hrp['is_teenage'] | df_hrp['is_boh']
+        df_hrp['is_lscs'] | df_hrp['is_sickle'] | df_hrp['is_teenage'] | df_hrp['is_boh'] |
+        df_hrp['is_mat_death']
     )
     df_hrp['has_any_risk'] = df_hrp['is_uhrp_severe'] | df_hrp['is_moderate_anemia']
 
@@ -528,6 +539,8 @@ def main():
         abort_idx = abort_indices[0] if abort_indices else 172
         abort_p_indices = [i for i, h in enumerate(headers) if h and 'place of abortion' in str(h).lower()]
         abort_p_idx = abort_p_indices[0] if abort_p_indices else 173
+        anc_mat_death_indices = [i for i, h in enumerate(headers) if h and 'maternal death' in str(h).lower()]
+        anc_mat_death_idx = anc_mat_death_indices[0] if anc_mat_death_indices else 176
 
         count_indexed = 0
         total_anc_mpids_by_year = {}
@@ -550,6 +563,8 @@ def main():
                     edd_val = format_to_dd_mmyyyy(row[edd_idx] if edd_idx < len(row) else None)
                     age_str = str(row[age_idx] if age_idx < len(row) and row[age_idx] is not None else '-').split('.')[0].strip()
                     mob_str = clean_mobile(row[mob_idx]) if mob_idx < len(row) else ''
+                    raw_anc_mat = str(row[anc_mat_death_idx] or '').strip().lower() if anc_mat_death_idx < len(row) else ''
+                    anc_mat_val = 'Yes' if raw_anc_mat == 'yes' else 'No'
                     
                     # Abortion check (Cols FQ & FR)
                     raw_abort = str(row[abort_idx] or '').strip() if abort_idx < len(row) else ''
@@ -641,6 +656,7 @@ def main():
                         'hrp': is_hrp_anc,
                         'phc': phc_str,
                         'y': fy_row,
+                        'mat': anc_mat_val,
                         'v_dates': date_list,
                         'hb_v': hb_list,
                         'bp_v': bp_list,
@@ -651,10 +667,12 @@ def main():
 
                     if mpid in uhrp_mpids:
                         if mpid not in anc_visit_lookup:
-                            anc_visit_lookup[mpid] = {'dates': date_list, 'hb': hb_list, 'bp': bp_list, 'alb': alb_list, 'mo': mo_list}
+                            anc_visit_lookup[mpid] = {'dates': date_list, 'hb': hb_list, 'bp': bp_list, 'alb': alb_list, 'mo': mo_list, 'mat': anc_mat_val}
                             count_indexed += 1
                         else:
                             existing = anc_visit_lookup[mpid]
+                            if anc_mat_val == 'Yes':
+                                existing['mat'] = 'Yes'
                             if 'alb' not in existing:
                                 existing['alb'] = [None] * 12
                             if 'mo' not in existing:
@@ -708,8 +726,17 @@ def main():
         del_date = format_to_dd_mmyyyy(row.get('Date of Delivery'))
 
         mat_death_date = str(row.get('Maternal Death Date', '')).strip()
-        if mat_death_date and mat_death_date not in ('nan', 'None', '', 'NaT'):
-            mat_info = f"Yes ({format_to_dd_mmyyyy(mat_death_date)})"
+        mat_death_place = str(row.get('Place of Maternal Death', '')).strip()
+        mat_death_dir = str(row.get('Direct Cause of Maternal Death', '')).strip()
+        mat_death_indir = str(row.get('Indirect Cause of Maternal Death', '')).strip()
+        if mat_death_place in ('nan', 'None', 'NaT'): mat_death_place = ''
+        if mat_death_dir in ('nan', 'None', 'NaT'): mat_death_dir = ''
+        if mat_death_indir in ('nan', 'None', 'NaT'): mat_death_indir = ''
+
+        has_hrp_mat_death = any(x not in ('nan', 'None', '', 'NaT', '-') for x in [mat_death_date, mat_death_place, mat_death_dir, mat_death_indir])
+        if has_hrp_mat_death:
+            date_part = format_to_dd_mmyyyy(mat_death_date) if mat_death_date and mat_death_date not in ('nan', 'None', '', 'NaT') else ''
+            mat_info = f"Yes ({date_part})" if date_part else "Yes"
         else:
             mat_info = "No"
 
@@ -741,6 +768,12 @@ def main():
 
         mpid_key = row['MP_ID_clean']
         del_info = delivery_lookup.get(mpid_key, {})
+        if del_info.get('mat_death'):
+            if mat_info == 'No':
+                mat_info = 'Yes'
+        if anc_trends.get('mat') == 'Yes':
+            if mat_info == 'No':
+                mat_info = 'Yes'
 
         # Column AB / BK: HB on LR admission (Delivery Line List Col AB preferred)
         lr_hb_val = del_info.get('hb_lr')
@@ -872,6 +905,9 @@ def main():
             'edd': edd_date,
             'f': ', '.join(factors) if factors else 'N/A',
             'mat': mat_info,
+            'mat_place': mat_death_place,
+            'mat_dir': mat_death_dir,
+            'mat_indir': mat_death_indir,
             'nnd': 'No',
             'hb_v': hb_v,
             'bp_v': bp_v,
@@ -920,6 +956,9 @@ def main():
                 r['lr_hb'] = del_info['hb_lr']
             if del_info.get('bp_adm'):
                 r['bp_adm'] = del_info['bp_adm']
+            if del_info.get('mat_death'):
+                if not r.get('mat') or r.get('mat') == 'No':
+                    r['mat'] = 'Yes'
 
         if mpid in hrp_patient_map:
             hp = hrp_patient_map[mpid]
@@ -937,6 +976,11 @@ def main():
             r['bt'] = hp.get('bt', 'No')
             r['fcm'] = hp.get('fcm', 'No')
             r['fcm_fac'] = hp.get('fcm_fac', '')
+            if hp.get('mat') and hp.get('mat') != 'No':
+                r['mat'] = hp['mat']
+                r['mat_place'] = hp.get('mat_place', '')
+                r['mat_dir'] = hp.get('mat_dir', '')
+                r['mat_indir'] = hp.get('mat_indir', '')
             if hp.get('lr_hb') is not None:
                 r['lr_hb'] = hp.get('lr_hb')
             if hp.get('bp_adm'):
