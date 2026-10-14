@@ -911,13 +911,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="kpi-value">${tabPatients.length.toLocaleString()}</span>
                             <span class="kpi-subtext">All registered cases</span>
                         </div>
-                        <div class="kpi-card clickable improving ${kpiFilter === 'moderate' ? 'active-kpi-filter' : ''}" data-kpi="moderate" title="Moderate Anemia (Hb 7.0 - 9.9 g/dL)">
-                            <span class="kpi-title">Moderate (7.0 - 9.9)</span>
-                            <span class="kpi-value">${moderate.toLocaleString()}</span>
-                            <span class="kpi-subtext">Hb 7.0 - 9.9 g/dL</span>
-                        </div>
-                        <div class="kpi-card clickable resolved ${kpiFilter === 'resolved' ? 'active-kpi-filter' : ''}" data-kpi="resolved" title="Hb resolved to normal (> 11.0 g/dL)">
-                            <span class="kpi-title">✓ Resolved (> 11.0)</span>
+                        <div class="kpi-card clickable resolved ${kpiFilter === 'resolved' ? 'active-kpi-filter' : ''}" data-kpi="resolved" title="Hb resolved to normal (≥ 11.0 g/dL)">
+                            <span class="kpi-title">✓ Resolved (≥ 11.0)</span>
                             <span class="kpi-value">${resolved.toLocaleString()}</span>
                             <span class="kpi-subtext">Normal Hemoglobin</span>
                         </div>
@@ -925,6 +920,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="kpi-title">Mild (10.0 - 10.9)</span>
                             <span class="kpi-value">${mild.toLocaleString()}</span>
                             <span class="kpi-subtext">Mild Anemia</span>
+                        </div>
+                        <div class="kpi-card clickable improving ${kpiFilter === 'moderate' ? 'active-kpi-filter' : ''}" data-kpi="moderate" title="Moderate Anemia (Hb 7.0 - 9.9 g/dL)">
+                            <span class="kpi-title">Moderate (7.0 - 9.9)</span>
+                            <span class="kpi-value">${moderate.toLocaleString()}</span>
+                            <span class="kpi-subtext">Hb 7.0 - 9.9 g/dL</span>
                         </div>
                         <div class="kpi-card clickable persistent ${kpiFilter === 'severe' ? 'active-kpi-filter' : ''}" data-kpi="severe" title="Severe Anemia (< 7.0 g/dL)">
                             <span class="kpi-title">⚠️ Severe Anemia (< 7.0)</span>
@@ -962,13 +962,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="kpi-value">${tabPatients.length.toLocaleString()}</span>
                             <span class="kpi-subtext">All registered (Col AG)</span>
                         </div>
-                        <div class="kpi-card clickable improving ${kpiFilter === 'moderate' ? 'active-kpi-filter' : ''}" data-kpi="moderate" title="Moderate Anemia (Hb 7.0 - 9.9 g/dL / Col AG)">
-                            <span class="kpi-title">Moderate (7.0 - 9.9)</span>
-                            <span class="kpi-value">${moderate.toLocaleString()}</span>
-                            <span class="kpi-subtext">Hb 7.0 - 9.9 g/dL</span>
-                        </div>
-                        <div class="kpi-card clickable resolved ${kpiFilter === 'resolved' ? 'active-kpi-filter' : ''}" data-kpi="resolved" title="Hb resolved to normal (> 11.0 g/dL)">
-                            <span class="kpi-title">✓ Resolved (> 11.0)</span>
+                        <div class="kpi-card clickable resolved ${kpiFilter === 'resolved' ? 'active-kpi-filter' : ''}" data-kpi="resolved" title="Hb resolved to normal (≥ 11.0 g/dL)">
+                            <span class="kpi-title">✓ Resolved (≥ 11.0)</span>
                             <span class="kpi-value">${resolved.toLocaleString()}</span>
                             <span class="kpi-subtext">Normal Hemoglobin</span>
                         </div>
@@ -976,6 +971,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="kpi-title">Mild (10.0 - 10.9)</span>
                             <span class="kpi-value">${mild.toLocaleString()}</span>
                             <span class="kpi-subtext">Mild Anemia</span>
+                        </div>
+                        <div class="kpi-card clickable improving ${kpiFilter === 'moderate' ? 'active-kpi-filter' : ''}" data-kpi="moderate" title="Moderate Anemia (Hb 7.0 - 9.9 g/dL / Col AG)">
+                            <span class="kpi-title">Moderate (7.0 - 9.9)</span>
+                            <span class="kpi-value">${moderate.toLocaleString()}</span>
+                            <span class="kpi-subtext">Hb 7.0 - 9.9 g/dL</span>
                         </div>
                         <div class="kpi-card clickable persistent ${kpiFilter === 'severe' ? 'active-kpi-filter' : ''}" data-kpi="severe" title="Deteriorated to Severe Anemia (< 7.0 g/dL)">
                             <span class="kpi-title">⚠️ Severe Anemia (< 7.0)</span>
@@ -1089,13 +1089,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="kpi-value">${tabPatients.length.toLocaleString()}</span>
                             <span class="kpi-subtext">All registered cases</span>
                         </div>
-                        <div class="kpi-card clickable improving ${kpiFilter === 'moderate' ? 'active-kpi-filter' : ''}" data-kpi="moderate" title="Moderate Anemia (Hb 7.0 - 9.9 g/dL)">
-                            <span class="kpi-title">Moderate (7.0 - 9.9)</span>
-                            <span class="kpi-value">${moderate.toLocaleString()}</span>
-                            <span class="kpi-subtext">Moderate Anemia</span>
-                        </div>
-                        <div class="kpi-card clickable resolved ${kpiFilter === 'resolved' ? 'active-kpi-filter' : ''}" data-kpi="resolved" title="Hb normal (> 11.0 g/dL)">
-                            <span class="kpi-title">✓ Resolved (> 11.0)</span>
+                        <div class="kpi-card clickable resolved ${kpiFilter === 'resolved' ? 'active-kpi-filter' : ''}" data-kpi="resolved" title="Hb normal (≥ 11.0 g/dL)">
+                            <span class="kpi-title">✓ Resolved (≥ 11.0)</span>
                             <span class="kpi-value">${resolved.toLocaleString()}</span>
                             <span class="kpi-subtext">Stable Hemoglobin</span>
                         </div>
@@ -1103,6 +1098,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="kpi-title">Mild (10.0 - 10.9)</span>
                             <span class="kpi-value">${mild.toLocaleString()}</span>
                             <span class="kpi-subtext">Mild Anemia</span>
+                        </div>
+                        <div class="kpi-card clickable improving ${kpiFilter === 'moderate' ? 'active-kpi-filter' : ''}" data-kpi="moderate" title="Moderate Anemia (Hb 7.0 - 9.9 g/dL)">
+                            <span class="kpi-title">Moderate (7.0 - 9.9)</span>
+                            <span class="kpi-value">${moderate.toLocaleString()}</span>
+                            <span class="kpi-subtext">Moderate Anemia</span>
                         </div>
                         <div class="kpi-card clickable persistent ${kpiFilter === 'severe' ? 'active-kpi-filter' : ''}" data-kpi="severe" title="Severe Anemia (< 7.0 g/dL)">
                             <span class="kpi-title">⚠️ Severe Anemia (< 7.0)</span>
