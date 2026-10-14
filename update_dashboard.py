@@ -267,6 +267,16 @@ def load_delivery_linelist(del_dir):
         mat_death_indices = [i for i, h in enumerate(headers) if h and 'maternal death' in str(h).lower()]
         mat_death_idx = mat_death_indices[0] if mat_death_indices else 57
 
+        b_idx = headers.index('Health Block') if 'Health Block' in headers else 2
+        sub_idx = headers.index('Health Sub Centre Name') if 'Health Sub Centre Name' in headers else 3
+        vil_idx = headers.index('Village') if 'Village' in headers else 4
+        pw_idx = headers.index('PW Name') if 'PW Name' in headers else 6
+        husb_idx = headers.index('Husband Name') if 'Husband Name' in headers else 7
+        mob_idx = headers.index('Mobile No') if 'Mobile No' in headers else 8
+        age_idx = headers.index('Age') if 'Age' in headers else 9
+        lmp_idx = headers.index('LMP date') if 'LMP date' in headers else 10
+        edd_idx = headers.index('EDD Date') if 'EDD Date' in headers else 12
+
         delivery_map = {}
         count = 0
         for r in rows_iter:
@@ -299,7 +309,16 @@ def load_delivery_linelist(del_dir):
                         'del_date': del_date_str,
                         'hb_lr': hb_val,
                         'bp_adm': bp_adm if bp_adm not in ('', '-', 'None', 'nan') else '',
-                        'mat_death': (raw_mat_death == 'yes')
+                        'mat_death': (raw_mat_death == 'yes'),
+                        'b': str(r[b_idx] or '').strip().title() if b_idx < len(r) else '',
+                        'sub': str(r[sub_idx] or '').strip().title() if sub_idx < len(r) else '',
+                        'v': str(r[vil_idx] or '').strip().title() if vil_idx < len(r) else '',
+                        'n': str(r[pw_idx] or '').strip().title() if pw_idx < len(r) else '',
+                        'h': str(r[husb_idx] or '').strip().title() if husb_idx < len(r) else '',
+                        'p': clean_mobile(r[mob_idx]) if mob_idx < len(r) else '',
+                        'a': str(r[age_idx] or '').strip().split('.')[0] if age_idx < len(r) else '-',
+                        'lmp': format_to_dd_mmyyyy(r[lmp_idx] if lmp_idx < len(r) else None),
+                        'edd': format_to_dd_mmyyyy(r[edd_idx] if edd_idx < len(r) else None)
                     }
                     count += 1
         wb.close()
@@ -1002,6 +1021,95 @@ def main():
                     r['del_date'] = hp['del_date']
             if hp.get('phc') and hp.get('phc') != 'Unknown':
                 r['phc'] = hp['phc']
+
+    # Ensure all maternal deaths from delivery linelist are included
+    anc_mpids_set = {r['id'] for r in anc_records}
+    patients_mpids_set = {p['id'] for p in patients_list}
+    for mpid, d_info in delivery_lookup.items():
+        if d_info.get('mat_death'):
+            b_str = d_info.get('b') or 'Unknown'
+            sub_str = d_info.get('sub') or 'Unknown'
+            b_lower = b_str.lower()
+            sub_lower = sub_str.lower()
+            mapped_phc = sub_to_phc_map.get((b_lower, sub_lower)) or sub_to_phc_map.get(sub_lower)
+            if not mapped_phc:
+                c_sub = sub_lower.replace('shc ', '').replace('sc ', '').replace('shc', '').strip()
+                mapped_phc = sub_to_phc_map.get((b_lower, c_sub)) or sub_to_phc_map.get(c_sub)
+            phc_str = mapped_phc if mapped_phc else 'Unknown'
+
+            if mpid not in anc_mpids_set:
+                anc_records.append({
+                    'id': mpid,
+                    'n': d_info.get('n', 'N/A'),
+                    'h': d_info.get('h', 'N/A'),
+                    'b': b_str,
+                    'sub': sub_str,
+                    'v': d_info.get('v', 'Unknown'),
+                    'lmp': d_info.get('lmp', '-'),
+                    'edd': d_info.get('edd', '-'),
+                    'a': d_info.get('a', '-'),
+                    'p': d_info.get('p', 'N/A'),
+                    'del': 1,
+                    'is_abortion': 0,
+                    'd': d_info.get('fac_name') or d_info.get('fac_type') or 'Facility',
+                    'del_cat': categorize_delivery_facility(d_info.get('fac_name'), d_info.get('fac_type'), d_info.get('del_at')),
+                    'del_date': d_info.get('del_date', '-'),
+                    'hrp': 0,
+                    'phc': phc_str,
+                    'y': get_fiscal_year(d_info.get('del_date')),
+                    'mat': f"Yes ({d_info.get('del_date')})" if d_info.get('del_date') and d_info.get('del_date') != '-' else 'Yes',
+                    'mat_place': d_info.get('fac_name', ''),
+                    'mat_dir': '',
+                    'mat_indir': '',
+                    'v_dates': [],
+                    'hb_v': [],
+                    'bp_v': [],
+                    'alb_v': [],
+                    'mo_v': [],
+                    'mo_done': 0,
+                    'lr_hb': d_info.get('hb_lr'),
+                    'bp_adm': d_info.get('bp_adm', '')
+                })
+                anc_mpids_set.add(mpid)
+
+            if mpid not in patients_mpids_set:
+                patients_list.append({
+                    'y': get_fiscal_year(d_info.get('del_date')),
+                    'b': b_str,
+                    'phc': phc_str,
+                    'sub': sub_str,
+                    'v': d_info.get('v', 'Unknown'),
+                    'm': 'Unknown',
+                    'reg': '-',
+                    'd': d_info.get('fac_name') or d_info.get('fac_type') or 'Facility',
+                    'del_cat': categorize_delivery_facility(d_info.get('fac_name'), d_info.get('fac_type'), d_info.get('del_at')),
+                    'del_date': d_info.get('del_date', '-'),
+                    'sa': 0, 'ma': 0, 'pi': 0, 'gd': 0, 'ls': 0, 'sc': 0, 'tp': 0, 'bh': 0,
+                    'uhrp': 1,
+                    'del': 1,
+                    'is_abortion': 0,
+                    'id': mpid,
+                    'n': d_info.get('n', 'N/A'),
+                    'h': d_info.get('h', 'N/A'),
+                    'p': d_info.get('p', 'N/A'),
+                    'a': d_info.get('a', '-'),
+                    'lmp': d_info.get('lmp', '-'),
+                    'edd': d_info.get('edd', '-'),
+                    'f': 'Maternal Death',
+                    'mat': f"Yes ({d_info.get('del_date')})" if d_info.get('del_date') and d_info.get('del_date') != '-' else 'Yes',
+                    'mat_place': d_info.get('fac_name', ''),
+                    'mat_dir': '',
+                    'mat_indir': '',
+                    'nnd': 'No',
+                    'hb_v': [], 'bp_v': [], 'v_dates': [], 'alb_v': [], 'mo_v': [],
+                    'mo_done': 0,
+                    'pe': 0,
+                    'lr_hb': d_info.get('hb_lr'),
+                    'bp_adm': d_info.get('bp_adm', ''),
+                    'is_doses': [], 'bt': 'No', 'fcm': 'No', 'fcm_fac': '', 'pih_mgmt': '',
+                    'gdm_mnt': 'No', 'gdm_met': 'No', 'gdm_ins': 'No', 'gdm_mgmt_at': 'No'
+                })
+                patients_mpids_set.add(mpid)
 
     nmr_list = []
     nmr_by_factor = {'Severe Anemia': 0, 'PIH': 0, 'GDM': 0, 'Previous LSCS': 0, 'Sickle Cell': 0, 'Teenage': 0}
