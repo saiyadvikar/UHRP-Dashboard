@@ -176,33 +176,69 @@ def fuzzy_match(s1, s2, threshold=0.75):
     if not s1 or not s2: return False
     return SequenceMatcher(None, s1, s2).ratio() >= threshold
 
+def clean_v_key(s):
+    if not s or pd.isna(s): return ''
+    s = re.sub(r'\s*\(\d+\)\*?$', '', str(s)).strip().lower()
+    return re.sub(r'[^a-z0-9]', '', s)
+
 def load_location_hierarchy(loc_dir):
-    """Load Location Hierarchy workbook to map (block, subcentre) -> facility_name."""
+    """Load Location Hierarchy workbook to map (block, subcentre) -> facility_name, and village -> (facility, subcentre)."""
     if not os.path.exists(loc_dir):
-        return {}
+        return {}, {}
     loc_files = [f for f in os.listdir(loc_dir) if f.endswith('.xlsx') and not f.startswith('~$')]
     if not loc_files:
-        return {}
+        return {}, {}
     loc_path = os.path.join(loc_dir, loc_files[0])
     try:
         wb = openpyxl.load_workbook(loc_path, data_only=True)
         sub_map = {}
+        village_map = {}
+
         # 1. Village list
         if 'Village list' in wb.sheetnames:
             s = wb['Village list']
             for r in s.iter_rows(min_row=3, values_only=True):
                 b = str(r[3] or '').strip().lower()
                 fac = str(r[6] or '').strip().title()
-                sub = str(r[10] or '').strip().lower()
-                if sub and sub not in ('blank', 'none', 'nan', ''):
-                    sub_map[(b, sub)] = fac
-                    sub_map[sub] = fac
-                    c_sub = sub.replace('shc ', '').replace('sc ', '').replace('shc', '').strip()
+                sub = str(r[10] or '').strip().title()
+                sub_lower = sub.lower()
+                if sub_lower and sub_lower not in ('blank', 'none', 'nan', ''):
+                    sub_map[(b, sub_lower)] = fac
+                    sub_map[sub_lower] = fac
+                    c_sub = sub_lower.replace('shc ', '').replace('sc ', '').replace('shc', '').strip()
                     if c_sub:
                         sub_map[(b, c_sub)] = fac
                         sub_map[c_sub] = fac
 
-        # 2. CHO
+                # Village mappings (Cols 14 and 16 if present)
+                v1 = str(r[14] or '').strip() if len(r) > 14 else ''
+                v2 = str(r[16] or '').strip() if len(r) > 16 else ''
+                for v in [v1, v2]:
+                    if v and v.lower() not in ('none', 'nan', '', 'blank'):
+                        cv = clean_v_key(v)
+                        if cv:
+                            village_map[(b, cv)] = (fac, sub)
+                            village_map[cv] = (fac, sub)
+
+        # 2. Redcap Village list (if present)
+        if 'Redcap Village list' in wb.sheetnames:
+            s = wb['Redcap Village list']
+            for r in s.iter_rows(min_row=2, values_only=True):
+                if len(r) >= 4 and r[3]:
+                    orig = str(r[3]).strip()
+                    parts = orig.split('/')
+                    if len(parts) >= 3:
+                        b = parts[0].strip().lower()
+                        sub = parts[1].strip().title()
+                        v = str(r[2] or parts[-1]).strip()
+                        cv = clean_v_key(v)
+                        sub_lower = sub.lower()
+                        fac = sub_map.get((b, sub_lower)) or sub_map.get(sub_lower) or ''
+                        if cv:
+                            village_map[(b, cv)] = (fac, sub)
+                            village_map[cv] = (fac, sub)
+
+        # 3. CHO
         if 'CHO' in wb.sheetnames:
             s = wb['CHO']
             for r in s.iter_rows(min_row=4, values_only=True):
@@ -217,7 +253,7 @@ def load_location_hierarchy(loc_dir):
                         sub_map[(b, c_sub)] = fac
                         sub_map[c_sub] = fac
 
-        # 3. ANM
+        # 4. ANM
         if 'ANM' in wb.sheetnames:
             s = wb['ANM']
             for r in s.iter_rows(min_row=4, values_only=True):
@@ -233,11 +269,11 @@ def load_location_hierarchy(loc_dir):
                         sub_map[c_sub] = fac
 
         wb.close()
-        print(f"  Loaded {len(sub_map)} location hierarchy mappings.")
-        return sub_map
+        print(f"  Loaded {len(sub_map)} subcenter mappings and {len(village_map)} village mappings.")
+        return sub_map, village_map
     except Exception as e:
         print(f"  Warning loading location hierarchy: {e}")
-        return {}
+        return {}, {}
 
 def load_delivery_linelist(del_dir):
     """Load Delivery Line List report to extract delivery details, admission Hb and BP."""
@@ -505,7 +541,7 @@ def main():
     # ===================================================================
     print("\n[4/5] Loading Delivery Line List & ANC files...")
     delivery_lookup = load_delivery_linelist(DELIVERY_DIR)
-    sub_to_phc_map = load_location_hierarchy(LOCATION_DIR)
+    sub_to_phc_map, village_to_loc_map = load_location_hierarchy(LOCATION_DIR)
 
     anc_files = sorted([f for f in glob.glob(os.path.join(ANC_DIR, "*.xlsx"))
                         if not os.path.basename(f).startswith("~$")])
@@ -606,12 +642,20 @@ def main():
                     # Map PHC from Location Hierarchy
                     b_str = str(row[block_idx] or 'Unknown').strip().title() if block_idx < len(row) else 'Unknown'
                     sub_str = str(row[sub_idx] or 'Unknown').strip().title() if sub_idx < len(row) else 'Unknown'
+                    vil_str = str(row[vil_idx] or 'Unknown').strip().title() if vil_idx < len(row) else 'Unknown'
                     b_lower = b_str.lower()
                     sub_lower = sub_str.lower()
                     mapped_phc = sub_to_phc_map.get((b_lower, sub_lower)) or sub_to_phc_map.get(sub_lower)
                     if not mapped_phc:
                         c_sub = sub_lower.replace('shc ', '').replace('sc ', '').replace('shc', '').strip()
                         mapped_phc = sub_to_phc_map.get((b_lower, c_sub)) or sub_to_phc_map.get(c_sub)
+                    if not mapped_phc and vil_str not in ('Unknown', 'N/A', '', 'Nan', 'None'):
+                        cv = clean_v_key(vil_str)
+                        v_res = village_to_loc_map.get((b_lower, cv)) or village_to_loc_map.get(cv)
+                        if v_res and v_res[0]:
+                            mapped_phc = v_res[0]
+                            if sub_str in ('Unknown', 'N/A', '') and v_res[1]:
+                                sub_str = v_res[1]
                     phc_str = mapped_phc if mapped_phc else 'Unknown'
 
                     date_list = []
@@ -739,6 +783,21 @@ def main():
         phc_name = str(row.get('Health Facility Name', 'N/A')).strip().title()
         subcenter_name = str(row.get('Health Sub Centre Name', 'N/A')).strip().title()
         village_name = str(row.get('Village Name', 'N/A')).strip().title()
+        b_lower = str(row.get('block', '')).strip().lower()
+
+        if phc_name in ('N/A', 'Nan', 'None', '', 'Unknown'):
+            sub_lower = subcenter_name.lower()
+            mapped_phc = sub_to_phc_map.get((b_lower, sub_lower)) or sub_to_phc_map.get(sub_lower)
+            if not mapped_phc:
+                c_sub = sub_lower.replace('shc ', '').replace('sc ', '').replace('shc', '').strip()
+                mapped_phc = sub_to_phc_map.get((b_lower, c_sub)) or sub_to_phc_map.get(c_sub)
+            if not mapped_phc and village_name not in ('Unknown', 'N/A', '', 'Nan', 'None'):
+                cv = clean_v_key(village_name)
+                v_res = village_to_loc_map.get((b_lower, cv)) or village_to_loc_map.get(cv)
+                if v_res and v_res[0]:
+                    mapped_phc = v_res[0]
+            if mapped_phc:
+                phc_name = mapped_phc
         
         lmp_date = format_to_dd_mmyyyy(row.get('LMP Date'))
         edd_date = format_to_dd_mmyyyy(row.get('EDD Date'))
@@ -1029,12 +1088,20 @@ def main():
         if d_info.get('mat_death'):
             b_str = d_info.get('b') or 'Unknown'
             sub_str = d_info.get('sub') or 'Unknown'
+            v_str = d_info.get('v') or 'Unknown'
             b_lower = b_str.lower()
             sub_lower = sub_str.lower()
             mapped_phc = sub_to_phc_map.get((b_lower, sub_lower)) or sub_to_phc_map.get(sub_lower)
             if not mapped_phc:
                 c_sub = sub_lower.replace('shc ', '').replace('sc ', '').replace('shc', '').strip()
                 mapped_phc = sub_to_phc_map.get((b_lower, c_sub)) or sub_to_phc_map.get(c_sub)
+            if not mapped_phc and v_str not in ('Unknown', 'N/A', '', 'Nan', 'None'):
+                cv = clean_v_key(v_str)
+                v_res = village_to_loc_map.get((b_lower, cv)) or village_to_loc_map.get(cv)
+                if v_res and v_res[0]:
+                    mapped_phc = v_res[0]
+                    if sub_str in ('Unknown', 'N/A', '') and v_res[1]:
+                        sub_str = v_res[1]
             phc_str = mapped_phc if mapped_phc else 'Unknown'
 
             if mpid not in anc_mpids_set:
