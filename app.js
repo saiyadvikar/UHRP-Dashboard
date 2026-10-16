@@ -2175,7 +2175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <div id="drawer-status-${p.id}"></div>
                                 </div>` : ''}
                                 <div class="anc-timeline-container">
-                                    <div class="anc-timeline-title">📋 12 ANC Visit Attendance Timeline Tracker</div>
+                                    <div class="anc-timeline-title">📋 12 ANC visit record</div>
                                     <div class="anc-timeline-grid" id="timeline-${p.id}"></div>
                                 </div>
                                 ${currentTab !== 'anc' ? `<div class="chart-wrapper" id="chart-${p.id}">
@@ -2298,8 +2298,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <button type="button" class="btn-card-action btn-card-anc" onclick="window.openAncModal('${p.id}')" title="View 12 ANC Visits Timeline">
                                             📋 12 ANC Visits
                                         </button>
-                                        <button type="button" class="btn-card-action btn-card-mgmt" onclick="window.openMgmtModal('${p.id}')" style="${cardMgmtDone ? 'background:#ecfdf5; color:#047857; border-color:#a7f3d0;' : (cardMgmtPending ? 'background:#fff7ed; color:#c2410c; border-color:#fed7aa;' : '')}" title="View Clinical Management & Admission Vitals">
-                                            ${cardMgmtDone ? '💊 Mgmt (✓ Done)' : (cardMgmtPending ? '💊 Mgmt (⚠️ Pending)' : '💊 Management')}
+                                        <button type="button" class="btn-card-action btn-card-mgmt ${cardMgmtDone ? 'btn-mgmt-done' : (cardMgmtPending ? 'btn-mgmt-pending' : 'btn-mgmt-routine')}" onclick="window.openMgmtModal('${p.id}')" style="${cardMgmtDone ? 'background:#059669 !important; color:#ffffff !important; border:1.5px solid #047857 !important; font-weight:700 !important;' : (cardMgmtPending ? 'background:#ea580c !important; color:#ffffff !important; border:1.5px solid #c2410c !important; font-weight:700 !important;' : 'background:#f1f5f9 !important; color:#475569 !important; border:1.5px solid #cbd5e1 !important;')}" title="Clinical Management: ${cardMgmtDone ? 'Done' : (cardMgmtPending ? 'Pending' : 'Routine')}">
+                                            ${cardMgmtDone ? '💊 Mgmt Done' : (cardMgmtPending ? '💊 Mgmt Pending' : '💊 Management')}
                                         </button>
                                     </div>
                                 </div>
@@ -3395,16 +3395,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const bodyEl = document.getElementById('modal-anc-body');
         if (!overlay || !bodyEl) return;
 
-        titleEl.textContent = `📋 12 ANC Visits Timeline — ${p.n}`;
-        subtitleEl.textContent = `MP ID: ${p.id} | Village: ${cleanVillageName(p.v)} | Subcenter: ${p.sub || '-'}`;
+        const subName = p.sub || p.subcenter || p.sc || 'Not Mapped';
+        const cleanV = cleanVillageName(p.v);
+
+        titleEl.textContent = `📋 12 ANC Visit Record — ${p.n}`;
+        subtitleEl.textContent = `MP ID: ${p.id} | Subcenter: ${subName} | Village: ${cleanV} | Block: ${p.b}`;
 
         const isMoSeen = hasMoVisit(p);
         const ancCheck = checkConsecutiveMissedAnc(p);
 
         bodyEl.innerHTML = `
-            <!-- 1. 12 ANC Visit Attendance Timeline Tracker (ON TOP) -->
+            <!-- Prominent Subcenter & Location Header Banner -->
+            <div style="background:#eff6ff; border:1.5px solid #93c5fd; border-radius:12px; padding:0.65rem 0.9rem; margin-bottom:0.75rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.45rem;">
+                    <span style="font-size:1.25rem;">🏥</span>
+                    <div>
+                        <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; color:#1d4ed8; letter-spacing:0.025em;">Subcenter</div>
+                        <div style="font-size:0.95rem; font-weight:800; color:#0f172a;">${subName}</div>
+                    </div>
+                </div>
+                <div style="font-size:0.78rem; color:#475569; text-align:right;">
+                    📍 Village: <strong style="color:#0f172a;">${cleanV}</strong><br>
+                    🏛️ Block: <strong style="color:#0f172a;">${p.b}</strong>
+                </div>
+            </div>
+
+            <!-- 1. 12 ANC visit record (ON TOP) -->
             <div class="anc-timeline-container" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:0.75rem; margin-bottom:0.75rem;">
-                <div class="anc-timeline-title" style="font-size:0.8rem; font-weight:800; margin-bottom:0.5rem;">📋 12 ANC Visit Attendance Timeline Tracker</div>
+                <div class="anc-timeline-title" style="font-size:0.8rem; font-weight:800; margin-bottom:0.5rem;">📋 12 ANC visit record</div>
                 <div class="anc-timeline-grid" id="timeline-modal-${p.id}"></div>
             </div>
 
@@ -3415,8 +3433,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <!-- Subcenter on top -->
                 <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.4rem; margin-bottom:0.45rem; padding-bottom:0.4rem; border-bottom:1px dashed #cbd5e1; font-size:0.82rem;">
                     <span style="color:#0284c7; font-weight:700;">🏥 Subcenter:</span>
-                    <strong style="color:#0f172a; font-size:0.85rem;">${p.sub || 'Not Mapped'}</strong>
-                    <span style="font-size:0.75rem; color:#64748b; margin-left:auto;">Village: <strong>${cleanVillageName(p.v)}</strong> | Block: <strong>${p.b}</strong></span>
+                    <strong style="color:#0f172a; font-size:0.88rem;">${subName}</strong>
+                    <span style="font-size:0.75rem; color:#64748b; margin-left:auto;">Village: <strong>${cleanV}</strong> | Block: <strong>${p.b}</strong></span>
                 </div>
                 <!-- ANM & CHO Contact Numbers -->
                 <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.5rem;">
@@ -3469,11 +3487,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const bodyEl = document.getElementById('modal-mgmt-body');
         if (!overlay || !bodyEl) return;
 
+        const subName = p.sub || p.subcenter || p.sc || 'Not Mapped';
+        const cleanV = cleanVillageName(p.v);
+
         titleEl.textContent = `💊 Clinical Management & Vitals — ${p.n}`;
-        subtitleEl.textContent = `MP ID: ${p.id} | Village: ${cleanVillageName(p.v)} | Subcenter: ${p.sub || '-'}`;
+        subtitleEl.textContent = `MP ID: ${p.id} | Subcenter: ${subName} | Village: ${cleanV} | Block: ${p.b}`;
 
         const isDelivered = (p.del === 1 || (p.del_date && p.del_date !== '-'));
-        const cleanV = cleanVillageName(p.v);
 
         // Management Status Calculation
         const hasAnemiaRisk = (p.sa === 1 || p.ma === 1 || p.sc === 1);
@@ -3679,7 +3699,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <!-- Subcenter on top -->
                 <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.4rem; margin-bottom:0.45rem; padding-bottom:0.4rem; border-bottom:1px dashed #cbd5e1; font-size:0.82rem;">
                     <span style="color:#0284c7; font-weight:700;">🏥 Subcenter:</span>
-                    <strong style="color:#0f172a; font-size:0.85rem;">${p.sub || 'Not Mapped'}</strong>
+                    <strong style="color:#0f172a; font-size:0.88rem;">${subName}</strong>
                     <span style="font-size:0.75rem; color:#64748b; margin-left:auto;">Village: <strong>${cleanV}</strong> | Block: <strong>${p.b}</strong></span>
                 </div>
                 <!-- ANM & CHO Contact Numbers -->

@@ -2632,12 +2632,48 @@ tr.expandable-row.expanded-row-active {
     background: #fffbeb;
     color: #b45309;
     border-color: #fde68a;
+    transition: all 0.15s ease;
 }
 
 .btn-card-mgmt:hover {
     background: #f59e0b;
     color: #ffffff;
     border-color: #f59e0b;
+}
+
+.btn-card-mgmt.btn-mgmt-done {
+    background: #059669 !important;
+    color: #ffffff !important;
+    border-color: #047857 !important;
+    font-weight: 700 !important;
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.3) !important;
+}
+
+.btn-card-mgmt.btn-mgmt-done:hover {
+    background: #047857 !important;
+    border-color: #065f46 !important;
+    color: #ffffff !important;
+}
+
+.btn-card-mgmt.btn-mgmt-pending {
+    background: #ea580c !important;
+    color: #ffffff !important;
+    border-color: #c2410c !important;
+    font-weight: 700 !important;
+    box-shadow: 0 1px 3px rgba(234, 88, 12, 0.3) !important;
+}
+
+.btn-card-mgmt.btn-mgmt-pending:hover {
+    background: #c2410c !important;
+    border-color: #9a3412 !important;
+    color: #ffffff !important;
+}
+
+.btn-card-mgmt.btn-mgmt-routine {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    border-color: #cbd5e1 !important;
+    font-weight: 700 !important;
 }
 
 /* Popup Modal Windows */
