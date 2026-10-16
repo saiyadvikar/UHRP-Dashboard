@@ -2229,56 +2229,81 @@ document.addEventListener('DOMContentLoaded', () => {
                         riskTagsHtml += `<span style="background:#fef3c7; color:#b45309; font-size:0.68rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:6px;" title="${ancCheck.daysSinceLastVisit ? `No visit in last ${ancCheck.daysSinceLastVisit} days` : '2+ Consecutive ANC Visits Missed'}">⚠️ 2+ Missed</span>`;
                     }
 
-                    return `
-                        <div class="uhrp-patient-card" data-mpid="${p.id}">
-                            <div class="pcard-header">
-                                <div class="pcard-name-wrap">
-                                    <div class="pcard-name">${p.n}</div>
-                                    <div class="pcard-husband">${p.h ? 'Husband: ' + p.h : ''}</div>
-                                </div>
-                                <span class="pcard-mpid-badge">ID: ${p.id}</span>
-                            </div>
+                            const hasAnemiaRisk = (p.sa === 1 || p.ma === 1 || p.sc === 1);
+                            const hasPihRisk = (p.pi === 1 || !!(p.pih_mgmt && p.pih_mgmt.trim() !== '' && p.pih_mgmt !== 'None' && p.pih_mgmt !== '-'));
+                            const hasGdmRisk = (p.gd === 1 || p.gdm_mnt === 'Yes' || p.gdm_met === 'Yes' || p.gdm_ins === 'Yes');
+                            const isAnemiaDone = (p.fcm === 'Yes' || (p.bt && p.bt !== 'No' && p.bt !== '-') || (Array.isArray(p.is_doses) && p.is_doses.length > 0));
+                            const isPihDone = !!(p.pih_mgmt && p.pih_mgmt.trim() !== '' && p.pih_mgmt !== 'None' && p.pih_mgmt !== '-');
+                            const isGdmDone = (p.gdm_mnt === 'Yes' || p.gdm_met === 'Yes' || p.gdm_ins === 'Yes' || p.gdm_mgmt_at === 'Yes');
 
-                            ${riskTagsHtml ? `<div class="pcard-risk-tags">${riskTagsHtml}</div>` : ''}
+                            let cardMgmtDone = false;
+                            let cardMgmtPending = false;
+                            if (currentTab === 'sa' || currentTab === 'ma' || currentTab === 'sc' || ['sa', 'ma', 'sc', 'severe', 'moderate', 'mild', 'resolved'].includes(kpiFilter)) {
+                                cardMgmtDone = isAnemiaDone;
+                                cardMgmtPending = !isAnemiaDone;
+                            } else if (currentTab === 'pi' || ['pi', 'controlled', 'uncontrolled', 'preeclampsia'].includes(kpiFilter)) {
+                                cardMgmtDone = isPihDone;
+                                cardMgmtPending = !isPihDone;
+                            } else if (currentTab === 'gd' || kpiFilter === 'gd') {
+                                cardMgmtDone = isGdmDone;
+                                cardMgmtPending = !isGdmDone;
+                            } else {
+                                const hasAnyMgmt = isAnemiaDone || isPihDone || isGdmDone;
+                                const needsMgmt = hasAnemiaRisk || hasPihRisk || hasGdmRisk;
+                                cardMgmtDone = hasAnyMgmt;
+                                cardMgmtPending = needsMgmt && !hasAnyMgmt;
+                            }
 
-                            <div class="pcard-info-grid">
-                                <div class="pcard-info-item">
-                                    <span class="pcard-info-label">📍 Village</span>
-                                    <span class="pcard-info-val">${cleanV}</span>
-                                </div>
-                                <div class="pcard-info-item">
-                                    <span class="pcard-info-label">⏳ Gestational Age</span>
-                                    <span class="pcard-info-val">${gaDisplay}</span>
-                                </div>
-                                <div class="pcard-info-item">
-                                    <span class="pcard-info-label">📅 LMP</span>
-                                    <span class="pcard-info-val">${formatDateDDMMYYYY(p.lmp)}</span>
-                                </div>
-                                <div class="pcard-info-item">
-                                    <span class="pcard-info-label">🎯 EDD</span>
-                                    <span class="pcard-info-val">${formatDateDDMMYYYY(p.edd)}</span>
-                                </div>
-                            </div>
+                            return `
+                                <div class="uhrp-patient-card" data-mpid="${p.id}">
+                                    <div class="pcard-header">
+                                        <div class="pcard-name-wrap">
+                                            <div class="pcard-name">${p.n}</div>
+                                            <div class="pcard-husband">${p.h ? 'Husband: ' + p.h : ''}</div>
+                                        </div>
+                                        <span class="pcard-mpid-badge">ID: ${p.id}</span>
+                                    </div>
 
-                            <div class="pcard-actions-grid">
-                                ${cleanPhone ? `
-                                    <a href="tel:${cleanPhone}" class="btn-card-action btn-card-phone" title="Call ${p.n}">
-                                        📞 ${cleanPhone}
-                                    </a>
-                                ` : `
-                                    <button class="btn-card-action btn-card-phone" style="opacity:0.5; cursor:not-allowed;" disabled title="Phone number not available">
-                                        📞 No Phone
-                                    </button>
-                                `}
-                                <button type="button" class="btn-card-action btn-card-anc" onclick="window.openAncModal('${p.id}')" title="View 12 ANC Visits Timeline">
-                                    📋 12 ANC Visits
-                                </button>
-                                <button type="button" class="btn-card-action btn-card-mgmt" onclick="window.openMgmtModal('${p.id}')" title="View Clinical Management & Admission Vitals">
-                                    💊 Management
-                                </button>
-                            </div>
-                        </div>
-                    `;
+                                    ${riskTagsHtml ? `<div class="pcard-risk-tags">${riskTagsHtml}</div>` : ''}
+
+                                    <div class="pcard-info-grid">
+                                        <div class="pcard-info-item">
+                                            <span class="pcard-info-label">📍 Village</span>
+                                            <span class="pcard-info-val">${cleanV}</span>
+                                        </div>
+                                        <div class="pcard-info-item">
+                                            <span class="pcard-info-label">⏳ Gestational Age</span>
+                                            <span class="pcard-info-val">${gaDisplay}</span>
+                                        </div>
+                                        <div class="pcard-info-item">
+                                            <span class="pcard-info-label">📅 LMP</span>
+                                            <span class="pcard-info-val">${formatDateDDMMYYYY(p.lmp)}</span>
+                                        </div>
+                                        <div class="pcard-info-item">
+                                            <span class="pcard-info-label">🎯 EDD</span>
+                                            <span class="pcard-info-val">${formatDateDDMMYYYY(p.edd)}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="pcard-actions-grid">
+                                        ${cleanPhone ? `
+                                            <a href="tel:${cleanPhone}" class="btn-card-action btn-card-phone" title="Call ${p.n}">
+                                                📞 ${cleanPhone}
+                                            </a>
+                                        ` : `
+                                            <button class="btn-card-action btn-card-phone" style="opacity:0.5; cursor:not-allowed;" disabled title="Phone number not available">
+                                                📞 No Phone
+                                            </button>
+                                        `}
+                                        <button type="button" class="btn-card-action btn-card-anc" onclick="window.openAncModal('${p.id}')" title="View 12 ANC Visits Timeline">
+                                            📋 12 ANC Visits
+                                        </button>
+                                        <button type="button" class="btn-card-action btn-card-mgmt" onclick="window.openMgmtModal('${p.id}')" style="${cardMgmtDone ? 'background:#ecfdf5; color:#047857; border-color:#a7f3d0;' : (cardMgmtPending ? 'background:#fff7ed; color:#c2410c; border-color:#fed7aa;' : '')}" title="View Clinical Management & Admission Vitals">
+                                            ${cardMgmtDone ? '💊 Mgmt (✓ Done)' : (cardMgmtPending ? '💊 Mgmt (⚠️ Pending)' : '💊 Management')}
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
                 }).join('');
             }
         }
@@ -3371,7 +3396,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!overlay || !bodyEl) return;
 
         titleEl.textContent = `📋 12 ANC Visits Timeline — ${p.n}`;
-        subtitleEl.textContent = `MP ID: ${p.id} | Village: ${cleanVillageName(p.v)} | Block: ${p.b}`;
+        subtitleEl.textContent = `MP ID: ${p.id} | Village: ${cleanVillageName(p.v)} | Subcenter: ${p.sub || '-'}`;
 
         const isMoSeen = hasMoVisit(p);
         const ancCheck = checkConsecutiveMissedAnc(p);
@@ -3385,15 +3410,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <div id="drawer-status-modal-${p.id}" style="margin-bottom:0.5rem;"></div>
 
-            <!-- 2. ANM & CHO Contact Numbers -->
-            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:0.5rem 0.85rem; margin-bottom:0.75rem; font-size:0.8rem; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.5rem;">
-                <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
-                    <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong>${p.anm_n || 'Not Mapped'}</strong>
-                    ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM">📞 Call ANM (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+            <!-- 2. Subcenter Name Above ANM & CHO Contact Numbers -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.65rem 0.85rem; margin-bottom:0.75rem; font-size:0.8rem;">
+                <!-- Subcenter on top -->
+                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.4rem; margin-bottom:0.45rem; padding-bottom:0.4rem; border-bottom:1px dashed #cbd5e1; font-size:0.82rem;">
+                    <span style="color:#0284c7; font-weight:700;">🏥 Subcenter:</span>
+                    <strong style="color:#0f172a; font-size:0.85rem;">${p.sub || 'Not Mapped'}</strong>
+                    <span style="font-size:0.75rem; color:#64748b; margin-left:auto;">Village: <strong>${cleanVillageName(p.v)}</strong> | Block: <strong>${p.b}</strong></span>
                 </div>
-                <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
-                    <span style="color:#0369a1; font-weight:700;">🩺 CHO:</span> <strong>${p.cho_n || 'Not Mapped'}</strong>
-                    ${p.cho_p ? `<a href="tel:${p.cho_p}" class="btn-call-chip btn-call-cho" title="Call CHO">📞 Call CHO (${p.cho_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                <!-- ANM & CHO Contact Numbers -->
+                <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.5rem;">
+                    <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+                        <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong>${p.anm_n || 'Not Mapped'}</strong>
+                        ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM">📞 Call ANM (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+                        <span style="color:#0369a1; font-weight:700;">🩺 CHO:</span> <strong>${p.cho_n || 'Not Mapped'}</strong>
+                        ${p.cho_p ? `<a href="tel:${p.cho_p}" class="btn-call-chip btn-call-cho" title="Call CHO">📞 Call CHO (${p.cho_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                    </div>
                 </div>
             </div>
 
@@ -3429,6 +3463,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!p) return;
 
         const overlay = document.getElementById('modal-mgmt-overlay');
+        const containerEl = document.getElementById('modal-mgmt-container') || overlay?.querySelector('.uhrp-modal-container');
         const titleEl = document.getElementById('modal-mgmt-title');
         const subtitleEl = document.getElementById('modal-mgmt-subtitle');
         const bodyEl = document.getElementById('modal-mgmt-body');
@@ -3522,6 +3557,16 @@ document.addEventListener('DOMContentLoaded', () => {
             titleEl.textContent = `💊 Clinical Management & Vitals — ${p.n}`;
         }
 
+        // Apply popup card colour: Green if Done, Orange if Pending
+        if (containerEl) {
+            containerEl.classList.remove('modal-status-done', 'modal-status-pending');
+            if (statusDone) {
+                containerEl.classList.add('modal-status-done');
+            } else if (statusPending) {
+                containerEl.classList.add('modal-status-pending');
+            }
+        }
+
         bodyEl.innerHTML = `
             ${isModalDeath ? `
             <div style="background:#450a0a; color:#fecaca; border:1.5px solid #dc2626; border-radius:10px; padding:0.65rem 0.85rem; margin-bottom:0.6rem; font-size:0.82rem; line-height:1.5;">
@@ -3531,33 +3576,80 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${p.mat_indir ? ` | ℹ️ <strong>Indirect Cause:</strong> ${p.mat_indir}` : ''}
             </div>
             ` : ''}
-            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:0.5rem 0.85rem; margin-bottom:0.6rem; font-size:0.8rem; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.5rem;">
-                <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
-                    <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong>${p.anm_n || 'Not Mapped'}</strong>
-                    ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM">📞 Call ANM (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
-                </div>
-                <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
-                    <span style="color:#0369a1; font-weight:700;">🩺 CHO:</span> <strong>${p.cho_n || 'Not Mapped'}</strong>
-                    ${p.cho_p ? `<a href="tel:${p.cho_p}" class="btn-call-chip btn-call-cho" title="Call CHO">📞 Call CHO (${p.cho_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
-                </div>
-            </div>
-            <!-- Overall Clinical Management Status Highlight (Green for Done, Red for Pending) -->
-            <div style="border-radius:10px; padding:0.65rem 0.85rem; margin-bottom:0.6rem; display:flex; align-items:center; justify-content:space-between; ${statusDone ? 'background:#ecfdf5; border:1.5px solid #10b981;' : (statusPending ? 'background:#fef2f2; border:1.5px solid #ef4444;' : 'background:#f8fafc; border:1px solid #cbd5e1;')}">
+
+            <!-- 1. DETAILS OF MANAGEMENT DONE (ON TOP) -->
+            <!-- Overall Status Highlight Banner (Green for Done, Orange for Pending) -->
+            <div style="border-radius:10px; padding:0.65rem 0.85rem; margin-bottom:0.6rem; display:flex; align-items:center; justify-content:space-between; ${statusDone ? 'background:#ecfdf5; border:1.5px solid #10b981;' : (statusPending ? 'background:#fff7ed; border:1.5px solid #f97316;' : 'background:#f8fafc; border:1px solid #cbd5e1;')}">
                 <div style="display:flex; align-items:center; gap:0.55rem;">
-                    <span style="font-size:1.15rem;">${statusDone ? '🟢' : (statusPending ? '🔴' : 'ℹ️')}</span>
+                    <span style="font-size:1.15rem;">${statusDone ? '🟢' : (statusPending ? '🟠' : 'ℹ️')}</span>
                     <div>
-                        <div style="font-size:0.82rem; font-weight:800; color:${statusDone ? '#047857' : (statusPending ? '#b91c1c' : '#334155')};">
+                        <div style="font-size:0.82rem; font-weight:800; color:${statusDone ? '#047857' : (statusPending ? '#c2410c' : '#334155')};">
                             ${statusTitle}
                         </div>
-                        <div style="font-size:0.72rem; color:${statusDone ? '#065f46' : (statusPending ? '#991b1b' : '#64748b')};">
+                        <div style="font-size:0.72rem; color:${statusDone ? '#065f46' : (statusPending ? '#9a3412' : '#64748b')};">
                             ${statusSubtext}
                         </div>
                     </div>
                 </div>
-                <span style="font-size:0.75rem; font-weight:800; padding:0.25rem 0.6rem; border-radius:6px; ${statusDone ? 'background:#10b981; color:#ffffff;' : (statusPending ? 'background:#ef4444; color:#ffffff;' : 'background:#94a3b8; color:#ffffff;')}">
+                <span style="font-size:0.75rem; font-weight:800; padding:0.25rem 0.6rem; border-radius:6px; ${statusDone ? 'background:#10b981; color:#ffffff;' : (statusPending ? 'background:#f97316; color:#ffffff;' : 'background:#94a3b8; color:#ffffff;')}">
                     ${statusBadge}
                 </span>
             </div>
+
+            <!-- Anemia Management Details (Green if done, Orange if pending) -->
+            ${showAnemia ? `
+                <div style="background:${isAnemiaDone ? '#ecfdf5' : '#fff7ed'}; border:1.5px solid ${isAnemiaDone ? '#10b981' : '#f97316'}; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+                        <div style="font-size:0.8rem; font-weight:800; color:${isAnemiaDone ? '#047857' : '#c2410c'}; text-transform:uppercase;">💉 Anemia Clinical Management</div>
+                        <span style="background:${isAnemiaDone ? '#10b981' : '#f97316'}; color:#ffffff; font-size:0.7rem; font-weight:800; padding:0.15rem 0.45rem; border-radius:5px;">
+                            ${isAnemiaDone ? '✓ Management Done' : '⚠️ Management Pending'}
+                        </span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.8rem; color:${isAnemiaDone ? '#065f46' : '#9a3412'};">
+                        <div>Inj. FCM: <strong>${p.fcm === 'Yes' ? `✓ Given ${p.fcm_fac ? `(${p.fcm_fac})` : ''}` : '✕ Not Given'}</strong></div>
+                        <div>Blood Transfusion: <strong>${p.bt || 'No'}</strong></div>
+                        <div style="grid-column:1/-1;">Iron Sucrose Doses: <strong>${(p.is_doses && p.is_doses.length > 0) ? p.is_doses.join(', ') : 'None'}</strong></div>
+                    </div>
+                </div>
+            ` : ''}
+
+            <!-- PIH Medications (Green if prescribed, Orange if pending) -->
+            ${showPih ? `
+                <div style="background:${isPihDone ? '#ecfdf5' : '#fff7ed'}; border:1.5px solid ${isPihDone ? '#10b981' : '#f97316'}; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
+                        <div style="font-size:0.8rem; font-weight:800; color:${isPihDone ? '#047857' : '#c2410c'};">🟠 PIH Hypertension Treatment:</div>
+                        <span style="background:${isPihDone ? '#10b981' : '#f97316'}; color:#ffffff; font-size:0.7rem; font-weight:800; padding:0.15rem 0.45rem; border-radius:5px;">
+                            ${isPihDone ? '✓ Prescribed' : '⚠️ Treatment Pending'}
+                        </span>
+                    </div>
+                    <div style="font-size:0.825rem; font-weight:700; color:${isPihDone ? '#065f46' : '#9a3412'};">
+                        ${isPihDone ? `✓ ${p.pih_mgmt}` : '✕ Anti-hypertensive treatment not recorded / Schedule Doctor Exam'}
+                    </div>
+                </div>
+            ` : ''}
+
+            <!-- GDM Management (Green if prescribed, Orange if pending) -->
+            ${showGdm ? `
+                <div style="background:${isGdmDone ? '#ecfdf5' : '#fff7ed'}; border:1.5px solid ${isGdmDone ? '#10b981' : '#f97316'}; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
+                        <div style="font-size:0.8rem; font-weight:800; color:${isGdmDone ? '#047857' : '#c2410c'};">🔵 GDM Diabetes Management:</div>
+                        <span style="background:${isGdmDone ? '#10b981' : '#f97316'}; color:#ffffff; font-size:0.7rem; font-weight:800; padding:0.15rem 0.45rem; border-radius:5px;">
+                            ${isGdmDone ? '✓ Active Therapy' : '⚠️ Therapy Pending'}
+                        </span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; font-size:0.78rem; color:${isGdmDone ? '#065f46' : '#9a3412'};">
+                        <div>MNT: <strong>${p.gdm_mnt === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
+                        <div>Metformin: <strong>${p.gdm_met === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
+                        <div>Insulin: <strong>${p.gdm_ins === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
+                    </div>
+                </div>
+            ` : ''}
+
+            ${(!showAnemia && !showPih && !showGdm) ? `
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem; color:#64748b; font-size:0.82rem; text-align:center;">
+                    ℹ️ No specialized medical drug therapy indicated for this patient (Routine Antenatal Care).
+                </div>
+            ` : ''}
 
             <!-- Admission Vitals (Visible strictly for Delivered cases only) -->
             ${isDelivered ? `
@@ -3577,71 +3669,36 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             ` : ''}
 
-            <!-- Facility Hierarchy & Delivery Details -->
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.75rem; font-size:0.8rem; line-height:1.5; margin-bottom:0.6rem;">
-                📍 <strong>Hierarchy:</strong> Block: <strong>${p.b}</strong> | PHC: <strong>${p.phc || 'Unknown'}</strong> | SC: <strong>${p.sub || 'Unknown'}</strong> | Village: <strong>${cleanV}</strong><br>
-                ${isDelivered ? `🏥 <strong>Delivery Facility:</strong> <strong style="color:#059669;">${p.d || '-'}</strong> (${p.del_cat || 'Facility'}) ${p.del_date && p.del_date !== '-' ? `on <strong>${formatDateDDMMYYYY(p.del_date)}</strong>` : ''}` : `🤰 <strong>Delivery Status:</strong> <span style="color:#0284c7; font-weight:700;">Pregnant (Antenatal Care)</span>`}
-            </div>
-
-            <!-- Risk Factor Banner -->
+            <!-- 2. IDENTIFIED RISK FACTORS -->
             <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:0.6rem 0.8rem; font-size:0.8rem; margin-bottom:0.6rem;">
                 <strong style="color:#991b1b;">⚠️ Identified Risk Factor(s):</strong> <span style="font-weight:700; color:#b91c1c;">${p.f || 'High Risk Pregnancy'}</span>
             </div>
 
-            <!-- Anemia Management Details (Green highlight if done, Red if pending) -->
-            ${showAnemia ? `
-                <div style="background:${isAnemiaDone ? '#ecfdf5' : '#fef2f2'}; border:1.5px solid ${isAnemiaDone ? '#10b981' : '#ef4444'}; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
-                        <div style="font-size:0.8rem; font-weight:800; color:${isAnemiaDone ? '#047857' : '#b91c1c'}; text-transform:uppercase;">💉 Anemia Clinical Management</div>
-                        <span style="background:${isAnemiaDone ? '#10b981' : '#ef4444'}; color:#ffffff; font-size:0.7rem; font-weight:800; padding:0.15rem 0.45rem; border-radius:5px;">
-                            ${isAnemiaDone ? '✓ Management Done' : '⚠️ Management Pending'}
-                        </span>
+            <!-- 3. SUBCENTER NAME ABOVE ANM & CHO MOBILE NUMBERS -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.65rem 0.85rem; margin-bottom:0.6rem; font-size:0.8rem;">
+                <!-- Subcenter on top -->
+                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.4rem; margin-bottom:0.45rem; padding-bottom:0.4rem; border-bottom:1px dashed #cbd5e1; font-size:0.82rem;">
+                    <span style="color:#0284c7; font-weight:700;">🏥 Subcenter:</span>
+                    <strong style="color:#0f172a; font-size:0.85rem;">${p.sub || 'Not Mapped'}</strong>
+                    <span style="font-size:0.75rem; color:#64748b; margin-left:auto;">Village: <strong>${cleanV}</strong> | Block: <strong>${p.b}</strong></span>
+                </div>
+                <!-- ANM & CHO Contact Numbers -->
+                <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.5rem;">
+                    <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+                        <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong>${p.anm_n || 'Not Mapped'}</strong>
+                        ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM">📞 Call ANM (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
                     </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.8rem; color:${isAnemiaDone ? '#065f46' : '#7f1d1d'};">
-                        <div>Inj. FCM: <strong>${p.fcm === 'Yes' ? `✓ Given ${p.fcm_fac ? `(${p.fcm_fac})` : ''}` : '✕ Not Given'}</strong></div>
-                        <div>Blood Transfusion: <strong>${p.bt || 'No'}</strong></div>
-                        <div style="grid-column:1/-1;">Iron Sucrose Doses: <strong>${(p.is_doses && p.is_doses.length > 0) ? p.is_doses.join(', ') : 'None'}</strong></div>
+                    <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+                        <span style="color:#0369a1; font-weight:700;">🩺 CHO:</span> <strong>${p.cho_n || 'Not Mapped'}</strong>
+                        ${p.cho_p ? `<a href="tel:${p.cho_p}" class="btn-call-chip btn-call-cho" title="Call CHO">📞 Call CHO (${p.cho_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
                     </div>
                 </div>
-            ` : ''}
+            </div>
 
-            <!-- PIH Medications (Green highlight if prescribed, Red if pending) -->
-            ${showPih ? `
-                <div style="background:${isPihDone ? '#ecfdf5' : '#fef2f2'}; border:1.5px solid ${isPihDone ? '#10b981' : '#ef4444'}; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
-                        <div style="font-size:0.8rem; font-weight:800; color:${isPihDone ? '#047857' : '#b91c1c'};">🟠 PIH Hypertension Treatment:</div>
-                        <span style="background:${isPihDone ? '#10b981' : '#ef4444'}; color:#ffffff; font-size:0.7rem; font-weight:800; padding:0.15rem 0.45rem; border-radius:5px;">
-                            ${isPihDone ? '✓ Prescribed' : '⚠️ Treatment Pending'}
-                        </span>
-                    </div>
-                    <div style="font-size:0.825rem; font-weight:700; color:${isPihDone ? '#065f46' : '#991b1b'};">
-                        ${isPihDone ? `✓ ${p.pih_mgmt}` : '✕ Anti-hypertensive treatment not recorded / Schedule Doctor Exam'}
-                    </div>
-                </div>
-            ` : ''}
-
-            <!-- GDM Management (Green highlight if prescribed, Red if pending) -->
-            ${showGdm ? `
-                <div style="background:${isGdmDone ? '#ecfdf5' : '#fef2f2'}; border:1.5px solid ${isGdmDone ? '#10b981' : '#ef4444'}; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
-                        <div style="font-size:0.8rem; font-weight:800; color:${isGdmDone ? '#047857' : '#b91c1c'};">🔵 GDM Diabetes Management:</div>
-                        <span style="background:${isGdmDone ? '#10b981' : '#ef4444'}; color:#ffffff; font-size:0.7rem; font-weight:800; padding:0.15rem 0.45rem; border-radius:5px;">
-                            ${isGdmDone ? '✓ Active Therapy' : '⚠️ Therapy Pending'}
-                        </span>
-                    </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; font-size:0.78rem; color:${isGdmDone ? '#065f46' : '#7f1d1d'};">
-                        <div>MNT: <strong>${p.gdm_mnt === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
-                        <div>Metformin: <strong>${p.gdm_met === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
-                        <div>Insulin: <strong>${p.gdm_ins === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
-                    </div>
-                </div>
-            ` : ''}
-
-            ${(!showAnemia && !showPih && !showGdm) ? `
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem; color:#64748b; font-size:0.82rem; text-align:center;">
-                    ℹ️ No specialized medical drug therapy indicated for this patient (Routine Antenatal Care).
-                </div>
-            ` : ''}
+            <!-- Delivery Details / Status -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem; font-size:0.78rem; line-height:1.4;">
+                ${isDelivered ? `🏥 <strong>Delivery Facility:</strong> <strong style="color:#059669;">${p.d || '-'}</strong> (${p.del_cat || 'Facility'}) ${p.del_date && p.del_date !== '-' ? `on <strong>${formatDateDDMMYYYY(p.del_date)}</strong>` : ''}` : `🤰 <strong>Delivery Status:</strong> <span style="color:#0284c7; font-weight:700;">Pregnant (Antenatal Care)</span>`}
+            </div>
         `;
 
         overlay.style.display = 'flex';
@@ -3650,6 +3707,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.closeMgmtModal = function() {
         const overlay = document.getElementById('modal-mgmt-overlay');
         if (overlay) overlay.style.display = 'none';
+        const containerEl = document.getElementById('modal-mgmt-container') || overlay?.querySelector('.uhrp-modal-container');
+        if (containerEl) {
+            containerEl.classList.remove('modal-status-done', 'modal-status-pending');
+        }
     };
 
     // Close Modals on overlay click or close button
