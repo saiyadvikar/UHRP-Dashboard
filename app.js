@@ -2042,9 +2042,20 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
             const hasAnemiaMgmtGiven = (p.is_doses && p.is_doses.length > 0) || (p.fcm === 'Yes') || (p.bt && p.bt !== 'No');
-            const showAnemiaMgmt = (currentTab === 'sa' || currentTab === 'ma' || currentTab === 'sc' || p.sa === 1 || p.ma === 1 || p.sc === 1) || hasAnemiaMgmtGiven;
-            const showPihMgmt = (currentTab === 'pi' || p.pi === 1);
-            const showGdmMgmt = (currentTab === 'gd' || p.gd === 1);
+            let showAnemiaMgmt = false;
+            let showPihMgmt = false;
+            let showGdmMgmt = false;
+            if (currentTab === 'sa' || currentTab === 'ma' || currentTab === 'sc' || ['sa', 'ma', 'sc', 'severe', 'moderate', 'mild', 'resolved'].includes(kpiFilter)) {
+                showAnemiaMgmt = true;
+            } else if (currentTab === 'pi' || ['pi', 'controlled', 'uncontrolled', 'preeclampsia'].includes(kpiFilter)) {
+                showPihMgmt = true;
+            } else if (currentTab === 'gd' || kpiFilter === 'gd') {
+                showGdmMgmt = true;
+            } else {
+                showAnemiaMgmt = (p.sa === 1 || p.ma === 1 || p.sc === 1) || hasAnemiaMgmtGiven;
+                showPihMgmt = (p.pi === 1 || !!(p.pih_mgmt && p.pih_mgmt.trim() !== '' && p.pih_mgmt !== 'None' && p.pih_mgmt !== '-'));
+                showGdmMgmt = (p.gd === 1 || p.gdm_mnt === 'Yes' || p.gdm_met === 'Yes' || p.gdm_ins === 'Yes');
+            }
 
             if (isExpandableTab) {
                 mainRowHtml += `
@@ -3366,21 +3377,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const ancCheck = checkConsecutiveMissedAnc(p);
 
         bodyEl.innerHTML = `
-            <div class="modal-vitals-bar" style="margin-bottom:0.75rem;">
-                <div class="modal-vitals-item">
-                    <span class="modal-vitals-label">Medical Officer (MO) Status</span>
-                    <span class="modal-vitals-val" style="color:${isMoSeen ? '#059669' : '#0284c7'}; font-size:0.9rem;">
-                        ${isMoSeen ? '✓ Examined by Doctor / MO' : '⚠️ Pending Mandatory MO Exam'}
-                    </span>
-                </div>
-                <div class="modal-vitals-item">
-                    <span class="modal-vitals-label">ANC Attendance Alert</span>
-                    <span class="modal-vitals-val" style="color:${ancCheck.hasMissed ? '#ea580c' : '#059669'}; font-size:0.9rem;">
-                        ${ancCheck.hasMissed ? `⚠️ Missed 2+ ANC Visits${ancCheck.daysSinceLastVisit ? ` (${ancCheck.daysSinceLastVisit}d since last visit)` : ''}` : '✓ Regular Follow-up'}
-                    </span>
-                </div>
+            <!-- 1. 12 ANC Visit Attendance Timeline Tracker (ON TOP) -->
+            <div class="anc-timeline-container" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:0.75rem; margin-bottom:0.75rem;">
+                <div class="anc-timeline-title" style="font-size:0.8rem; font-weight:800; margin-bottom:0.5rem;">📋 12 ANC Visit Attendance Timeline Tracker</div>
+                <div class="anc-timeline-grid" id="timeline-modal-${p.id}"></div>
             </div>
 
+            <div id="drawer-status-modal-${p.id}" style="margin-bottom:0.5rem;"></div>
+
+            <!-- 2. ANM & CHO Contact Numbers -->
             <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:0.5rem 0.85rem; margin-bottom:0.75rem; font-size:0.8rem; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.5rem;">
                 <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
                     <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong>${p.anm_n || 'Not Mapped'}</strong>
@@ -3392,27 +3397,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
 
-            <div id="drawer-status-modal-${p.id}" style="margin-bottom:0.5rem;"></div>
-
-            <div class="anc-timeline-container" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:0.75rem;">
-                <div class="anc-timeline-title" style="font-size:0.78rem; font-weight:800; margin-bottom:0.5rem;">📋 12 ANC Visit Attendance Timeline Tracker</div>
-                <div class="anc-timeline-grid" id="timeline-modal-${p.id}"></div>
-            </div>
-
-            <div class="chart-wrapper" id="chart-modal-${p.id}" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:0.75rem; min-height:180px;">
-                <div style="text-align:center; padding:1.5rem; color:#64748b;">Rendering clinical progression chart...</div>
+            <!-- 3. Medical Officer & Attendance Status Alert -->
+            <div class="modal-vitals-bar" style="margin-bottom:0.35rem;">
+                <div class="modal-vitals-item">
+                    <span class="modal-vitals-label">Medical Officer (MO) Status</span>
+                    <span class="modal-vitals-val" style="color:${isMoSeen ? '#059669' : '#0284c7'}; font-size:0.85rem;">
+                        ${isMoSeen ? '✓ Examined by Doctor / MO' : '⚠️ Pending Mandatory MO Exam'}
+                    </span>
+                </div>
+                <div class="modal-vitals-item">
+                    <span class="modal-vitals-label">ANC Attendance Alert</span>
+                    <span class="modal-vitals-val" style="color:${ancCheck.hasMissed ? '#ea580c' : '#059669'}; font-size:0.85rem;">
+                        ${ancCheck.hasMissed ? `⚠️ Missed 2+ ANC Visits${ancCheck.daysSinceLastVisit ? ` (${ancCheck.daysSinceLastVisit}d since last)` : ''}` : '✓ Regular Follow-up'}
+                    </span>
+                </div>
             </div>
         `;
 
         overlay.style.display = 'flex';
         renderAncTimelineGrid(`modal-${p.id}`, p);
-        setTimeout(() => {
-            if (currentTab === 'pi') {
-                renderBpSparkline(`modal-${p.id}`, p);
-            } else {
-                renderHbSparkline(`modal-${p.id}`, p);
-            }
-        }, 100);
     };
 
     window.closeAncModal = function() {
@@ -3441,6 +3444,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const hasAnemiaRisk = (p.sa === 1 || p.ma === 1 || p.sc === 1);
         const hasPihRisk = (p.pi === 1 || !!(p.pih_mgmt && p.pih_mgmt.trim() !== '' && p.pih_mgmt !== 'None' && p.pih_mgmt !== '-'));
         const hasGdmRisk = (p.gd === 1 || p.gdm_mnt === 'Yes' || p.gdm_met === 'Yes' || p.gdm_ins === 'Yes');
+        const hasAnemiaMgmtGiven = (p.is_doses && p.is_doses.length > 0) || (p.fcm === 'Yes') || (p.bt && p.bt !== 'No');
 
         const isAnemiaDone = (p.fcm === 'Yes' || (p.bt && p.bt !== 'No' && p.bt !== '-') || (Array.isArray(p.is_doses) && p.is_doses.length > 0));
         const isPihDone = !!(p.pih_mgmt && p.pih_mgmt.trim() !== '' && p.pih_mgmt !== 'None' && p.pih_mgmt !== '-');
@@ -3449,6 +3453,74 @@ document.addEventListener('DOMContentLoaded', () => {
         const hasAnyMgmt = isAnemiaDone || isPihDone || isGdmDone;
         const needsMgmt = hasAnemiaRisk || hasPihRisk || hasGdmRisk;
         const isModalDeath = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
+
+        // Determine active risk factor context:
+        // When user is under a specific tab or has clicked a specific risk KPI card,
+        // show ONLY that respective risk factor's management.
+        let targetRisk = null;
+        if (currentTab === 'sa' || currentTab === 'ma' || currentTab === 'sc') {
+            targetRisk = 'anemia';
+        } else if (currentTab === 'pi') {
+            targetRisk = 'pih';
+        } else if (currentTab === 'gd') {
+            targetRisk = 'gdm';
+        } else if (kpiFilter) {
+            if (['sa', 'ma', 'sc', 'severe', 'moderate', 'mild', 'resolved'].includes(kpiFilter)) {
+                targetRisk = 'anemia';
+            } else if (['pi', 'controlled', 'uncontrolled', 'preeclampsia'].includes(kpiFilter)) {
+                targetRisk = 'pih';
+            } else if (kpiFilter === 'gd') {
+                targetRisk = 'gdm';
+            }
+        }
+
+        let showAnemia = false;
+        let showPih = false;
+        let showGdm = false;
+
+        let statusDone = false;
+        let statusPending = false;
+        let statusTitle = '';
+        let statusSubtext = '';
+        let statusBadge = '';
+
+        if (targetRisk === 'anemia') {
+            showAnemia = true;
+            statusDone = isAnemiaDone;
+            statusPending = !isAnemiaDone;
+            statusTitle = isAnemiaDone ? 'Anemia Clinical Management: Done' : 'Anemia Clinical Management: Action Pending';
+            statusSubtext = isAnemiaDone ? 'Inj. FCM, Blood Transfusion, or Iron Sucrose recorded' : 'Pending IV Iron/FCM or Blood Transfusion';
+            statusBadge = isAnemiaDone ? '✓ DONE' : '⚠️ PENDING';
+            titleEl.textContent = `💉 Anemia Clinical Management — ${p.n}`;
+        } else if (targetRisk === 'pih') {
+            showPih = true;
+            statusDone = isPihDone;
+            statusPending = !isPihDone;
+            statusTitle = isPihDone ? 'PIH Hypertension Treatment: Prescribed' : 'PIH Hypertension Treatment: Action Pending';
+            statusSubtext = isPihDone ? 'Antihypertensive therapy prescribed' : 'Pending Antihypertensive therapy (Methyldopa/Labetalol/Nifedipine)';
+            statusBadge = isPihDone ? '✓ DONE' : '⚠️ PENDING';
+            titleEl.textContent = `🟠 PIH Hypertension Management — ${p.n}`;
+        } else if (targetRisk === 'gdm') {
+            showGdm = true;
+            statusDone = isGdmDone;
+            statusPending = !isGdmDone;
+            statusTitle = isGdmDone ? 'GDM Diabetes Management: Active' : 'GDM Diabetes Management: Action Pending';
+            statusSubtext = isGdmDone ? 'MNT, Metformin, or Insulin therapy recorded' : 'Pending GDM Medical Nutrition Therapy or Pharmacotherapy';
+            statusBadge = isGdmDone ? '✓ DONE' : '⚠️ PENDING';
+            titleEl.textContent = `🔵 GDM Diabetes Management — ${p.n}`;
+        } else {
+            showAnemia = hasAnemiaRisk || hasAnemiaMgmtGiven;
+            showPih = hasPihRisk;
+            showGdm = hasGdmRisk;
+
+            const isMgmtPending = needsMgmt && !hasAnyMgmt;
+            statusDone = hasAnyMgmt;
+            statusPending = isMgmtPending;
+            statusTitle = hasAnyMgmt ? 'Clinical Management: Done / Prescribed' : (isMgmtPending ? 'Clinical Management: Action Pending' : 'Routine Clinical Monitoring');
+            statusSubtext = hasAnyMgmt ? 'Medication / Therapy recorded for identified risk factor' : (isMgmtPending ? 'Pending IV Iron/FCM, Antihypertensive or GDM therapy' : 'No specialized medical therapy indicated');
+            statusBadge = hasAnyMgmt ? '✓ DONE' : (isMgmtPending ? '⚠️ PENDING' : 'ROUTINE');
+            titleEl.textContent = `💊 Clinical Management & Vitals — ${p.n}`;
+        }
 
         bodyEl.innerHTML = `
             ${isModalDeath ? `
@@ -3470,20 +3542,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <!-- Overall Clinical Management Status Highlight (Green for Done, Red for Pending) -->
-            <div style="border-radius:10px; padding:0.65rem 0.85rem; margin-bottom:0.6rem; display:flex; align-items:center; justify-content:space-between; ${hasAnyMgmt ? 'background:#ecfdf5; border:1.5px solid #10b981;' : (isMgmtPending ? 'background:#fef2f2; border:1.5px solid #ef4444;' : 'background:#f8fafc; border:1px solid #cbd5e1;')}">
+            <div style="border-radius:10px; padding:0.65rem 0.85rem; margin-bottom:0.6rem; display:flex; align-items:center; justify-content:space-between; ${statusDone ? 'background:#ecfdf5; border:1.5px solid #10b981;' : (statusPending ? 'background:#fef2f2; border:1.5px solid #ef4444;' : 'background:#f8fafc; border:1px solid #cbd5e1;')}">
                 <div style="display:flex; align-items:center; gap:0.55rem;">
-                    <span style="font-size:1.15rem;">${hasAnyMgmt ? '🟢' : (isMgmtPending ? '🔴' : 'ℹ️')}</span>
+                    <span style="font-size:1.15rem;">${statusDone ? '🟢' : (statusPending ? '🔴' : 'ℹ️')}</span>
                     <div>
-                        <div style="font-size:0.82rem; font-weight:800; color:${hasAnyMgmt ? '#047857' : (isMgmtPending ? '#b91c1c' : '#334155')};">
-                            ${hasAnyMgmt ? 'Clinical Management: Done / Prescribed' : (isMgmtPending ? 'Clinical Management: Action Pending' : 'Routine Clinical Monitoring')}
+                        <div style="font-size:0.82rem; font-weight:800; color:${statusDone ? '#047857' : (statusPending ? '#b91c1c' : '#334155')};">
+                            ${statusTitle}
                         </div>
-                        <div style="font-size:0.72rem; color:${hasAnyMgmt ? '#065f46' : (isMgmtPending ? '#991b1b' : '#64748b')};">
-                            ${hasAnyMgmt ? 'Medication / Therapy recorded for identified risk factor' : (isMgmtPending ? 'Pending IV Iron/FCM, Antihypertensive or GDM therapy' : 'No specialized medical therapy indicated')}
+                        <div style="font-size:0.72rem; color:${statusDone ? '#065f46' : (statusPending ? '#991b1b' : '#64748b')};">
+                            ${statusSubtext}
                         </div>
                     </div>
                 </div>
-                <span style="font-size:0.75rem; font-weight:800; padding:0.25rem 0.6rem; border-radius:6px; ${hasAnyMgmt ? 'background:#10b981; color:#ffffff;' : (isMgmtPending ? 'background:#ef4444; color:#ffffff;' : 'background:#94a3b8; color:#ffffff;')}">
-                    ${hasAnyMgmt ? '✓ DONE' : (isMgmtPending ? '⚠️ PENDING' : 'ROUTINE')}
+                <span style="font-size:0.75rem; font-weight:800; padding:0.25rem 0.6rem; border-radius:6px; ${statusDone ? 'background:#10b981; color:#ffffff;' : (statusPending ? 'background:#ef4444; color:#ffffff;' : 'background:#94a3b8; color:#ffffff;')}">
+                    ${statusBadge}
                 </span>
             </div>
 
@@ -3517,7 +3589,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
 
             <!-- Anemia Management Details (Green highlight if done, Red if pending) -->
-            ${hasAnemiaRisk ? `
+            ${showAnemia ? `
                 <div style="background:${isAnemiaDone ? '#ecfdf5' : '#fef2f2'}; border:1.5px solid ${isAnemiaDone ? '#10b981' : '#ef4444'}; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
                         <div style="font-size:0.8rem; font-weight:800; color:${isAnemiaDone ? '#047857' : '#b91c1c'}; text-transform:uppercase;">💉 Anemia Clinical Management</div>
@@ -3531,19 +3603,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="grid-column:1/-1;">Iron Sucrose Doses: <strong>${(p.is_doses && p.is_doses.length > 0) ? p.is_doses.join(', ') : 'None'}</strong></div>
                     </div>
                 </div>
-            ` : `
-                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
-                    <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:0.5rem; text-transform:uppercase;">💉 Anemia Clinical Management</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.8rem;">
-                        <div>Inj. FCM: <strong>${p.fcm === 'Yes' ? `✓ Given ${p.fcm_fac ? `(${p.fcm_fac})` : ''}` : '✕ Not Given'}</strong></div>
-                        <div>Blood Transfusion: <strong>${p.bt || 'No'}</strong></div>
-                        <div style="grid-column:1/-1;">Iron Sucrose Doses: <strong>${(p.is_doses && p.is_doses.length > 0) ? p.is_doses.join(', ') : 'None'}</strong></div>
-                    </div>
-                </div>
-            `}
+            ` : ''}
 
             <!-- PIH Medications (Green highlight if prescribed, Red if pending) -->
-            ${hasPihRisk ? `
+            ${showPih ? `
                 <div style="background:${isPihDone ? '#ecfdf5' : '#fef2f2'}; border:1.5px solid ${isPihDone ? '#10b981' : '#ef4444'}; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
                         <div style="font-size:0.8rem; font-weight:800; color:${isPihDone ? '#047857' : '#b91c1c'};">🟠 PIH Hypertension Treatment:</div>
@@ -3555,14 +3618,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${isPihDone ? `✓ ${p.pih_mgmt}` : '✕ Anti-hypertensive treatment not recorded / Schedule Doctor Exam'}
                     </div>
                 </div>
-            ` : (p.pih_mgmt ? `
-                <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
-                    <div style="font-size:0.8rem; font-weight:800; color:#047857; margin-bottom:0.4rem;">🟠 PIH Hypertension Treatment:</div>
-                    <div style="font-size:0.825rem; font-weight:700; color:#065f46;">✓ ${p.pih_mgmt}</div>
-                </div>` : '')}
+            ` : ''}
 
             <!-- GDM Management (Green highlight if prescribed, Red if pending) -->
-            ${hasGdmRisk ? `
+            ${showGdm ? `
                 <div style="background:${isGdmDone ? '#ecfdf5' : '#fef2f2'}; border:1.5px solid ${isGdmDone ? '#10b981' : '#ef4444'}; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
                         <div style="font-size:0.8rem; font-weight:800; color:${isGdmDone ? '#047857' : '#b91c1c'};">🔵 GDM Diabetes Management:</div>
@@ -3576,15 +3635,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div>Insulin: <strong>${p.gdm_ins === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
                     </div>
                 </div>
-            ` : ((p.gdm_mnt === 'Yes' || p.gdm_met === 'Yes' || p.gdm_ins === 'Yes') ? `
-                <div style="background:#f0f9ff; border:1px solid #e0f2fe; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
-                    <div style="font-size:0.8rem; font-weight:800; color:#0369a1; margin-bottom:0.4rem;">🔵 GDM Diabetes Management:</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; font-size:0.78rem;">
-                        <div>MNT: <strong>${p.gdm_mnt === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
-                        <div>Metformin: <strong>${p.gdm_met === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
-                        <div>Insulin: <strong>${p.gdm_ins === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
-                    </div>
-                </div>` : '')}
+            ` : ''}
+
+            ${(!showAnemia && !showPih && !showGdm) ? `
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem; color:#64748b; font-size:0.82rem; text-align:center;">
+                    ℹ️ No specialized medical drug therapy indicated for this patient (Routine Antenatal Care).
+                </div>
+            ` : ''}
         `;
 
         overlay.style.display = 'flex';
