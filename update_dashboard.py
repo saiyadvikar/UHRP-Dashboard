@@ -181,18 +181,40 @@ def clean_v_key(s):
     s = re.sub(r'\s*\(\d+\)\*?$', '', str(s)).strip().lower()
     return re.sub(r'[^a-z0-9]', '', s)
 
+def clean_phone(v):
+    if not v or pd.isna(v): return ''
+    s = str(v).split('.')[0].strip()
+    digits = re.sub(r'[^0-9]', '', s)
+    if len(digits) == 10:
+        return digits
+    elif len(digits) > 10 and digits.startswith('91') and len(digits) == 12:
+        return digits[2:]
+    elif len(digits) >= 10:
+        return digits[-10:]
+    return digits if len(digits) >= 7 else ''
+
+def norm_sub_key(s):
+    if not s or pd.isna(s): return ''
+    s = str(s).lower()
+    s = re.sub(r'^(shc|sc|phc|chc)\s*', '', s)
+    s = re.sub(r'\s*(new|old)$', '', s)
+    s = re.sub(r'[^a-z0-9]', '', s)
+    return s.strip()
+
 def load_location_hierarchy(loc_dir):
-    """Load Location Hierarchy workbook to map (block, subcentre) -> facility_name, and village -> (facility, subcentre)."""
+    """Load Location Hierarchy workbook to map (block, subcentre) -> facility_name, village -> (facility, subcentre), and ANM/CHO contacts."""
     if not os.path.exists(loc_dir):
-        return {}, {}
+        return {}, {}, {}, {}
     loc_files = [f for f in os.listdir(loc_dir) if f.endswith('.xlsx') and not f.startswith('~$')]
     if not loc_files:
-        return {}, {}
+        return {}, {}, {}, {}
     loc_path = os.path.join(loc_dir, loc_files[0])
     try:
         wb = openpyxl.load_workbook(loc_path, data_only=True)
         sub_map = {}
         village_map = {}
+        anm_map = {}
+        cho_map = {}
 
         # 1. Village list
         if 'Village list' in wb.sheetnames:
@@ -244,14 +266,23 @@ def load_location_hierarchy(loc_dir):
             for r in s.iter_rows(min_row=4, values_only=True):
                 b = str(r[2] or '').strip().lower()
                 fac = str(r[3] or '').strip().title()
-                sub = str(r[4] or '').strip().lower()
-                if sub and sub not in ('blank', 'none', 'nan', ''):
-                    sub_map[(b, sub)] = fac
-                    sub_map[sub] = fac
-                    c_sub = sub.replace('shc ', '').replace('sc ', '').replace('shc', '').strip()
+                sub = str(r[4] or '').strip()
+                cho_name = str(r[5] or '').strip().title()
+                cho_phone = clean_phone(r[7])
+                if sub and sub.lower() not in ('blank', 'none', 'nan', ''):
+                    sub_lower = sub.lower()
+                    sub_map[(b, sub_lower)] = fac
+                    sub_map[sub_lower] = fac
+                    c_sub = sub_lower.replace('shc ', '').replace('sc ', '').replace('shc', '').strip()
                     if c_sub:
                         sub_map[(b, c_sub)] = fac
                         sub_map[c_sub] = fac
+                nsub = norm_sub_key(sub)
+                if nsub and (cho_name or cho_phone):
+                    info = {'name': cho_name, 'phone': cho_phone}
+                    cho_map[(b, nsub)] = info
+                    if nsub not in cho_map:
+                        cho_map[nsub] = info
 
         # 4. ANM
         if 'ANM' in wb.sheetnames:
@@ -259,21 +290,68 @@ def load_location_hierarchy(loc_dir):
             for r in s.iter_rows(min_row=4, values_only=True):
                 b = str(r[2] or '').strip().lower()
                 fac = str(r[3] or '').strip().title()
-                sub = str(r[4] or '').strip().lower()
-                if sub and sub not in ('blank', 'none', 'nan', ''):
-                    sub_map[(b, sub)] = fac
-                    sub_map[sub] = fac
-                    c_sub = sub.replace('shc ', '').replace('sc ', '').replace('shc', '').strip()
+                sub = str(r[4] or '').strip()
+                anm_name = str(r[5] or '').strip().title()
+                anm_phone = clean_phone(r[7])
+                if sub and sub.lower() not in ('blank', 'none', 'nan', ''):
+                    sub_lower = sub.lower()
+                    sub_map[(b, sub_lower)] = fac
+                    sub_map[sub_lower] = fac
+                    c_sub = sub_lower.replace('shc ', '').replace('sc ', '').replace('shc', '').strip()
                     if c_sub:
                         sub_map[(b, c_sub)] = fac
                         sub_map[c_sub] = fac
+                nsub = norm_sub_key(sub)
+                if nsub and (anm_name or anm_phone):
+                    info = {'name': anm_name, 'phone': anm_phone}
+                    anm_map[(b, nsub)] = info
+                    if nsub not in anm_map:
+                        anm_map[nsub] = info
+
+        # 5. HR Directory (additional CHOs)
+        if 'HR_Directory_15-Mar-2023_11-49-' in wb.sheetnames:
+            s = wb['HR_Directory_15-Mar-2023_11-49-']
+            for r in s.iter_rows(min_row=2, values_only=True):
+                fac = str(r[1] or '').strip()
+                desig = str(r[5] or '').strip().upper()
+                name = str(r[4] or '').strip().title()
+                phone = clean_phone(r[8])
+                nsub = norm_sub_key(fac)
+                if 'CHO' in desig and nsub and (name or phone):
+                    if nsub not in cho_map:
+                        cho_map[nsub] = {'name': name, 'phone': phone}
 
         wb.close()
-        print(f"  Loaded {len(sub_map)} subcenter mappings and {len(village_map)} village mappings.")
-        return sub_map, village_map
+        print(f"  Loaded {len(sub_map)} subcenters, {len(village_map)} villages, {len(anm_map)} ANM contacts, {len(cho_map)} CHO contacts.")
+        return sub_map, village_map, anm_map, cho_map
     except Exception as e:
         print(f"  Warning loading location hierarchy: {e}")
-        return {}, {}
+        return {}, {}, {}, {}
+
+def get_hr_contacts(b_str, sub_str, vil_str, anm_map, cho_map, village_to_loc_map):
+    """Retrieve ANM and CHO contact details based on block, subcenter, and fallback village."""
+    b = str(b_str or '').lower().strip()
+    nsub = norm_sub_key(sub_str)
+
+    anm = anm_map.get((b, nsub)) or anm_map.get(nsub)
+    cho = cho_map.get((b, nsub)) or cho_map.get(nsub)
+
+    if (not anm or not cho) and vil_str and vil_str not in ('Unknown', 'N/A', '', 'Nan', 'None'):
+        cv = clean_v_key(vil_str)
+        v_res = village_to_loc_map.get((b, cv)) or village_to_loc_map.get(cv)
+        if v_res and v_res[1]:
+            v_nsub = norm_sub_key(v_res[1])
+            if not anm:
+                anm = anm_map.get((b, v_nsub)) or anm_map.get(v_nsub)
+            if not cho:
+                cho = cho_map.get((b, v_nsub)) or cho_map.get(v_nsub)
+
+    anm_name = anm['name'] if anm and anm.get('name') else ''
+    anm_phone = anm['phone'] if anm and anm.get('phone') else ''
+    cho_name = cho['name'] if cho and cho.get('name') else ''
+    cho_phone = cho['phone'] if cho and cho.get('phone') else ''
+
+    return anm_name, anm_phone, cho_name, cho_phone
 
 def load_delivery_linelist(del_dir):
     """Load Delivery Line List report to extract delivery details, admission Hb and BP."""
@@ -541,7 +619,7 @@ def main():
     # ===================================================================
     print("\n[4/5] Loading Delivery Line List & ANC files...")
     delivery_lookup = load_delivery_linelist(DELIVERY_DIR)
-    sub_to_phc_map, village_to_loc_map = load_location_hierarchy(LOCATION_DIR)
+    sub_to_phc_map, village_to_loc_map, anm_map, cho_map = load_location_hierarchy(LOCATION_DIR)
 
     anc_files = sorted([f for f in glob.glob(os.path.join(ANC_DIR, "*.xlsx"))
                         if not os.path.basename(f).startswith("~$")])
@@ -699,6 +777,7 @@ def main():
                             mo_list.append(None)
 
                     mo_done = 1 if any(is_mo_str(x) for x in mo_list) else 0
+                    anm_n_anc, anm_p_anc, cho_n_anc, cho_p_anc = get_hr_contacts(b_str, sub_str, str(row[vil_idx] or '').strip() if vil_idx < len(row) else '', anm_map, cho_map, village_to_loc_map)
 
                     anc_records.append({
                         'id': mpid,
@@ -725,7 +804,11 @@ def main():
                         'bp_v': bp_list,
                         'alb_v': alb_list,
                         'mo_v': mo_list,
-                        'mo_done': mo_done
+                        'mo_done': mo_done,
+                        'anm_n': anm_n_anc,
+                        'anm_p': anm_p_anc,
+                        'cho_n': cho_n_anc,
+                        'cho_p': cho_p_anc
                     })
 
                     if mpid in uhrp_mpids:
@@ -952,6 +1035,8 @@ def main():
                 deliv_place_display = 'Pregnant'
                 del_cat = 'Not Delivered'
 
+        anm_n_pt, anm_p_pt, cho_n_pt, cho_p_pt = get_hr_contacts(row.get('block', ''), subcenter_name, village_name, anm_map, cho_map, village_to_loc_map)
+
         patients_list.append({
             'y': row['Year'],
             'b': row['block'],
@@ -1005,6 +1090,10 @@ def main():
             'gdm_met': 'Yes' if str(row.get('On Metformin', '')).strip().lower() == 'yes' else 'No',
             'gdm_ins': 'Yes' if str(row.get('On Insulin', '')).strip().lower() == 'yes' else 'No',
             'gdm_mgmt_at': 'Yes' if str(row.get('GDM Mangement', '')).strip().lower() == 'yes' else 'No',
+            'anm_n': anm_n_pt,
+            'anm_p': anm_p_pt,
+            'cho_n': cho_n_pt,
+            'cho_p': cho_p_pt
         })
 
     # Enrich ANC records with Delivery line list and HRP risk tags
@@ -1080,6 +1169,14 @@ def main():
                     r['del_date'] = hp['del_date']
             if hp.get('phc') and hp.get('phc') != 'Unknown':
                 r['phc'] = hp['phc']
+            if hp.get('anm_n') and not r.get('anm_n'): r['anm_n'] = hp['anm_n']
+            if hp.get('anm_p') and not r.get('anm_p'): r['anm_p'] = hp['anm_p']
+            if hp.get('cho_n') and not r.get('cho_n'): r['cho_n'] = hp['cho_n']
+            if hp.get('cho_p') and not r.get('cho_p'): r['cho_p'] = hp['cho_p']
+            if r.get('anm_n') and not hp.get('anm_n'): hp['anm_n'] = r['anm_n']
+            if r.get('anm_p') and not hp.get('anm_p'): hp['anm_p'] = r['anm_p']
+            if r.get('cho_n') and not hp.get('cho_n'): hp['cho_n'] = r['cho_n']
+            if r.get('cho_p') and not hp.get('cho_p'): hp['cho_p'] = r['cho_p']
 
     # Ensure all maternal deaths from delivery linelist are included
     anc_mpids_set = {r['id'] for r in anc_records}
@@ -1103,6 +1200,8 @@ def main():
                     if sub_str in ('Unknown', 'N/A', '') and v_res[1]:
                         sub_str = v_res[1]
             phc_str = mapped_phc if mapped_phc else 'Unknown'
+
+            anm_n_d, anm_p_d, cho_n_d, cho_p_d = get_hr_contacts(b_str, sub_str, v_str, anm_map, cho_map, village_to_loc_map)
 
             if mpid not in anc_mpids_set:
                 anc_records.append({
@@ -1135,7 +1234,11 @@ def main():
                     'mo_v': [],
                     'mo_done': 0,
                     'lr_hb': d_info.get('hb_lr'),
-                    'bp_adm': d_info.get('bp_adm', '')
+                    'bp_adm': d_info.get('bp_adm', ''),
+                    'anm_n': anm_n_d,
+                    'anm_p': anm_p_d,
+                    'cho_n': cho_n_d,
+                    'cho_p': cho_p_d
                 })
                 anc_mpids_set.add(mpid)
 
@@ -1174,7 +1277,11 @@ def main():
                     'lr_hb': d_info.get('hb_lr'),
                     'bp_adm': d_info.get('bp_adm', ''),
                     'is_doses': [], 'bt': 'No', 'fcm': 'No', 'fcm_fac': '', 'pih_mgmt': '',
-                    'gdm_mnt': 'No', 'gdm_met': 'No', 'gdm_ins': 'No', 'gdm_mgmt_at': 'No'
+                    'gdm_mnt': 'No', 'gdm_met': 'No', 'gdm_ins': 'No', 'gdm_mgmt_at': 'No',
+                    'anm_n': anm_n_d,
+                    'anm_p': anm_p_d,
+                    'cho_n': cho_n_d,
+                    'cho_p': cho_p_d
                 })
                 patients_mpids_set.add(mpid)
 

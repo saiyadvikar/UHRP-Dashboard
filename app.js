@@ -457,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (searchVal) {
                 const cleanV = cleanVillageName(p.v);
-                const matchStr = `${p.id} ${p.n} ${p.h} ${p.p} ${cleanV} ${p.b}`.toLowerCase();
+                const matchStr = `${p.id} ${p.n} ${p.h} ${p.p} ${cleanV} ${p.b} ${p.anm_n || ''} ${p.anm_p || ''} ${p.cho_n || ''} ${p.cho_p || ''}`.toLowerCase();
                 if (!matchStr.includes(searchVal)) return false;
             }
 
@@ -493,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (searchVal) {
                 const cleanV = cleanVillageName(p.v);
-                const matchStr = `${p.id} ${p.n} ${p.h} ${p.p} ${cleanV} ${p.b}`.toLowerCase();
+                const matchStr = `${p.id} ${p.n} ${p.h} ${p.p} ${cleanV} ${p.b} ${p.anm_n || ''} ${p.anm_p || ''} ${p.cho_n || ''} ${p.cho_p || ''}`.toLowerCase();
                 if (!matchStr.includes(searchVal)) return false;
             }
 
@@ -2062,6 +2062,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         ${(p.del_date && p.del_date !== '-') ? `<div class="dprofile-item"><span class="dprofile-label">Del Date</span><span class="dprofile-val">${delDateDisplay}</span></div>` : ''}
                                         <div class="dprofile-item"><span class="dprofile-label">LR Admission Hb</span><span class="dprofile-val" style="font-weight:700; color:#dc2626;">${p.lr_hb ? p.lr_hb + ' g/dL' : 'Not Recorded'}</span></div>
                                         <div class="dprofile-item"><span class="dprofile-label">BP at Admission</span><span class="dprofile-val" style="font-weight:700; color:#0369a1;">${p.bp_adm ? p.bp_adm + ' mmHg' : 'Not Recorded'}</span></div>
+                                        <div class="dprofile-item"><span class="dprofile-label">👩‍⚕️ ANM Contact</span><span class="dprofile-val">${p.anm_n ? `<strong>${p.anm_n}</strong><br>` : ''}${p.anm_p ? `<a href="tel:${p.anm_p}" style="color:#16a34a; font-weight:700; text-decoration:none;">📞 ${p.anm_p}</a>` : '<span style="color:#94a3b8;">Not Mapped</span>'}</span></div>
+                                        <div class="dprofile-item"><span class="dprofile-label">🩺 CHO Contact</span><span class="dprofile-val">${p.cho_n ? `<strong>${p.cho_n}</strong><br>` : ''}${p.cho_p ? `<a href="tel:${p.cho_p}" style="color:#0284c7; font-weight:700; text-decoration:none;">📞 ${p.cho_p}</a>` : '<span style="color:#94a3b8;">Not Mapped</span>'}</span></div>
                                         <div class="dprofile-item full-span"><span class="dprofile-label">Complications / Risk</span><span class="dprofile-val" style="color:#b91c1c; font-weight:700;">${p.f || '-'}</span></div>
                                     </div>
                                 </div>
@@ -2080,6 +2082,19 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ${isDelivered ? ` | 🏥 <strong>Delivery Facility:</strong> <strong style="color:#059669;">${p.d || '-'}</strong> (${p.del_cat || 'Facility'}) ${p.del_date && p.del_date !== '-' ? `on <strong>${delDateDisplay}</strong>` : ''}` : ''}
                                     ${p.lr_hb ? ` | 🩸 <strong>Hb on LR Admission:</strong> <strong style="color:#dc2626;">${p.lr_hb} g/dL</strong>` : ''}
                                     ${p.bp_adm ? ` | 🩺 <strong>BP at Admission:</strong> <strong style="color:#0369a1;">${p.bp_adm} mmHg</strong>` : ''}
+                                </div>
+
+                                <div class="drawer-contact-bar">
+                                    <div class="contact-group">
+                                        <span style="font-weight:700; color:#166534;">👩‍⚕️ ANM:</span>
+                                        <strong style="color:#0f172a;">${p.anm_n || 'Not Mapped'}</strong>
+                                        ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM ${p.anm_n || ''}">📞 Call ANM (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                                    </div>
+                                    <div class="contact-group">
+                                        <span style="font-weight:700; color:#0369a1;">🩺 CHO:</span>
+                                        <strong style="color:#0f172a;">${p.cho_n || 'Not Mapped'}</strong>
+                                        ${p.cho_p ? `<a href="tel:${p.cho_p}" class="btn-call-chip btn-call-cho" title="Call CHO ${p.cho_n || ''}">📞 Call CHO (${p.cho_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                                    </div>
                                 </div>
                                 ${showAnemiaMgmt ? `
                                 <div class="drawer-management-bar" style="margin-bottom: 0.6rem;">
@@ -3102,6 +3117,10 @@ document.addEventListener('DOMContentLoaded', () => {
             'Block': p.b,
             'PHC Facility': p.phc || '',
             'Subcenter': p.sub || '',
+            'ANM Name': p.anm_n || '',
+            'ANM Contact': p.anm_p || '',
+            'CHO Name': p.cho_n || '',
+            'CHO Contact': p.cho_p || '',
             'Village': cleanVillageName(p.v),
             'MP ID': p.id,
             'ANC Name': p.n,
@@ -3362,6 +3381,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
 
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:0.5rem 0.85rem; margin-bottom:0.75rem; font-size:0.8rem; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+                    <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong>${p.anm_n || 'Not Mapped'}</strong>
+                    ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM">📞 Call ANM (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                </div>
+                <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+                    <span style="color:#0369a1; font-weight:700;">🩺 CHO:</span> <strong>${p.cho_n || 'Not Mapped'}</strong>
+                    ${p.cho_p ? `<a href="tel:${p.cho_p}" class="btn-call-chip btn-call-cho" title="Call CHO">📞 Call CHO (${p.cho_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                </div>
+            </div>
+
             <div id="drawer-status-modal-${p.id}" style="margin-bottom:0.5rem;"></div>
 
             <div class="anc-timeline-container" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:0.75rem;">
@@ -3429,6 +3459,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${p.mat_indir ? ` | ℹ️ <strong>Indirect Cause:</strong> ${p.mat_indir}` : ''}
             </div>
             ` : ''}
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:0.5rem 0.85rem; margin-bottom:0.6rem; font-size:0.8rem; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+                    <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong>${p.anm_n || 'Not Mapped'}</strong>
+                    ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM">📞 Call ANM (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                </div>
+                <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+                    <span style="color:#0369a1; font-weight:700;">🩺 CHO:</span> <strong>${p.cho_n || 'Not Mapped'}</strong>
+                    ${p.cho_p ? `<a href="tel:${p.cho_p}" class="btn-call-chip btn-call-cho" title="Call CHO">📞 Call CHO (${p.cho_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                </div>
+            </div>
             <!-- Overall Clinical Management Status Highlight (Green for Done, Red for Pending) -->
             <div style="border-radius:10px; padding:0.65rem 0.85rem; margin-bottom:0.6rem; display:flex; align-items:center; justify-content:space-between; ${hasAnyMgmt ? 'background:#ecfdf5; border:1.5px solid #10b981;' : (isMgmtPending ? 'background:#fef2f2; border:1.5px solid #ef4444;' : 'background:#f8fafc; border:1px solid #cbd5e1;')}">
                 <div style="display:flex; align-items:center; gap:0.55rem;">
