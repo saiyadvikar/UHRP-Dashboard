@@ -505,6 +505,13 @@ body {
     box-shadow: 0 0 0 2.5px rgba(234, 88, 12, 0.25) !important;
 }
 .kpi-card.mo-pending { border-left: 3.5px solid #7928ca; background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%); }
+.kpi-card.overdue, .kpi-card.overdue-kpi { border-left: 3.5px solid #e11d48; background: linear-gradient(135deg, #ffffff 0%, #fff1f2 100%); }
+.kpi-card.overdue.active-kpi-filter, .kpi-card.overdue-kpi.active-kpi-filter {
+    border-color: #e11d48 !important;
+    background: #ffe4e6 !important;
+    box-shadow: 0 0 0 2.5px rgba(225, 29, 72, 0.25) !important;
+}
+.kpi-card.overdue-kpi .kpi-value, .kpi-card.overdue .kpi-value { color: #e11d48; }
 .kpi-card.mo-pending.active-kpi-filter {
     border-color: #7928ca !important;
     background: #ede9fe !important;

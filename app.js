@@ -819,8 +819,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.innerWidth <= 768) {
             if (currentTab === 'anc') {
                 let uhrpCount = 0;
+                let overdueCount = 0;
                 tabPatients.forEach(p => {
                     if (p.uhrp === 1 || p.hrp === 1) uhrpCount++;
+                    if (isEddOverdue(p.edd, p.del_date, p.del)) overdueCount++;
                 });
 
                 kpiContainer.style.display = 'block';
@@ -836,6 +838,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="kpi-title">⚡ High Risk</span>
                             <span class="kpi-value">${uhrpCount.toLocaleString()}</span>
                             <span class="kpi-subtext">${tabPatients.length > 0 ? ((uhrpCount / tabPatients.length) * 100).toFixed(1) : 0}% of ANC Cohort</span>
+                        </div>
+                        <div class="kpi-card clickable overdue-kpi ${kpiFilter === 'overdue' ? 'active-kpi-filter' : ''}" data-kpi="overdue" title="Click to filter mothers whose EDD has passed but delivery is not recorded">
+                            <span class="kpi-title">⏳ Delivery Overdue</span>
+                            <span class="kpi-value">${overdueCount.toLocaleString()}</span>
+                            <span class="kpi-subtext">Past EDD • Del Pending</span>
                         </div>
                         <div class="kpi-card clickable missed-anc-kpi ${kpiFilter === 'missed_anc' ? 'active-kpi-filter' : ''}" data-kpi="missed_anc" title="Click to filter mothers who missed 2+ consecutive ANC visits">
                             <span class="kpi-title">⚠️ Missed 2+ ANC</span>
@@ -996,8 +1003,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             } else if (currentTab === 'anc') {
                 let uhrpCount = 0;
+                let overdueCount = 0;
                 tabPatients.forEach(p => {
                     if (p.uhrp === 1 || p.hrp === 1) uhrpCount++;
+                    if (isEddOverdue(p.edd, p.del_date, p.del)) overdueCount++;
                 });
 
                 kpiContainer.style.display = 'block';
@@ -1013,6 +1022,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="kpi-title">⚡ High Risk</span>
                             <span class="kpi-value">${uhrpCount.toLocaleString()}</span>
                             <span class="kpi-subtext">${tabPatients.length > 0 ? ((uhrpCount / tabPatients.length) * 100).toFixed(1) : 0}% of ANC Cohort</span>
+                        </div>
+                        <div class="kpi-card clickable overdue ${kpiFilter === 'overdue' ? 'active-kpi-filter' : ''}" data-kpi="overdue" title="Delivery Overdue: EDD has passed but delivery is not recorded">
+                            <span class="kpi-title">⏳ Delivery Overdue</span>
+                            <span class="kpi-value">${overdueCount.toLocaleString()}</span>
+                            <span class="kpi-subtext">Past EDD • Del Pending</span>
                         </div>
                         <div class="kpi-card clickable missed-anc ${kpiFilter === 'missed_anc' ? 'active-kpi-filter' : ''}" data-kpi="missed_anc" title="Missed 2+ consecutive ANC visits or no visit in last 70 days">
                             <span class="kpi-title">⚠️ Missed 2+ ANC Visits</span>
@@ -1900,6 +1914,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 kpiFilteredPatients = mgmtFilteredPatients.filter(p => hasPreEclampsia(p));
             } else if (kpiFilter === 'uhrp') {
                 kpiFilteredPatients = mgmtFilteredPatients.filter(p => p.uhrp === 1 || p.hrp === 1);
+            } else if (kpiFilter === 'overdue') {
+                kpiFilteredPatients = mgmtFilteredPatients.filter(p => isEddOverdue(p.edd, p.del_date, p.del));
             } else if (currentTab === 'all' && ['sa', 'pi', 'gd', 'ls', 'sc', 'tp', 'bh'].includes(kpiFilter)) {
                 kpiFilteredPatients = mgmtFilteredPatients.filter(p => p[kpiFilter] === 1);
             } else if (['sa', 'ma', 'sc', 'anc', 'all'].includes(currentTab)) {
@@ -2353,13 +2369,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!lmpDate) return null;
 
         // Reference date:
-        // 1. If delivered -> Delivery Date (or EDD as fallback)
-        // 2. If abortion -> event occurred early (cap at 20 wks or use edd/gen_date)
-        // 3. If undelivered -> Date of Dashboard Generation Date (DASHBOARD_DATA.gen_date)
+        // 1. If maternal death -> Date of Death (extracted from p.mat) or del_date
+        // 2. If delivered -> Delivery Date (or EDD as fallback)
+        // 3. If abortion -> event occurred early (cap at 20 wks or use edd/gen_date)
+        // 4. If undelivered -> Date of Dashboard Generation Date (DASHBOARD_DATA.gen_date)
         let refDate = parseDate(DASHBOARD_DATA.gen_date) || new Date();
 
+        const isMaternalDeath = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
         const isDelivered = (p.del === 1 || (p.del_date && p.del_date !== '-'));
         const isAbortion = (p.del === 2 || p.is_abortion === 1);
+
+        if (isMaternalDeath) {
+            let deathDate = null;
+            if (p.mat && p.mat.includes('(')) {
+                const deathDateStr = p.mat.replace(/^Yes\s*\(?|\)?$/gi, '').trim();
+                deathDate = parseDate(deathDateStr);
+            }
+            if (!deathDate && p.del_date && p.del_date !== '-') {
+                deathDate = parseDate(p.del_date);
+            }
+            if (deathDate) {
+                refDate = deathDate;
+                const diffMs = refDate.getTime() - lmpDate.getTime();
+                const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+                if (diffDays < 0) return null;
+                return Math.floor(diffDays / 7);
+            }
+        }
 
         if (isDelivered) {
             const parsedDel = parseDate(p.del_date);
@@ -2399,9 +2435,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function getPatientGaDisplay(p) {
         const weeks = getPatientCurrentGaWeeks(p);
         if (weeks === null) return '—';
+        const isMaternalDeath = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
         const isDelivered = (p.del === 1 || (p.del_date && p.del_date !== '-'));
         const isAbortion = (p.del === 2 || p.is_abortion === 1);
 
+        if (isMaternalDeath) {
+            return `<span class="badge-ga" style="background:#450a0a; color:#fecaca; border:1px solid #dc2626;" title="Maternal Death at ~${weeks} Wks GA">${weeks} Wks</span>`;
+        }
         if (isAbortion) {
             return `<span class="badge-ga" style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca;" title="Abortion (~${weeks} Wks GA)">${weeks} Wks</span>`;
         }
@@ -2631,6 +2671,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let activeKpiLabel = '';
         if (kpiFilter) {
             if (kpiFilter === 'missed_anc') activeKpiLabel = ' • Missed 2+ ANC Cohort';
+            else if (kpiFilter === 'overdue') activeKpiLabel = ' • Delivery Overdue Cohort';
             else if (kpiFilter === 'preeclampsia') activeKpiLabel = ' • Pre-eclampsia Cohort';
             else if (kpiFilter === 'mo_pending') activeKpiLabel = ' • Not Seen by MO Cohort';
             else if (kpiFilter === 'resolved') activeKpiLabel = ' • Resolved (> 11.0 g/dL) Cohort';
@@ -3100,6 +3141,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 exportData = exportData.filter(p => !hasMoVisit(p));
             } else if (kpiFilter === 'uhrp') {
                 exportData = exportData.filter(p => p.uhrp === 1 || p.hrp === 1);
+            } else if (kpiFilter === 'overdue') {
+                exportData = exportData.filter(p => isEddOverdue(p.edd, p.del_date, p.del));
             } else if (['sa', 'ma', 'sc', 'anc', 'all'].includes(key)) {
                 if (kpiFilter === 'moderate') {
                     exportData = exportData.filter(p => {
@@ -3399,45 +3442,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const cleanV = cleanVillageName(p.v);
 
         titleEl.textContent = `📋 12 ANC Visit Record — ${p.n}`;
-        subtitleEl.textContent = `MP ID: ${p.id} | Subcenter: ${subName} | Village: ${cleanV} | Block: ${p.b}`;
+        subtitleEl.textContent = `MP ID: ${p.id} • Village: ${cleanV} • Block: ${p.b}`;
 
         const isMoSeen = hasMoVisit(p);
         const ancCheck = checkConsecutiveMissedAnc(p);
 
         bodyEl.innerHTML = `
-            <!-- Prominent Subcenter & Location Header Banner -->
-            <div style="background:#eff6ff; border:1.5px solid #93c5fd; border-radius:12px; padding:0.65rem 0.9rem; margin-bottom:0.75rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
-                <div style="display:flex; align-items:center; gap:0.45rem;">
-                    <span style="font-size:1.25rem;">🏥</span>
-                    <div>
-                        <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; color:#1d4ed8; letter-spacing:0.025em;">Subcenter</div>
-                        <div style="font-size:0.95rem; font-weight:800; color:#0f172a;">${subName}</div>
-                    </div>
-                </div>
-                <div style="font-size:0.78rem; color:#475569; text-align:right;">
-                    📍 Village: <strong style="color:#0f172a;">${cleanV}</strong><br>
-                    🏛️ Block: <strong style="color:#0f172a;">${p.b}</strong>
-                </div>
-            </div>
-
             <!-- 1. 12 ANC visit record (ON TOP) -->
-            <div class="anc-timeline-container" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:0.75rem; margin-bottom:0.75rem;">
-                <div class="anc-timeline-title" style="font-size:0.8rem; font-weight:800; margin-bottom:0.5rem;">📋 12 ANC visit record</div>
+            <div class="anc-timeline-container" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:0.75rem; margin-bottom:0.65rem;">
+                <div class="anc-timeline-title" style="font-size:0.82rem; font-weight:800; margin-bottom:0.5rem; color:#0f172a;">📋 12 ANC visit record</div>
                 <div class="anc-timeline-grid" id="timeline-modal-${p.id}"></div>
             </div>
 
-            <div id="drawer-status-modal-${p.id}" style="margin-bottom:0.5rem;"></div>
+            <div id="drawer-status-modal-${p.id}" style="margin-bottom:0.45rem;"></div>
 
             <!-- 2. Subcenter Name Above ANM & CHO Contact Numbers -->
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.65rem 0.85rem; margin-bottom:0.75rem; font-size:0.8rem;">
-                <!-- Subcenter on top -->
-                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.4rem; margin-bottom:0.45rem; padding-bottom:0.4rem; border-bottom:1px dashed #cbd5e1; font-size:0.82rem;">
-                    <span style="color:#0284c7; font-weight:700;">🏥 Subcenter:</span>
-                    <strong style="color:#0f172a; font-size:0.88rem;">${subName}</strong>
-                    <span style="font-size:0.75rem; color:#64748b; margin-left:auto;">Village: <strong>${cleanV}</strong> | Block: <strong>${p.b}</strong></span>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.65rem 0.85rem; margin-bottom:0.65rem; font-size:0.8rem;">
+                <div style="margin-bottom:0.4rem; padding-bottom:0.35rem; border-bottom:1px dashed #cbd5e1; font-size:0.82rem; color:#0f172a;">
+                    🏥 Subcenter: <strong style="color:#0284c7;">${subName}</strong>
                 </div>
-                <!-- ANM & CHO Contact Numbers -->
-                <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.5rem;">
+                <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.45rem;">
                     <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
                         <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong>${p.anm_n || 'Not Mapped'}</strong>
                         ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM">📞 Call ANM (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
@@ -3450,7 +3474,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
 
             <!-- 3. Medical Officer & Attendance Status Alert -->
-            <div class="modal-vitals-bar" style="margin-bottom:0.35rem;">
+            <div class="modal-vitals-bar" style="margin-bottom:0.25rem;">
                 <div class="modal-vitals-item">
                     <span class="modal-vitals-label">Medical Officer (MO) Status</span>
                     <span class="modal-vitals-val" style="color:${isMoSeen ? '#059669' : '#0284c7'}; font-size:0.85rem;">
@@ -3491,7 +3515,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cleanV = cleanVillageName(p.v);
 
         titleEl.textContent = `💊 Clinical Management & Vitals — ${p.n}`;
-        subtitleEl.textContent = `MP ID: ${p.id} | Subcenter: ${subName} | Village: ${cleanV} | Block: ${p.b}`;
+        subtitleEl.textContent = `MP ID: ${p.id} • Village: ${cleanV} • Block: ${p.b}`;
 
         const isDelivered = (p.del === 1 || (p.del_date && p.del_date !== '-'));
 
@@ -3689,21 +3713,20 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             ` : ''}
 
-            <!-- 2. IDENTIFIED RISK FACTORS -->
-            <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:0.6rem 0.8rem; font-size:0.8rem; margin-bottom:0.6rem;">
-                <strong style="color:#991b1b;">⚠️ Identified Risk Factor(s):</strong> <span style="font-weight:700; color:#b91c1c;">${p.f || 'High Risk Pregnancy'}</span>
+            <!-- 2. IDENTIFIED RISK FACTORS & DELIVERY STATUS -->
+            <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:0.6rem 0.8rem; font-size:0.8rem; margin-bottom:0.6rem; display:flex; flex-direction:column; gap:0.35rem;">
+                <div><strong style="color:#991b1b;">⚠️ Identified Risk Factor(s):</strong> <span style="font-weight:700; color:#b91c1c;">${p.f || 'High Risk Pregnancy'}</span></div>
+                <div style="font-size:0.78rem; color:#475569; border-top:1px dashed #fecaca; padding-top:0.35rem;">
+                    ${isDelivered ? `🏥 <strong>Delivery:</strong> <strong style="color:#059669;">${p.d || '-'}</strong> (${p.del_cat || 'Facility'}) ${p.del_date && p.del_date !== '-' ? `on <strong>${formatDateDDMMYYYY(p.del_date)}</strong>` : ''}` : `🤰 <strong>Delivery Status:</strong> <span style="color:#0284c7; font-weight:700;">Pregnant (Antenatal Care)</span>`}
+                </div>
             </div>
 
             <!-- 3. SUBCENTER NAME ABOVE ANM & CHO MOBILE NUMBERS -->
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.65rem 0.85rem; margin-bottom:0.6rem; font-size:0.8rem;">
-                <!-- Subcenter on top -->
-                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.4rem; margin-bottom:0.45rem; padding-bottom:0.4rem; border-bottom:1px dashed #cbd5e1; font-size:0.82rem;">
-                    <span style="color:#0284c7; font-weight:700;">🏥 Subcenter:</span>
-                    <strong style="color:#0f172a; font-size:0.88rem;">${subName}</strong>
-                    <span style="font-size:0.75rem; color:#64748b; margin-left:auto;">Village: <strong>${cleanV}</strong> | Block: <strong>${p.b}</strong></span>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.65rem 0.85rem; margin-bottom:0.35rem; font-size:0.8rem;">
+                <div style="margin-bottom:0.4rem; padding-bottom:0.35rem; border-bottom:1px dashed #cbd5e1; font-size:0.82rem; color:#0f172a;">
+                    🏥 Subcenter: <strong style="color:#0284c7;">${subName}</strong>
                 </div>
-                <!-- ANM & CHO Contact Numbers -->
-                <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.5rem;">
+                <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.45rem;">
                     <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
                         <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong>${p.anm_n || 'Not Mapped'}</strong>
                         ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM">📞 Call ANM (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
@@ -3713,11 +3736,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${p.cho_p ? `<a href="tel:${p.cho_p}" class="btn-call-chip btn-call-cho" title="Call CHO">📞 Call CHO (${p.cho_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
                     </div>
                 </div>
-            </div>
-
-            <!-- Delivery Details / Status -->
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem; font-size:0.78rem; line-height:1.4;">
-                ${isDelivered ? `🏥 <strong>Delivery Facility:</strong> <strong style="color:#059669;">${p.d || '-'}</strong> (${p.del_cat || 'Facility'}) ${p.del_date && p.del_date !== '-' ? `on <strong>${formatDateDDMMYYYY(p.del_date)}</strong>` : ''}` : `🤰 <strong>Delivery Status:</strong> <span style="color:#0284c7; font-weight:700;">Pregnant (Antenatal Care)</span>`}
             </div>
         `;
 
