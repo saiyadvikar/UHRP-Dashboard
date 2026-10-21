@@ -822,7 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let overdueCount = 0;
                 tabPatients.forEach(p => {
                     if (p.uhrp === 1 || p.hrp === 1) uhrpCount++;
-                    if (isEddOverdue(p.edd, p.del_date, p.del)) overdueCount++;
+                    if (isEddOverdue(p)) overdueCount++;
                 });
 
                 kpiContainer.style.display = 'block';
@@ -1006,7 +1006,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let overdueCount = 0;
                 tabPatients.forEach(p => {
                     if (p.uhrp === 1 || p.hrp === 1) uhrpCount++;
-                    if (isEddOverdue(p.edd, p.del_date, p.del)) overdueCount++;
+                    if (isEddOverdue(p)) overdueCount++;
                 });
 
                 kpiContainer.style.display = 'block';
@@ -1302,9 +1302,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Check if EDD is overdue
-    function isEddOverdue(eddDateStr, delDateStr, isDelivered) {
+    // Check if EDD is overdue (Strictly excludes delivered, maternal deaths, and abortions)
+    function isEddOverdue(pOrEdd, delDateStr, isDelivered, pObj) {
+        let p = pObj;
+        let eddDateStr = pOrEdd;
+        if (typeof pOrEdd === 'object' && pOrEdd !== null) {
+            p = pOrEdd;
+            eddDateStr = p.edd;
+            delDateStr = p.del_date;
+            isDelivered = p.del;
+        }
+
+        // Exclude delivered cases
         if (isDelivered === 1 || (delDateStr && delDateStr !== '-')) return false;
+
+        // Exclude maternal death and abortion cases
+        if (p) {
+            const isMaternalDeath = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
+            const isAbortion = (p.del === 2 || p.is_abortion === 1);
+            if (isMaternalDeath || isAbortion) return false;
+        }
+
         if (!eddDateStr || eddDateStr === '-') return false;
         const edd = parseDate(eddDateStr);
         if (!edd || isNaN(edd.getTime())) return false;
@@ -1915,7 +1933,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (kpiFilter === 'uhrp') {
                 kpiFilteredPatients = mgmtFilteredPatients.filter(p => p.uhrp === 1 || p.hrp === 1);
             } else if (kpiFilter === 'overdue') {
-                kpiFilteredPatients = mgmtFilteredPatients.filter(p => isEddOverdue(p.edd, p.del_date, p.del));
+                kpiFilteredPatients = mgmtFilteredPatients.filter(p => isEddOverdue(p));
             } else if (currentTab === 'all' && ['sa', 'pi', 'gd', 'ls', 'sc', 'tp', 'bh'].includes(kpiFilter)) {
                 kpiFilteredPatients = mgmtFilteredPatients.filter(p => p[kpiFilter] === 1);
             } else if (['sa', 'ma', 'sc', 'anc', 'all'].includes(currentTab)) {
@@ -2003,7 +2021,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const cleanV = p.v ? p.v.replace(/\s*\(\d+\)\*?|\s*\(\*\)/, '').trim() : '-';
             const isDelivered = p.del === 1 || (p.del_date && p.del_date !== '-');
-            const isOverdue = isEddOverdue(p.edd, p.del_date, p.del);
+            const isOverdue = isEddOverdue(p);
 
             const isMaternalDeath = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
 
@@ -2397,6 +2415,42 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        if (isAbortion) {
+            // In abortion cases, date of abortion is not available.
+            // Freeze GA to the GA of the last recorded ANC visit.
+            let lastVisitDate = null;
+            const vDates = p.v_dates || [];
+            for (let i = vDates.length - 1; i >= 0; i--) {
+                const dStr = vDates[i];
+                if (dStr && dStr !== '-' && dStr !== 'None' && dStr !== 'nan' && dStr.trim() !== '') {
+                    const parsed = parseDate(dStr);
+                    if (parsed && !isNaN(parsed.getTime())) {
+                        lastVisitDate = parsed;
+                        break;
+                    }
+                }
+            }
+            if (!lastVisitDate && p.reg && p.reg !== '-' && p.reg !== 'None' && p.reg !== 'nan') {
+                const parsedReg = parseDate(p.reg);
+                if (parsedReg && !isNaN(parsedReg.getTime())) {
+                    lastVisitDate = parsedReg;
+                }
+            }
+
+            if (lastVisitDate) {
+                const diffMs = lastVisitDate.getTime() - lmpDate.getTime();
+                const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+                if (diffDays >= 0) {
+                    return Math.floor(diffDays / 7);
+                }
+            }
+            // Fallback: if no visit date or reg date recorded, calculate to gen_date capped at 20 wks
+            const diffMs = refDate.getTime() - lmpDate.getTime();
+            const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+            const calculatedWeeks = Math.floor(diffDays / 7);
+            return (calculatedWeeks >= 0 && calculatedWeeks <= 20) ? calculatedWeeks : 12;
+        }
+
         if (isDelivered) {
             const parsedDel = parseDate(p.del_date);
             if (parsedDel) {
@@ -2405,15 +2459,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const parsedEdd = parseDate(p.edd);
                 if (parsedEdd) refDate = parsedEdd;
             }
-        } else if (isAbortion) {
-            // For abortion cases without an exact date, pregnancy terminated earlier
-            // If LMP difference to gen_date is > 20 weeks, cap at 20 weeks (or 1st/2nd trimester)
-            const diffDays = Math.round((refDate.getTime() - lmpDate.getTime()) / (1000 * 60 * 60 * 24));
-            const calculatedWeeks = Math.floor(diffDays / 7);
-            if (calculatedWeeks > 20) {
-                return 16; // Categorized into 2nd trimester as standard for abortion if later
-            }
-            return calculatedWeeks >= 0 ? calculatedWeeks : null;
         }
 
         const diffMs = refDate.getTime() - lmpDate.getTime();
@@ -2443,7 +2488,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<span class="badge-ga" style="background:#450a0a; color:#fecaca; border:1px solid #dc2626;" title="Maternal Death at ~${weeks} Wks GA">${weeks} Wks</span>`;
         }
         if (isAbortion) {
-            return `<span class="badge-ga" style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca;" title="Abortion (~${weeks} Wks GA)">${weeks} Wks</span>`;
+            return `<span class="badge-ga" style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca;" title="Abortion (GA frozen at last ANC visit: ${weeks} Wks)">${weeks} Wks</span>`;
         }
         if (isDelivered) {
             return `<span class="badge-ga delivered" title="Delivered (~${weeks} Wks GA)">${weeks} Wks</span>`;
@@ -3142,7 +3187,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (kpiFilter === 'uhrp') {
                 exportData = exportData.filter(p => p.uhrp === 1 || p.hrp === 1);
             } else if (kpiFilter === 'overdue') {
-                exportData = exportData.filter(p => isEddOverdue(p.edd, p.del_date, p.del));
+                exportData = exportData.filter(p => isEddOverdue(p));
             } else if (['sa', 'ma', 'sc', 'anc', 'all'].includes(key)) {
                 if (kpiFilter === 'moderate') {
                     exportData = exportData.filter(p => {

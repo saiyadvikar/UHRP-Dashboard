@@ -291,8 +291,9 @@ def build_sop_pdf(output_path=None):
 
     story.append(Spacer(1, 3))
     story.append(Paragraph("B. Delivery Overdue Triage & Gestational Age Calculation", h2_style))
-    story.append(Paragraph("• <b>Delivery Overdue (Past EDD):</b> Identified when <code>p.del === 0</code> and the calculated Expected Date of Delivery (EDD) is earlier than the dashboard generation date (or today). Displayed with a prominent pulsing rose badge (<code>⏳ Delivery Overdue</code>) and dedicated KPI filtering card. Overdue mothers require urgent tracking to rule out post-maturity complications and stillbirth.", bullet_style))
+    story.append(Paragraph("• <b>Delivery Overdue (Past EDD):</b> Identified when <code>p.del === 0</code> and the calculated Expected Date of Delivery (EDD) is earlier than the dashboard generation date (or today). <i>Maternal death and abortion cases are strictly excluded from the overdue list.</i> Displayed with a prominent pulsing rose badge (<code>⏳ Delivery Overdue</code>) and dedicated KPI filtering card. Overdue mothers require urgent tracking to rule out post-maturity complications and stillbirth.", bullet_style))
     story.append(Paragraph("• <b>Maternal Death Gestational Age:</b> For maternal death cases (extracted from <code>p.mat</code>), gestational age is calculated precisely using Last Menstrual Period (LMP) and the documented Date of Death (rather than today's date), preserving accurate epidemiological records.", bullet_style))
+    story.append(Paragraph("• <b>Abortion Cases Gestational Age:</b> Since exact dates of abortion are not available, gestational age is frozen at the completed weeks of pregnancy corresponding to the mother's last recorded ANC visit (or registration date), preventing false advancement or overdue flags.", bullet_style))
 
     story.append(Spacer(1, 3))
     story.append(Paragraph("C. Attendance & Doctor Exam Alerts", h2_style))
