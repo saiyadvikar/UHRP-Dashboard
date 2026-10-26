@@ -554,9 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const totalUhrpEl = document.getElementById('total-uhrp');
-        const totalNndPill = document.getElementById('total-nnd-pill');
         if (totalUhrpEl) totalUhrpEl.textContent = counts.all.toLocaleString();
-        if (totalNndPill) totalNndPill.textContent = `${deaths.all} NND`;
     }
 
     // Render Protocol Hindi Banner
@@ -1377,15 +1375,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (iconSpan) iconSpan.textContent = '↕';
             }
         });
-    }
-
-    // Labor Room Admission Hemoglobin (Col BK) Categorization
-    function getLrAnemiaCategory(val) {
-        if (val === null || val === undefined || isNaN(val)) return null;
-        const hb = parseFloat(val);
-        if (hb < 7.0) return 'severe';
-        if (hb < 11.0) return 'moderate';
-        return 'resolved';
     }
 
     // Render Delivery Place Distribution Chart
