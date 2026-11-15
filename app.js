@@ -809,6 +809,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check if Clinical Management has been done for a condition (Canonical Module)
     function isManagementDone(p, condition) {
         if (!condition) condition = currentTab;
+        if (condition === 'all') {
+            const hasClinicalCondition = (p.sa === 1 || p.ma === 1 || p.pi === 1 || p.gd === 1 || p.sc === 1);
+            if (!hasClinicalCondition) return true; // not pending clinical management if no treatable condition
+            if (p.sa === 1 && !isManagementDone(p, 'sa')) return false;
+            if (p.ma === 1 && !isManagementDone(p, 'ma')) return false;
+            if (p.pi === 1 && !isManagementDone(p, 'pi')) return false;
+            if (p.gd === 1 && !isManagementDone(p, 'gd')) return false;
+            if (p.sc === 1 && !isManagementDone(p, 'sc')) return false;
+            return true;
+        }
         if (condition === 'sa' || condition === 'sc') {
             const hasDoses = Array.isArray(p.is_doses) && p.is_doses.length > 0;
             const hasFcm = p.fcm === 'Yes';
@@ -889,14 +899,18 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         ` : '';
 
-        // Mobile View (<= 768px): Render the 4 actionable clinical KPI cards
+        // Mobile View (<= 768px): Render customized actionable clinical sub-KPI cards according to Main KPI filter
         if (window.innerWidth <= 768) {
+            let overdueCount = 0;
+            tabPatients.forEach(p => {
+                if (isEddOverdue(p)) overdueCount++;
+            });
+
             if (currentTab === 'anc') {
+                // 1. ANC Tab: Total Registered, High Risk, Delivery Overdue, Missed 2+ ANC, Not Seen by MO (5 cards)
                 let uhrpCount = 0;
-                let overdueCount = 0;
                 tabPatients.forEach(p => {
                     if (p.uhrp === 1 || p.hrp === 1) uhrpCount++;
-                    if (isEddOverdue(p)) overdueCount++;
                 });
 
                 kpiContainer.style.display = 'block';
@@ -930,34 +944,92 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                 `;
-            } else {
+            } else if (currentTab === 'all') {
+                // 2. Total UHRP Cohort: Total UHRP Cohort, Management Pending, Missed 2+ ANC, Not Seen by MO (4 cards)
                 let pendingMgmtCount = 0;
-                const canMgmt = ['sa', 'ma', 'pi', 'gd'].includes(currentTab);
-
-                if (canMgmt) {
-                    tabPatients.forEach(p => {
-                        if (!isManagementDone(p, currentTab)) {
-                            pendingMgmtCount++;
-                        }
-                    });
-                }
+                tabPatients.forEach(p => {
+                    if (!isManagementDone(p, 'all')) {
+                        pendingMgmtCount++;
+                    }
+                });
 
                 kpiContainer.style.display = 'block';
                 kpiContainer.innerHTML = `
                     ${activeKpiInfo}
                     <div class="kpi-cards-grid">
-                        <div class="kpi-card clickable ${!canMgmt ? 'kpi-card-span-2' : ''} ${kpiFilter === 'all' || kpiFilter === null ? 'active-kpi-filter' : ''}" data-kpi="all" title="View all registered cases in this risk cohort">
+                        <div class="kpi-card clickable ${kpiFilter === 'all' || kpiFilter === null ? 'active-kpi-filter' : ''}" data-kpi="all" title="View all UHRP cohort cases">
+                            <span class="kpi-title">📋 Total UHRP Cohort</span>
+                            <span class="kpi-value">${tabPatients.length.toLocaleString()}</span>
+                            <span class="kpi-subtext">All High Risk Cases</span>
+                        </div>
+                        <div class="kpi-card clickable pending-mgmt-kpi ${kpiFilter === 'pending_mgmt' ? 'active-kpi-filter' : ''}" data-kpi="pending_mgmt" title="Click to filter cases where clinical management is pending">
+                            <span class="kpi-title">⚠️ Management Pending</span>
+                            <span class="kpi-value">${pendingMgmtCount.toLocaleString()}</span>
+                            <span class="kpi-subtext">Rx / Meds Needed</span>
+                        </div>
+                        <div class="kpi-card clickable missed-anc-kpi ${kpiFilter === 'missed_anc' ? 'active-kpi-filter' : ''}" data-kpi="missed_anc" title="Click to filter mothers who missed 2+ consecutive ANC visits">
+                            <span class="kpi-title">⚠️ Missed 2+ ANC</span>
+                            <span class="kpi-value">${missedAncCount.toLocaleString()}</span>
+                            <span class="kpi-subtext">Field Follow-up Needed</span>
+                        </div>
+                        <div class="kpi-card clickable mo-pending-kpi ${kpiFilter === 'mo_pending' ? 'active-kpi-filter' : ''}" data-kpi="mo_pending" title="Click to filter mothers not examined by a Medical Officer yet">
+                            <span class="kpi-title">🩺 Not Seen by MO</span>
+                            <span class="kpi-value">${moPendingCount.toLocaleString()}</span>
+                            <span class="kpi-subtext">Pending Doctor Exam</span>
+                        </div>
+                    </div>
+                `;
+            } else if (['sa', 'ma', 'pi', 'gd'].includes(currentTab)) {
+                // 3. Clinical Management Tabs (sa, ma, pi, gd): Total Registered, Management Pending, Missed 2+ ANC, Not Seen by MO (4 cards)
+                let pendingMgmtCount = 0;
+                tabPatients.forEach(p => {
+                    if (!isManagementDone(p, currentTab)) {
+                        pendingMgmtCount++;
+                    }
+                });
+
+                kpiContainer.style.display = 'block';
+                kpiContainer.innerHTML = `
+                    ${activeKpiInfo}
+                    <div class="kpi-cards-grid">
+                        <div class="kpi-card clickable ${kpiFilter === 'all' || kpiFilter === null ? 'active-kpi-filter' : ''}" data-kpi="all" title="View all registered cases in this risk cohort">
                             <span class="kpi-title">📋 Total Registered</span>
                             <span class="kpi-value">${tabPatients.length.toLocaleString()}</span>
                             <span class="kpi-subtext">All Active Cases</span>
                         </div>
-                        ${canMgmt ? `
                         <div class="kpi-card clickable pending-mgmt-kpi ${kpiFilter === 'pending_mgmt' ? 'active-kpi-filter' : ''}" data-kpi="pending_mgmt" title="Click to filter cases where clinical management is pending (FCM / Iron Sucrose / BP meds / GDM therapy)">
                             <span class="kpi-title">⚠️ Management Pending</span>
                             <span class="kpi-value">${pendingMgmtCount.toLocaleString()}</span>
                             <span class="kpi-subtext">Rx / Meds Needed</span>
                         </div>
-                        ` : ''}
+                        <div class="kpi-card clickable missed-anc-kpi ${kpiFilter === 'missed_anc' ? 'active-kpi-filter' : ''}" data-kpi="missed_anc" title="Click to filter mothers who missed 2+ consecutive ANC visits">
+                            <span class="kpi-title">⚠️ Missed 2+ ANC</span>
+                            <span class="kpi-value">${missedAncCount.toLocaleString()}</span>
+                            <span class="kpi-subtext">Field Follow-up Needed</span>
+                        </div>
+                        <div class="kpi-card clickable mo-pending-kpi ${kpiFilter === 'mo_pending' ? 'active-kpi-filter' : ''}" data-kpi="mo_pending" title="Click to filter mothers not examined by a Medical Officer yet">
+                            <span class="kpi-title">🩺 Not Seen by MO</span>
+                            <span class="kpi-value">${moPendingCount.toLocaleString()}</span>
+                            <span class="kpi-subtext">Pending Doctor Exam</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // 4. Other Risk Tabs (ls, sc, tp, bh): Total Registered, Delivery Overdue, Missed 2+ ANC, Not Seen by MO (4 cards)
+                kpiContainer.style.display = 'block';
+                kpiContainer.innerHTML = `
+                    ${activeKpiInfo}
+                    <div class="kpi-cards-grid">
+                        <div class="kpi-card clickable ${kpiFilter === 'all' || kpiFilter === null ? 'active-kpi-filter' : ''}" data-kpi="all" title="View all registered cases in this risk cohort">
+                            <span class="kpi-title">📋 Total Registered</span>
+                            <span class="kpi-value">${tabPatients.length.toLocaleString()}</span>
+                            <span class="kpi-subtext">All Active Cases</span>
+                        </div>
+                        <div class="kpi-card clickable overdue-kpi ${kpiFilter === 'overdue' ? 'active-kpi-filter' : ''}" data-kpi="overdue" title="Click to filter mothers whose EDD has passed but delivery is not recorded">
+                            <span class="kpi-title">⏳ Delivery Overdue</span>
+                            <span class="kpi-value">${overdueCount.toLocaleString()}</span>
+                            <span class="kpi-subtext">Past EDD • Del Pending</span>
+                        </div>
                         <div class="kpi-card clickable missed-anc-kpi ${kpiFilter === 'missed_anc' ? 'active-kpi-filter' : ''}" data-kpi="missed_anc" title="Click to filter mothers who missed 2+ consecutive ANC visits">
                             <span class="kpi-title">⚠️ Missed 2+ ANC</span>
                             <span class="kpi-value">${missedAncCount.toLocaleString()}</span>
@@ -1358,7 +1430,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.stopPropagation();
                 kpiFilter = null;
                 renderLineList();
-                scrollToLinelistOnMobile();
             });
         }
 
@@ -1389,7 +1460,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
                     renderAnalyticsCharts(tabPatients);
                 }
-                scrollToLinelistOnMobile();
             });
         });
     }

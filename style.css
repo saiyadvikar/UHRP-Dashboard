@@ -1616,14 +1616,74 @@ body {
 
 
 @media (max-width: 768px) {
-    /* Mobile Streamlining: Hide Main KPI Cards, 12 ANC Visit Cards, Charts, and DPMU Section */
+    /* Mobile Streamlining: Hide Main Top Risk Cards, 12 ANC Visit Cards, Charts, and DPMU Section */
     .risk-tabs-section,
-    .kpi-summary-container,
-    .kpi-cards-grid,
-    .linelist-clinical-kpis-grid,
     .anc-visit-kpi-container,
     .anc-visit-kpi-grid {
         display: none !important;
+    }
+
+    /* Mobile Sub-KPI Clinical Summary Cards — Equal 2-Column Grid */
+    .kpi-summary-container {
+        display: block !important;
+        width: 100% !important;
+        padding: 0.45rem 0.6rem !important;
+        background: #f8fafc !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        box-sizing: border-box !important;
+        margin: 0.25rem 0 0.4rem 0 !important;
+    }
+
+    .kpi-cards-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.45rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .kpi-card {
+        padding: 0.55rem 0.65rem !important;
+        border-radius: 12px !important;
+        box-sizing: border-box !important;
+        min-height: 66px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+    }
+
+    .kpi-title {
+        font-size: 0.68rem !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .kpi-value {
+        font-size: 1.15rem !important;
+        line-height: 1.2 !important;
+        margin: 0.15rem 0 !important;
+    }
+
+    .kpi-subtext {
+        font-size: 0.62rem !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .active-filter-indicator {
+        font-size: 0.72rem !important;
+        padding: 0.35rem 0.6rem !important;
+        margin-bottom: 0.45rem !important;
+        border-radius: 6px !important;
+    }
+
+    .clear-kpi-filter-tag {
+        font-size: 0.68rem !important;
+        padding: 0.2rem 0.45rem !important;
     }
 
     #view-analytics,
@@ -3958,9 +4018,6 @@ tr.expandable-row.expanded-row-active {
 
 @media (max-width: 768px) {
     .risk-tabs-section,
-    .kpi-summary-container,
-    .kpi-cards-grid,
-    .linelist-clinical-kpis-grid,
     .anc-visit-kpi-container,
     .anc-visit-kpi-grid {
         display: none !important;
