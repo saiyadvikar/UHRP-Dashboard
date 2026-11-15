@@ -38,6 +38,33 @@ def format_to_dd_mmyyyy(val):
         return f"{int(d):02d}-{int(m):02d}-{y}"
     return s
 
+def parse_date_to_datetime(val):
+    """Parse string or date representation into a datetime object."""
+    if val is None or pd.isna(val):
+        return None
+    if isinstance(val, datetime.datetime):
+        return val
+    if isinstance(val, datetime.date):
+        return datetime.datetime(val.year, val.month, val.day)
+    s = str(val).strip()
+    if s in ('', 'nan', 'None', 'NaT', '-'):
+        return None
+    m_ddmmyyyy = re.match(r'^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$', s)
+    if m_ddmmyyyy:
+        d, m, y = m_ddmmyyyy.groups()
+        try:
+            return datetime.datetime(int(y), int(m), int(d))
+        except:
+            return None
+    m_yyyymmdd = re.match(r'^(\d{4})[-/](\d{1,2})[-/](\d{1,2})', s)
+    if m_yyyymmdd:
+        y, m, d = m_yyyymmdd.groups()
+        try:
+            return datetime.datetime(int(y), int(m), int(d))
+        except:
+            return None
+    return None
+
 def get_fiscal_year(date_val):
     """Determine fiscal year string (e.g. '2025-26', '2026-27') from any date string or object."""
     if not date_val or date_val is None or str(date_val).strip() in ('', 'nan', 'None', 'NaT', '-'):
@@ -70,7 +97,33 @@ def is_mo_str(s):
     """Detect if designation string corresponds to a Medical Officer / Doctor."""
     if not s or s is None: return False
     sl = str(s).lower().strip()
-    return any(k in sl for k in ['medical officer', 'gynecologist', 'doctor', 'mo (', 'lmo', 'pgmo'])
+    return any(k in sl for k in ['medical officer', 'gynecologist', 'doctor', 'mo (', 'lmo', 'pgmo', 'specialist', 'mbbs'])
+
+def clean_mo_str(s):
+    """Normalize designation to compact abbreviation to optimize JSON payload size."""
+    if not s or s is None: return None
+    sl = str(s).strip().lower()
+    if sl in ('', 'nan', 'none', 'select', '-'): return None
+    if any(k in sl for k in ['medical officer', 'gynecologist', 'doctor', 'mo (', 'lmo', 'pgmo', 'specialist', 'mbbs']):
+        return 'MO'
+    if 'community' in sl or 'cho' in sl:
+        return 'CHO'
+    if 'nurse' in sl or 'anm' in sl:
+        return 'ANM'
+    if 'unknown' in sl:
+        return 'Unk'
+    return str(s).strip()[:15]
+
+def trim_trailing_none(lst):
+    """Trim trailing None values from fixed-length visit arrays to cut JSON payload by 20MB+."""
+    if not lst: return []
+    last_idx = -1
+    for i in range(len(lst) - 1, -1, -1):
+        if lst[i] is not None:
+            last_idx = i
+            break
+    if last_idx == -1: return []
+    return lst[:last_idx + 1]
 
 def read_file_metadata(file_path, from_row=3, to_row=4):
     """Read From Date / To Date metadata from an Excel report."""
@@ -353,94 +406,66 @@ def get_hr_contacts(b_str, sub_str, vil_str, anm_map, cho_map, village_to_loc_ma
 
     return anm_name, anm_phone, cho_name, cho_phone
 
-def load_delivery_linelist(del_dir):
-    """Load Delivery Line List report to extract delivery details, admission Hb and BP."""
-    if not os.path.exists(del_dir):
-        return {}
-    del_files = [f for f in os.listdir(del_dir) if f.endswith('.xlsx') and not f.startswith('~$')]
+def load_delivery_linelist(del_dir=None):
+    """Load Delivery Line List report from workspace (including FY subdirectories)."""
+    del_files = glob.glob(os.path.join(WORKSPACE, "*", "Delivery_Line_List_Report*.xlsx"))
+    if not del_files and del_dir and os.path.exists(del_dir):
+        del_files = glob.glob(os.path.join(del_dir, "*.xlsx"))
+    del_files = sorted([f for f in del_files if not os.path.basename(f).startswith("~$")])
     if not del_files:
+        print("  ⚠️ No Delivery Line List files found.")
         return {}
-    del_path = os.path.join(del_dir, del_files[0])
-    try:
-        print(f"  → Loading Delivery Line List: {os.path.basename(del_path)}")
-        wb = openpyxl.load_workbook(del_path, read_only=True, data_only=True)
-        sheet = wb[wb.sheetnames[0]]
-        rows_iter = sheet.iter_rows(values_only=True)
-        # Headers at row 9 (skip 8 rows)
-        for _ in range(8):
-            next(rows_iter)
-        headers = [c for c in next(rows_iter)]
 
-        mpid_idx = headers.index('MPID') if 'MPID' in headers else 5
-        del_at_idx = headers.index('Delivery At') if 'Delivery At' in headers else 13
-        fac_type_idx = headers.index('Facility Type(Govt/Pvt)') if 'Facility Type(Govt/Pvt)' in headers else 16
-        fac_name_idx = headers.index('Facility Name') if 'Facility Name' in headers else 17
-        bp_adm_idx = headers.index('BP At Admission') if 'BP At Admission' in headers else 20
-        hb_adm_idx = headers.index('HB on LR admission') if 'HB on LR admission' in headers else 27
-        del_date_idx = headers.index('Date of Delivery') if 'Date of Delivery' in headers else 34
-        mat_death_indices = [i for i, h in enumerate(headers) if h and 'maternal death' in str(h).lower()]
-        mat_death_idx = mat_death_indices[0] if mat_death_indices else 57
+    delivery_map = {}
+    for del_path in del_files:
+        try:
+            print(f"  → Loading Delivery Line List: {os.path.basename(del_path)}")
+            wb = openpyxl.load_workbook(del_path, read_only=True, data_only=True)
+            sheet = wb[wb.sheetnames[0]]
+            rows_iter = sheet.iter_rows(values_only=True)
+            for _ in range(8):
+                next(rows_iter)
+            headers = [str(c or '').strip() for c in next(rows_iter)]
 
-        b_idx = headers.index('Health Block') if 'Health Block' in headers else 2
-        sub_idx = headers.index('Health Sub Centre Name') if 'Health Sub Centre Name' in headers else 3
-        vil_idx = headers.index('Village') if 'Village' in headers else 4
-        pw_idx = headers.index('PW Name') if 'PW Name' in headers else 6
-        husb_idx = headers.index('Husband Name') if 'Husband Name' in headers else 7
-        mob_idx = headers.index('Mobile No') if 'Mobile No' in headers else 8
-        age_idx = headers.index('Age') if 'Age' in headers else 9
-        lmp_idx = headers.index('LMP date') if 'LMP date' in headers else 10
-        edd_idx = headers.index('EDD Date') if 'EDD Date' in headers else 12
+            mpid_idx = headers.index('MPID') if 'MPID' in headers else 6
+            del_at_idx = headers.index('Delivery At') if 'Delivery At' in headers else 15
+            fac_type_idx = headers.index('Facility Type(Govt/Pvt)') if 'Facility Type(Govt/Pvt)' in headers else 18
+            fac_name_idx = headers.index('Facility Name') if 'Facility Name' in headers else 19
+            bp_adm_idx = headers.index('BP At Admission') if 'BP At Admission' in headers else 20
+            hb_adm_idx = headers.index('HB on LR admission') if 'HB on LR admission' in headers else 28
+            del_date_idx = headers.index('Date of Delivery') if 'Date of Delivery' in headers else 35
+            mat_death_indices = [i for i, h in enumerate(headers) if 'maternal death' in h.lower()]
+            mat_death_idx = mat_death_indices[0] if mat_death_indices else 58
 
-        delivery_map = {}
-        count = 0
-        for r in rows_iter:
-            if mpid_idx < len(r) and r[mpid_idx] is not None:
-                mpid = str(r[mpid_idx]).strip().split('.')[0]
-                if mpid and mpid not in ('None', 'nan', ''):
-                    del_at = str(r[del_at_idx] or '').strip() if del_at_idx < len(r) else ''
-                    fac_type = str(r[fac_type_idx] or '').strip() if fac_type_idx < len(r) else ''
-                    fac_name = str(r[fac_name_idx] or '').strip() if fac_name_idx < len(r) else ''
-                    bp_adm = str(r[bp_adm_idx] or '').strip() if bp_adm_idx < len(r) else ''
-                    raw_hb = r[hb_adm_idx] if hb_adm_idx < len(r) else None
-                    raw_del_date = r[del_date_idx] if del_date_idx < len(r) else None
-                    raw_mat_death = str(r[mat_death_idx] or '').strip().lower() if mat_death_idx < len(r) else ''
+            b_idx = headers.index('Health Block') if 'Health Block' in headers else 2
+            sub_idx = headers.index('Health Sub Centre Name') if 'Health Sub Centre Name' in headers else 4
+            vil_idx = headers.index('Village') if 'Village' in headers else 5
 
-                    hb_val = None
-                    if raw_hb is not None and str(raw_hb).strip() not in ('', '-', 'None', 'nan'):
-                        try:
-                            flt = float(raw_hb)
-                            if not np.isnan(flt) and flt > 0:
-                                hb_val = round(flt, 1)
-                        except:
-                            pass
+            for r in rows_iter:
+                if mpid_idx < len(r) and r[mpid_idx] is not None:
+                    mpid = clean_str(r[mpid_idx]).split('.')[0]
+                    if mpid and mpid not in ('None', 'nan', ''):
+                        del_at = str(r[del_at_idx] or '').strip() if del_at_idx < len(r) else ''
+                        fac_type = str(r[fac_type_idx] or '').strip() if fac_type_idx < len(r) else ''
+                        fac_name = str(r[fac_name_idx] or '').strip() if fac_name_idx < len(r) else ''
+                        del_date = str(r[del_date_idx] or '').strip() if del_date_idx < len(r) else ''
+                        mat_death = str(r[mat_death_idx] or '').strip().lower() if mat_death_idx < len(r) else ''
+                        cat = categorize_delivery_facility(fac_name, fac_type, del_at)
 
-                    del_date_str = format_to_dd_mmyyyy(raw_del_date)
-
-                    delivery_map[mpid] = {
-                        'del_at': del_at,
-                        'fac_type': fac_type,
-                        'fac_name': fac_name,
-                        'del_date': del_date_str,
-                        'hb_lr': hb_val,
-                        'bp_adm': bp_adm if bp_adm not in ('', '-', 'None', 'nan') else '',
-                        'mat_death': (raw_mat_death == 'yes'),
-                        'b': str(r[b_idx] or '').strip().title() if b_idx < len(r) else '',
-                        'sub': str(r[sub_idx] or '').strip().title() if sub_idx < len(r) else '',
-                        'v': str(r[vil_idx] or '').strip().title() if vil_idx < len(r) else '',
-                        'n': str(r[pw_idx] or '').strip().title() if pw_idx < len(r) else '',
-                        'h': str(r[husb_idx] or '').strip().title() if husb_idx < len(r) else '',
-                        'p': clean_mobile(r[mob_idx]) if mob_idx < len(r) else '',
-                        'a': str(r[age_idx] or '').strip().split('.')[0] if age_idx < len(r) else '-',
-                        'lmp': format_to_dd_mmyyyy(r[lmp_idx] if lmp_idx < len(r) else None),
-                        'edd': format_to_dd_mmyyyy(r[edd_idx] if edd_idx < len(r) else None)
-                    }
-                    count += 1
-        wb.close()
-        print(f"  Loaded {count} delivery records from Delivery Line List.")
-        return delivery_map
-    except Exception as e:
-        print(f"  Warning loading delivery line list: {e}")
-        return {}
+                        delivery_map[mpid] = {
+                            'del_at': del_at,
+                            'fac_type': fac_type,
+                            'fac_name': fac_name,
+                            'del_date': del_date,
+                            'del_cat': cat,
+                            'mat_death': mat_death in ('yes', 'true', '1'),
+                            'b': str(r[b_idx] or '').strip() if b_idx < len(r) else '',
+                            'sub': str(r[sub_idx] or '').strip() if sub_idx < len(r) else '',
+                            'v': str(r[vil_idx] or '').strip() if vil_idx < len(r) else ''
+                        }
+        except Exception as e:
+            print(f"  ❌ Error loading {os.path.basename(del_path)}: {e}")
+    return delivery_map
 
 def categorize_delivery_facility(fac_name, fac_type, place_val):
     """Categorize delivery facility into standard dashboard categories."""
@@ -771,13 +796,34 @@ def main():
                     mo_list = []
                     for idx in mo_indices:
                         val = row[idx] if idx < len(row) else None
-                        if val is not None and str(val).strip() not in ('', 'nan', 'None', 'Select'):
-                            mo_list.append(str(val).strip())
-                        else:
-                            mo_list.append(None)
+                        mo_list.append(clean_mo_str(val))
 
                     mo_done = 1 if any(is_mo_str(x) for x in mo_list) else 0
                     anm_n_anc, anm_p_anc, cho_n_anc, cho_p_anc = get_hr_contacts(b_str, sub_str, str(row[vil_idx] or '').strip() if vil_idx < len(row) else '', anm_map, cho_map, village_to_loc_map)
+
+                    # 4 ANC Checkup by Gestational Age (GA) from LMP:
+                    # 1st ANC Checkup (0–12 Wks)
+                    # 2nd ANC Checkup (13–26 Wks) 
+                    # 3rd ANC Checkup (27–34 Wks)
+                    # 4th ANC Checkup (35–Delivery)
+                    c1_done, c2_done, c3_done, c4_done = 0, 0, 0, 0
+                    dt_lmp = parse_date_to_datetime(raw_lmp_date)
+                    if dt_lmp:
+                        for raw_vd in date_list:
+                            dt_vd = parse_date_to_datetime(raw_vd)
+                            if dt_vd:
+                                diff_days = (dt_vd - dt_lmp).days
+                                if diff_days >= 0:
+                                    ga_weeks = diff_days / 7.0
+                                    if ga_weeks <= 12.0:
+                                        c1_done = 1
+                                    elif 12.0 < ga_weeks <= 26.0:
+                                        c2_done = 1
+                                    elif 26.0 < ga_weeks <= 34.0:
+                                        c3_done = 1
+                                    elif ga_weeks > 34.0:
+                                        c4_done = 1
+                    all4_done = 1 if (c1_done and c2_done and c3_done and c4_done) else 0
 
                     anc_records.append({
                         'id': mpid,
@@ -799,12 +845,17 @@ def main():
                         'phc': phc_str,
                         'y': fy_row,
                         'mat': anc_mat_val,
-                        'v_dates': date_list,
-                        'hb_v': hb_list,
-                        'bp_v': bp_list,
-                        'alb_v': alb_list,
-                        'mo_v': mo_list,
+                        'v_dates': trim_trailing_none(date_list),
+                        'hb_v': trim_trailing_none(hb_list),
+                        'bp_v': trim_trailing_none(bp_list),
+                        'alb_v': trim_trailing_none(alb_list),
+                        'mo_v': trim_trailing_none(mo_list),
                         'mo_done': mo_done,
+                        'c1': c1_done,
+                        'c2': c2_done,
+                        'c3': c3_done,
+                        'c4': c4_done,
+                        'all4': all4_done,
                         'anm_n': anm_n_anc,
                         'anm_p': anm_p_anc,
                         'cho_n': cho_n_anc,
@@ -1072,11 +1123,11 @@ def main():
             'mat_dir': mat_death_dir,
             'mat_indir': mat_death_indir,
             'nnd': 'No',
-            'hb_v': hb_v,
-            'bp_v': bp_v,
-            'v_dates': v_dates,
-            'alb_v': alb_v,
-            'mo_v': mo_v,
+            'hb_v': trim_trailing_none(hb_v),
+            'bp_v': trim_trailing_none(bp_v),
+            'v_dates': trim_trailing_none(v_dates),
+            'alb_v': trim_trailing_none(alb_v),
+            'mo_v': trim_trailing_none([clean_mo_str(x) for x in mo_v]),
             'mo_done': mo_done,
             'pe': is_preeclampsia,
             'lr_hb': lr_hb_val,

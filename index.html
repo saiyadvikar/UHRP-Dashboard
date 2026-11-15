@@ -24,8 +24,10 @@
                 Developer: <strong style="color:#7928ca;">Dr Vikar Saiyad (Sankalp)</strong>
             </div>
         </div>
+    </header>
 
-        <!-- Sticky Filter Controls Bar -->
+    <main class="dashboard-container">
+        <!-- Filters Bar (Positioned Prominently Above Main KPI Cards) -->
         <div class="filter-bar">
             <!-- Main Category Filter (Mobile) -->
             <div class="filter-chip risk-factor-chip">
@@ -82,8 +84,8 @@
                 <div class="filter-chip">
                     <label for="delivery-filter">👶 Delivery:</label>
                     <select id="delivery-filter">
-                        <option value="All" selected>All Statuses</option>
-                        <option value="0">Pregnant</option>
+                        <option value="All">All Statuses</option>
+                        <option value="0" selected>Pregnant</option>
                         <option value="1">Delivered</option>
                         <option value="abortion">Abortion</option>
                         <option value="death">Deaths (Maternal Death)</option>
@@ -92,10 +94,8 @@
                 <button id="btn-clear-filters" class="btn-clear-chip" title="Clear all active filters">🧹 Clear Filters</button>
             </div>
         </div>
-    </header>
 
-    <main class="dashboard-container">
-        <!-- Top Risk Factor Navigation Cards Grid (NMR removed) -->
+        <!-- Top Risk Factor Navigation Cards Grid (Main KPI Cards) -->
         <section class="risk-tabs-section">
             <div class="risk-tabs-grid">
                 <div class="risk-tab-card active clickable" id="total-anc-card" data-tab="anc" title="Click to view Total ANC Registrations Line List">
@@ -194,7 +194,6 @@
                         <span class="risk-title">All UHRP Cohort</span>
                         <div class="risk-meta">
                             <span class="risk-count" id="total-uhrp">0</span>
-                            <span class="uhrp-pct-badge" id="total-anc-uhrp-pct">0% UHRP</span>
                         </div>
                     </div>
                 </div>
@@ -206,6 +205,7 @@
             <button class="main-view-btn active" data-view="linelist">📋 Patient Line Lists</button>
             <button class="main-view-btn" data-view="analytics">📊 Charts</button>
             <button class="main-view-btn" data-view="protocols">📜 Protocols & Counselling</button>
+            <button class="main-view-btn" data-view="dpmu">📈 DPMU</button>
         </div>
 
         <!-- Main View Mode 1: Patient Line Lists Section (Protocols moved to dedicated section 3) -->
@@ -307,60 +307,30 @@
 
         <!-- Main View Mode 2: Charts Section -->
         <div id="view-analytics" class="main-view-section" style="display: none;">
-            <section class="analytics-section card">
-                <div class="analytics-header">
-                    <div class="analytics-title-group">
-                        <h2>📊 Charts</h2>
-                        <span class="analytics-subtitle" id="analytics-subtitle">Showing Charts for Severe Anemia</span>
-                    </div>
-                </div>
-
-                <div class="analytics-grid">
-                    <div class="chart-card-modern">
+            <section class="analytics-section">
+                <div class="charts-stacked-container">
+                    <!-- 1. Monthly Identification Trend Chart (Full Width Stacked) -->
+                    <div class="chart-card-modern chart-card-fullwidth">
                         <div class="chart-header">
-                            <h3>💊 Risk Factor-wise Clinical Management Status</h3>
-                            <span class="chart-badge">On Regimen (Yes) vs Pending (No)</span>
+                            <div>
+                                <h3 id="chart-monthly-trend-title">📈 Monthly Identification Trend (YoY Comparison)</h3>
+                                <span class="chart-badge" id="chart-monthly-trend-badge">% of Monthly ANC Registrations (2026-27 vs 2025-26)</span>
+                            </div>
+                            <button type="button" class="btn-download-svg" data-target="chart-monthly-trend" data-filename="Monthly_Identification_Trend" title="Download chart as SVG">📥 SVG</button>
                         </div>
-                        <div id="chart-mgmt-risk" class="chart-container"></div>
+                        <div id="chart-monthly-trend" class="chart-container" style="min-height: 330px;"></div>
                     </div>
 
-                    <div class="chart-card-modern">
+                    <!-- 2. Delivery Place Distribution Donut Chart (Full Width Stacked) -->
+                    <div class="chart-card-modern chart-card-fullwidth">
                         <div class="chart-header">
-                            <h3>💊 Block-wise Clinical Management Status</h3>
-                            <span class="chart-badge">Management Coverage by Block</span>
+                            <div>
+                                <h3>🏥 Delivery Place Distribution</h3>
+                                <span class="chart-badge" id="chart-delivery-badge">Institutional vs Home Deliveries</span>
+                            </div>
+                            <button type="button" class="btn-download-svg" data-target="chart-delivery" data-filename="Delivery_Place_Distribution" title="Download chart as SVG">📥 SVG</button>
                         </div>
-                        <div id="chart-mgmt-block" class="chart-container"></div>
-                    </div>
-
-                    <div class="chart-card-modern">
-                        <div class="chart-header">
-                            <h3>🩺 Block-wise Medical Officer Checkup Status</h3>
-                            <span class="chart-badge">MO Exam Done vs Pending</span>
-                        </div>
-                        <div id="chart-mo-block" class="chart-container"></div>
-                    </div>
-
-                    <div class="chart-card-modern">
-                        <div class="chart-header">
-                            <h3>🩺 Risk Factor-wise Medical Officer Checkup Status</h3>
-                            <span class="chart-badge">Risk Factor Breakdown</span>
-                        </div>
-                        <div id="chart-mo-risk" class="chart-container"></div>
-                    </div>
-                    <div class="chart-card-modern">
-                        <div class="chart-header">
-                            <h3>🏥 Block-wise Case Distribution</h3>
-                            <span class="chart-badge">Geographic Breakdown</span>
-                        </div>
-                        <div id="chart-block" class="chart-container"></div>
-                    </div>
-
-                    <div class="chart-card-modern">
-                        <div class="chart-header">
-                            <h3>🏥 Delivery Place Distribution</h3>
-                            <span class="chart-badge" id="chart-delivery-badge">Facility vs Home</span>
-                        </div>
-                        <div id="chart-delivery" class="chart-container"></div>
+                        <div id="chart-delivery" class="chart-container" style="min-height: 300px;"></div>
                     </div>
                 </div>
             </section>
@@ -368,15 +338,57 @@
 
         <!-- Main View Mode 3: Protocols & Counselling Section (Moved from main screen) -->
         <div id="view-protocols" class="main-view-section" style="display: none;">
-            <section class="protocols-section card">
-                <div class="protocols-header-bar">
-                    <div class="protocols-title-group">
-                        <h2>📜 National Health Mission (NHM) Clinical Protocols & Counselling Guidelines</h2>
-                        <span class="protocols-subtitle">District West Nimar (Khargone) High Risk Pregnancy Protocols & Frontline Worker Hindi Counselling Points</span>
-                    </div>
-                </div>
-
+            <section class="protocols-section">
                 <div class="protocols-grid">
+                    <!-- Comprehensive Good ANC Care Protocol (All Registered Pregnancies - As per NHM / MoHFW / AMB Guidelines) -->
+                    <div class="protocol-card anc-border">
+                        <div class="protocol-card-header anc-header">
+                            <span class="p-icon">📋</span>
+                            <div class="p-header-info">
+                                <h3>संपूर्ण प्रसव पूर्व देखभाल (Comprehensive Good ANC Care) — राष्ट्रीय स्वास्थ्य मिशन (NHM) दिशानिर्देश</h3>
+                                <span class="protocol-tier-pill anc-tier">Universal NHM Quality ANC Tier</span>
+                            </div>
+                        </div>
+                        <div class="protocol-card-body">
+                            <div class="protocol-block-heading">1. आवश्यक औषधियां एवं सप्लीमेंट्स (Mandatory Prophylaxis as per NHM / AMB):</div>
+                            <ul class="protocol-list">
+                                <li><strong>IFA प्रोफिलैक्सिस (एनीमिया मुक्त भारत - AMB):</strong> 14 सप्ताह (द्वितीय तिमाही) से प्रसव तक 180 दिन प्रतिदिन 1 लाल गोली (60mg एलीमेंटल आयरन + 500mcg फोलिक एसिड) एवं प्रसव पश्चात धात्री अवस्था में 180 दिन जारी रखें। प्रथम 12 सप्ताह में न्यूरल ट्यूब डिफेक्ट (NTD) बचाव हेतु फोलिक एसिड 400mcg/5mg दें।</li>
+                                <li><strong>एनीमिया चिकित्सीय खुराक (Therapeutic IFA):</strong> हीमोग्लोबिन 7.0–10.9 g/dL (Mild/Moderate) होने पर प्रतिदिन 2 IFA लाल गोलियां (सुबह-शाम) अथवा द्वितीय/तृतीय तिमाही में PHC/CHC/DH पर IV Iron Sucrose / FCM दें।</li>
+                                <li><strong>कैल्शियम एवं विटामिन D3 (MoHFW गाइडलाइन):</strong> 14 सप्ताह पूर्ण होने के बाद प्रतिदिन 2 गोलियां (500mg सुबह, 500mg शाम, कुल 1000mg/दिन) प्रसव उपरांत 6 माह तक दें। <em>अति-महत्वपूर्ण:</em> आयरन (IFA) और कैल्शियम कभी एक साथ न खाएं; कम से कम 2 घंटे का अंतराल रखें।</li>
+                                <li><strong>एल्बेंडाजोल (कृमि मुक्ति - National Deworming):</strong> 14 सप्ताह बाद (द्वितीय तिमाही) में 400mg की 1 खुराक भोजन के बाद रात में मौखिक दें।</li>
+                                <li><strong>टीडी टीकाकरण (Td Immunization as per National Schedule):</strong> Td-1 पंजीकरण पर शीघ्र, Td-2 चार सप्ताह बाद (यदि पिछले 3 वर्षों में 2 खुराक मिल चुकी हैं, तो केवल 1 Td बूस्टर खुराक दें)।</li>
+                            </ul>
+
+                            <div class="protocol-block-heading" style="margin-top:0.75rem;">2. अनिवार्य नैदानिक जांचें (Mandatory Investigations as per NHM / PMSMA Package):</div>
+                            <ul class="protocol-list">
+                                <li><strong>प्रयोगशाला जांचें (Essential Lab Tests):</strong> प्रत्येक विजिट पर डिजिटल हीमोग्लोबिनोमीटर से Hb जांच; प्रत्येक विजिट पर डिपस्टिक से मूत्र एल्बुमिन एवं शुगर जांच (प्री-एक्लेमप्सिया एवं ग्लाइकोसुरिया स्क्रीनिंग); प्रथम विजिट पर ब्लड ग्रुप एवं Rh टाइपिंग (Rh-negative होने पर 28 सप्ताह में ICT जांच एवं प्रसव उपरांत 72 घंटे में Anti-D); HIV एवं सिफलिस (VDRL/RPR) दोहरी जांच तथा हेपेटाइटिस-बी (HBsAg) जांच।</li>
+                                <li><strong>गर्भावधि मधुमेह (GDM स्क्रीनिंग):</strong> सिंगल-स्टेप 75 ग्राम ग्लूकोज टेस्ट (OGTT, non-fasting; कट-ऑफ ≥ 140 mg/dL) प्रथम विजिट पर एवं 24–28 सप्ताह पर अनिवार्य रूप से कराएं।</li>
+                                <li><strong>सिकल सेल स्क्रीनिंग (खरगोन जिला प्राथमिकता):</strong> राष्ट्रीय सिकल सेल एनीमिया उन्मूलन मिशन अंतर्गत सॉल्युबिलिटी टेस्ट एवं HPLC हीमोग्लोबिन इलेक्ट्रोफोरेसिस जांच।</li>
+                                <li><strong>शारीरिक व क्लिनिकल स्क्रीनिंग:</strong> प्रत्येक जांच पर कैलिब्रेटेड उपकरण से रक्तचाप (BP) माप (≥ 140/90 mmHg होने पर तुरंत प्रबंधन); वजन माप (सामान्य बीएमआई पर कुल अपेक्षित वजन वृद्धि: 10–12 किग्रा); पेलोर व पैरों में सूजन (Pedal Edema) जांच; 24 सप्ताह से सिम्फिसिस-फंडल हाइट (SFH) एवं डॉप्लर/स्टेथॉस्कोप से शिशु की धड़कन (FHS: 120–160/मिनट)।</li>
+                                <li><strong>सोनोग्राफी (USG):</strong> प्रथम तिमाही (11–14 सप्ताह) में डेटिंग स्कैन तथा द्वितीय तिमाही (18–20 सप्ताह) में विसंगति स्कैन (TIFFA Anomaly Scan)।</li>
+                                <li><strong>PMSMA विशेषज्ञ जांच:</strong> प्रत्येक माह की 9 तारीख को प्रधानमंत्री सुरक्षित मातृत्व अभियान में एमबीबीएस डॉक्टर / स्त्री रोग विशेषज्ञ द्वारा जांच।</li>
+                            </ul>
+
+                            <div class="protocol-block-heading counselling-accent" style="margin-top:0.75rem;">3. संतुलित पोषण एवं आहार परामर्श (Nutrition as per ICMR-NIN & Poshan Abhiyaan):</div>
+                            <ul class="counselling-list">
+                                <li><strong>अतिरिक्त ऊर्जा व प्रोटीन:</strong> द्वितीय एवं तृतीय तिमाही में सामान्य से अतिरिक्त 350 kcal ऊर्जा व 15–20g प्रोटीन हेतु दालें, अंडे, दूध, पनीर, सोयाबीन, अंकुरित अनाज व स्थानीय मोटे अनाज (कोदो, कुटकी, ज्वार, बाजरा) दैनिक आहार में लें।</li>
+                                <li><strong>आहार विविधता (Dietary Diversity):</strong> प्रतिदिन 10 में से न्यूनतम 5 खाद्य समूहों का सेवन सुनिश्चित करें।</li>
+                                <li><strong>आयरन व विटामिन-सी युक्त आहार:</strong> सहजन (मोरिंगा/मुनगा पत्ते व फली), पालक, मेथी, चने का साग, गुड़, चना, भुनी मूंगफली, तिल तथा आयरन अवशोषण बढ़ाने हेतु साथ में विटामिन-सी (नींबू, आंवला, अमरूद, संतरा) लें।</li>
+                                <li><strong>पर्याप्त जलयोजन:</strong> प्रतिदिन 8–10 गिलास (2.5 से 3 लीटर) स्वच्छ व सुरक्षित पेयजल अवश्य पिएं।</li>
+                                <li><strong>खान-पान में परहेज:</strong> चाय/कॉफी भोजन के तुरंत पहले या बाद में कभी न पिएं (टैनिन आयरन अवशोषण रोकता है); अत्यधिक नमक (5g/दिन से कम), तंबाकू, बीड़ी, गुटखा व शराब का पूर्णतः निषेध करें।</li>
+                            </ul>
+
+                            <div class="protocol-block-heading counselling-accent" style="margin-top:0.75rem;">4. प्रसव पूर्व तैयारी, सुमन (SUMAN) हितलाभ एवं खतरे के संकेत (BPCR & Danger Signs):</div>
+                            <ul class="counselling-list">
+                                <li><strong>ANC जांच का संशोधित मानक:</strong> न्यूनतम 4 अनिवार्य जांचें (NHM आदर्श मानक: 8 संपर्क / 12 मासिक मॉनिटरिंग): 1st (&lt;12 सप्ताह), 2nd (14-26 सप्ताह), 3rd (28 सप्ताह), 4th (32 सप्ताह), 5th (36 सप्ताह से प्रसव तक)।</li>
+                                <li><strong>बर्थ प्लानिंग (BPCR):</strong> प्रसव हेतु 24x7 क्रियाशील शासकीय स्वास्थ्य केंद्र (FRU/DH) का पूर्व चयन, 108/102 एम्बुलेंस का संपर्क नंबर, 2 आपातकालीन रक्तदाताओं का पूर्व चयन, आपातकालीन बचत कोष, एवं एमसीपी (MCP) कार्ड पूर्ण भरना।</li>
+                                <li><strong>सुमन (SUMAN) एवं जेएसवाई (JSY) हितलाभ:</strong> 100% नि:शुल्क संस्थागत प्रसव, नि:शुल्क दवाइयां, जांचें, रक्त आधान एवं भोजन; सुरक्षित मातृत्व आश्वासन (SUMAN) अंतर्गत शून्य जेब खर्च (Zero Out-of-Pocket Expense) एवं जननी सुरक्षा योजना (JSY) अंतर्गत ₹1,400 (ग्रामीण) वित्तीय सहायता।</li>
+                                <li><strong>विश्राम एवं सोने की मुद्रा:</strong> दिन में न्यूनतम 2 घंटे का विश्राम और रात में 8 घंटे की नींद। गर्भस्थ शिशु को गर्भाशय व प्लेसेंटा के माध्यम से सर्वोत्तम रक्त प्रवाह हेतु अनिवार्य रूप से <strong>बाईं करवट (Left Lateral Position)</strong> सोएं।</li>
+                                <li><strong>⚠️ खतरे के संकेत (Red Flag Symptoms - बिना किसी देरी के तत्काल 108 बुलाकर FRU/DH जाएं):</strong> योनि से रक्तस्राव/धब्बे दिखना, तेज सिरदर्द या आंखों में धुंधलापन दिखना, चेहरे या हाथों पर अचानक सूजन, तेज बुखार/बदबूदार स्राव, पानी की थैली छूटना (PPROM), गर्भस्थ शिशु की हलचल में अचानक कमी आना या बंद होना, समय पूर्व असहनीय पेट दर्द या प्रसव पीड़ा।</li>
+                            </ul>
+                        </div>
+                    </div>
+
                     <!-- Severe Anemia Protocol -->
                     <div class="protocol-card sa-border">
                         <div class="protocol-card-header sa-header">
@@ -387,13 +399,13 @@
                             </div>
                         </div>
                         <div class="protocol-card-body">
-                            <div class="protocol-block-heading">🏥 क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
+                            <div class="protocol-block-heading">क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
                             <ul class="protocol-list">
                                 <li>प्रथम/द्वितीय तिमाही में तत्काल एफआरयू / जिला अस्पताल रेफर करें एवं आईवी आयरन (Inj. Iron Sucrose 100mg / Inj. FCM 500-1000mg) सुनिश्चित करें।</li>
                                 <li>Hb &lt; 5.0 g/dL अथवा प्रसव पीड़ा/तृतीय तिमाही में होने पर तत्काल ब्लड बैंक सुविधा वाले केंद्र पर रक्त आधान (Blood Transfusion) हेतु व्यवस्था करें।</li>
                                 <li>स्वास्थ्य सुधार उपरांत दैनिक 2 आईएफए (IFA) गोलियां (100mg एलीमेंटल आयरन + 500mcg फोलिक एसिड) का नियमित सेवन अनिवार्य रूप से कराएं।</li>
                             </ul>
-                            <div class="protocol-block-heading counselling-accent">🗣️ गृह भेंट परामर्श बिंदु</div>
+                            <div class="protocol-block-heading counselling-accent">गृह भेंट परामर्श बिंदु (Home Visit Counselling Points):</div>
                             <ul class="counselling-list">
                                 <li>हरी पत्तेदार सब्जियां, सहजन (मोरिंगा), पालक, गुड़, चना, भुनी मूंगफली एवं अंकुरित अनाज दैनिक आहार में अनिवार्यतः लें।</li>
                                 <li>चाय या कॉफी भोजन के तुरंत बाद न पिएं क्योंकि इससे आयरन का अवशोषण रुकता है; नींबू/आंवला (विटामिन-सी) साथ लें।</li>
@@ -412,13 +424,13 @@
                             </div>
                         </div>
                         <div class="protocol-card-body">
-                            <div class="protocol-block-heading">🏥 क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
+                            <div class="protocol-block-heading">क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
                             <ul class="protocol-list">
                                 <li>प्राथमिक स्वास्थ्य केंद्र (PHC/CHC/DH) पर आईवी आयरन सुक्रोज (Inj. Iron Sucrose) या आईवी एफसीएम (Inj. FCM) की खुराक सुनिश्चित करें।</li>
                                 <li>14-16 सप्ताह के बाद कृमि मुक्ति हेतु Albendazole (400mg) की एक खुराक अनिवार्य रूप से दें।</li>
                                 <li>हर 14-21 दिन में हीमोग्लोबिन स्तर की पुनर्जांच करें जब तक स्तर सामान्य (&gt; 11.0 g/dL) न हो जाए।</li>
                             </ul>
-                            <div class="protocol-block-heading counselling-accent">🗣️ गृह भेंट परामर्श बिंदु</div>
+                            <div class="protocol-block-heading counselling-accent">गृह भेंट परामर्श बिंदु (Home Visit Counselling Points):</div>
                             <ul class="counselling-list">
                                 <li>प्रतिदिन 2 लाल आईएफए गोलियां (भोजन के 1-2 घंटे बाद) नियमित रूप से कम से कम 100 दिनों तक लें।</li>
                                 <li>स्थानीय पोषक फल जैसे अमरूद, सीताफल, महुआ एवं आंवला का नियमित सेवन करें।</li>
@@ -437,13 +449,13 @@
                             </div>
                         </div>
                         <div class="protocol-card-body">
-                            <div class="protocol-block-heading">🏥 क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
+                            <div class="protocol-block-heading">क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
                             <ul class="protocol-list">
                                 <li>चिकित्सा अधिकारी द्वारा तत्काल Tab. Labetalol 100mg BD प्रारंभ करें एवं साप्ताहिक रक्तचाप ट्रैक करें।</li>
                                 <li>यूरिन एल्बुमिन जांच कराएं; यदि एल्बुमिन ≥ +2 और BP ≥ 140/90 हो तो प्री-एकलेम्पसिया मानकर तत्काल FRU रेफर करें।</li>
                                 <li>कन्वल्शन/दौरे की स्थिति में Pritchard Regimen के अनुसार Inj. MgSO4 (लोडिंग डोज 4g IV + 10g IM) देकर 108 से रेफर करें।</li>
                             </ul>
-                            <div class="protocol-block-heading counselling-accent">🗣️ गृह भेंट परामर्श बिंदु</div>
+                            <div class="protocol-block-heading counselling-accent">गृह भेंट परामर्श बिंदु (Home Visit Counselling Points):</div>
                             <ul class="counselling-list">
                                 <li>खतरे के लक्षण: तेज सिरदर्द, आंखों के सामने धुंधलापन/चमक, सीने में जलन, चेहरे/हाथों पर अचानक सूजन।</li>
                                 <li>कम नमक वाला सुपाच्य भोजन लें; बाईं करवट (Left lateral position) में अधिक आराम करें।</li>
@@ -462,13 +474,13 @@
                             </div>
                         </div>
                         <div class="protocol-card-body">
-                            <div class="protocol-block-heading">🏥 क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
+                            <div class="protocol-block-heading">क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
                             <ul class="protocol-list">
                                 <li>2-घंटे 75 ग्राम ओरल ग्लूकोज टॉलरेंस टेस्ट (OGTT) कराएं; यदि प्लाज्मा ग्लूकोज ≥ 140 mg/dL है तो GDM चिन्हित करें।</li>
                                 <li>मेडिकल न्यूट्रिशन थेरेपी (MNT) शुरू करें; यदि उपवास ग्लूकोज ≥ 95 mg/dL या 2-घंटे बाद ≥ 120 mg/dL हो तो मेटफॉर्मिन/इंसुलिन शुरू करें।</li>
                                 <li>28-32 सप्ताह पर नियमित भ्रूण विकास की निगरानी (USG Growth Scan) सुनिश्चित करें।</li>
                             </ul>
-                            <div class="protocol-block-heading counselling-accent">🗣️ गृह भेंट परामर्श बिंदु</div>
+                            <div class="protocol-block-heading counselling-accent">गृह भेंट परामर्श बिंदु (Home Visit Counselling Points):</div>
                             <ul class="counselling-list">
                                 <li>मीठी वस्तुएं, गुड़, शक्कर, मिठाई, और परिष्कृत आटा (मैदा) का सेवन बिल्कुल बंद करें।</li>
                                 <li>दिन में 3 बार भरपेट खाने की जगह 5-6 बार थोड़ी-थोड़ी मात्रा में मोटा अनाज (ज्वार, मक्का, बाजरा, दलिया) लें।</li>
@@ -487,13 +499,13 @@
                             </div>
                         </div>
                         <div class="protocol-card-body">
-                            <div class="protocol-block-heading">🏥 क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
+                            <div class="protocol-block-heading">क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
                             <ul class="protocol-list">
                                 <li>पूर्व गर्भाशय चीरे का प्रकार (Lower segment transverse vs classical) और प्रसव अंतराल दर्ज करें।</li>
                                 <li>संभावित प्रसव तिथि (EDD) से कम से कम 2 सप्ताह पूर्व संदर्भन अस्पताल में बर्थ प्लानिंग सुनिश्चित करें।</li>
                                 <li>ब्लड बैंक एवं आपातकालीन सी-सेक्शन सुविधा वाले केंद्र पर क्रॉस-मैच्ड रक्त की पूर्व व्यवस्था रखें।</li>
                             </ul>
-                            <div class="protocol-block-heading counselling-accent">🗣️ गृह भेंट परामर्श बिंदु</div>
+                            <div class="protocol-block-heading counselling-accent">गृह भेंट परामर्श बिंदु (Home Visit Counselling Points):</div>
                             <ul class="counselling-list">
                                 <li>घर पर प्रसव का प्रयास सख्त वर्जित है, इससे गर्भाशय फटने (Uterine Rupture) का जानलेवा खतरा होता है।</li>
                                 <li>पुराने टांके के स्थान पर हल्का सा भी दर्द, रक्तस्राव या पानी छूटने पर 108 एम्बुलेंस से तुरंत अस्पताल पहुंचे।</li>
@@ -512,13 +524,13 @@
                             </div>
                         </div>
                         <div class="protocol-card-body">
-                            <div class="protocol-block-heading">🏥 क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
+                            <div class="protocol-block-heading">क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
                             <ul class="protocol-list">
                                 <li>दैनिक 5mg फोलिक एसिड दें। आयरन की दवा केवल सीरम फेरिटिन स्तर कम होने पर ही दें।</li>
                                 <li>सिकलिंग क्राइसिस से बचाव हेतु प्रचुर मात्रा में जलयोजन (प्रतिदिन 3-4 लीटर तरल पदार्थ) सुनिश्चित करें।</li>
                                 <li>दर्द का दौरा (Vaso-occlusive Crisis) या बुखार होने पर तत्काल आईवी फ्लुइड्स एवं पेन मैनेजमेंट हेतु भर्ती करें।</li>
                             </ul>
-                            <div class="protocol-block-heading counselling-accent">🗣️ गृह भेंट परामर्श बिंदु</div>
+                            <div class="protocol-block-heading counselling-accent">गृह भेंट परामर्श बिंदु (Home Visit Counselling Points):</div>
                             <ul class="counselling-list">
                                 <li>स्थानीय पोषक अनाज (ज्वार, मक्का, कोदो-कुटकी), दालें (चना, तुअर, कुल्थी), गुड़-चना और मूंगफली खाएं।</li>
                                 <li>पारंपरिक लौह एवं विटामिन युक्त हरी भाजियां (सहजन/मोरिंगा, चेंच भाजी, चौलाई, पालक, कचनार) अवश्य शामिल करें।</li>
@@ -537,13 +549,13 @@
                             </div>
                         </div>
                         <div class="protocol-card-body">
-                            <div class="protocol-block-heading">🏥 क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
+                            <div class="protocol-block-heading">क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
                             <ul class="protocol-list">
                                 <li>सीपीडी (Cephalopelvic Disproportion) और कम वजन के शिशु (LBW) के जोखिम को रोकने हेतु विशेष पोषण व कैल्शियम (1000mg/दिन) दें।</li>
                                 <li>प्री-एकलेम्पसिया, गंभीर एनीमिया और अंतर्गर्भाशयी विकास मंदता (IUGR) के लिए नियमित जांच करें।</li>
                                 <li>दक्ष प्रसव परिचारक (Skilled Birth Attendant) की देखरेख में अनिवार्य संस्थागत प्रसव कराएं।</li>
                             </ul>
-                            <div class="protocol-block-heading counselling-accent">🗣️ गृह भेंट परामर्श बिंदु</div>
+                            <div class="protocol-block-heading counselling-accent">गृह भेंट परामर्श बिंदु (Home Visit Counselling Points):</div>
                             <ul class="counselling-list">
                                 <li>किशोरी माता को पारिवारिक एवं मानसिक संबल दें; पोषण आहार एवं आराम का विशेष ध्यान रखें।</li>
                                 <li>प्रसव बाद उचित अंतर रखने हेतु प्रसवोत्तर परिवार नियोजन (PPFP - PPIUCD / Antara) की जानकारी दें।</li>
@@ -561,13 +573,13 @@
                             </div>
                         </div>
                         <div class="protocol-card-body">
-                            <div class="protocol-block-heading">🏥 क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
+                            <div class="protocol-block-heading">क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
                             <ul class="protocol-list">
                                 <li>पूर्व में हुए मृत जन्म (Stillbirth), बार-बार गर्भपात, या जन्मजात विकृति के कारणों की विस्तृत समीक्षा करें।</li>
                                 <li>स्त्री रोग विशेषज्ञ (Gynecologist) द्वारा प्रारंभिक त्रैमासिक में ही विशेष जांच व योजना बनाएं।</li>
                                 <li>18-22 सप्ताह पर अनिवार्य यूएसजी एनोमली स्कैन (USG Anomaly Scan) और नियमित ग्रोथ स्कैन कराएं।</li>
                             </ul>
-                            <div class="protocol-block-heading counselling-accent">🗣️ गृह भेंट परामर्श बिंदु</div>
+                            <div class="protocol-block-heading counselling-accent">गृह भेंट परामर्श बिंदु (Home Visit Counselling Points):</div>
                             <ul class="counselling-list">
                                 <li>प्रत्येक माह की 9 तारीख को PMSMA क्लीनिक में डॉक्टर से जांच अवश्य कराएं।</li>
                                 <li>गर्भ में शिशु की हलचल (Fetal Movements) पर सतर्क नजर रखें; हलचल कम लगने पर तुरंत अस्पताल पहुंचें।</li>
@@ -585,17 +597,287 @@
                             </div>
                         </div>
                         <div class="protocol-card-body">
-                            <div class="protocol-block-heading">🏥 क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
+                            <div class="protocol-block-heading">क्लिनिकल प्रोटोकॉल (Clinical Protocol):</div>
                             <ul class="protocol-list">
                                 <li>सभी 12 एएनसी विजिट्स में उच्च जोखिम स्थिति को ट्रैक करें; चिकित्सा अधिकारी (MO) द्वारा कम से कम 4 अनिवार्य जांच सुनिश्चित करें।</li>
                                 <li>प्रसव स्थल का पूर्व चयन, 108 आपातकालीन एम्बुलेंस की अग्रिम बुकिंग, एवं 48 घंटे अस्पताल में ठहराव अनिवार्य है।</li>
                                 <li>2 या अधिक एएनसी जांच छूटने पर आशा/एएनएम द्वारा 3 दिन के भीतर अनिवार्य गृह भ्रमण (Home Visit) कर फॉलो-अप करें।</li>
                             </ul>
-                            <div class="protocol-block-heading counselling-accent">🗣️ गृह भेंट परामर्श बिंदु</div>
+                            <div class="protocol-block-heading counselling-accent">गृह भेंट परामर्श बिंदु (Home Visit Counselling Points):</div>
                             <ul class="counselling-list">
                                 <li>प्रसव पूर्व तैयारी (बर्थ प्लानिंग): प्रसव केंद्र, वाहन व्यवस्था, आपातकालीन कोष एवं रक्तदाता का पूर्व चयन करें।</li>
                                 <li>नवजात शिशु को जन्म के तुरंत बाद (1 घंटे के भीतर) पहला गाढ़ा पीला दूध (कोलोस्ट्रम) अवश्य पिलाएं।</li>
                             </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Main View Mode 4: DPMU Section (District Programme Management Unit) -->
+        <div id="view-dpmu" class="main-view-section" style="display: none;">
+            <section class="dpmu-section">
+                <!-- DPMU Official Anmol 2.0 Tracking Tables -->
+
+                <!-- SECTION: OFFICIAL ANMOL 2.0 TABLES (Matching Reference Reports) -->
+                <div id="dpmu-tables-container">
+                    <!-- Dynamic Location Breadcrumb Banner -->
+                    <div id="dpmu-location-breadcrumb-banner" class="anmol-breadcrumb-banner">
+                        <span class="anmol-bc-icon">📍</span>
+                        <span id="dpmu-breadcrumb-text">District Scope: All 9 Blocks (Khargone)</span>
+                        <span style="margin-left:auto; font-size:0.75rem; color:#64748b; font-weight:600;">(Top filters dynamically drill down into PHCs & Subcenters)</span>
+                    </div>
+
+                    <!-- Table 1: Block-wise % ANC Registration Compare to Previous Year -->
+                    <div class="anmol-report-card">
+                        <div class="anmol-table-header-banner banner-anc-yoy">
+                            <div class="anmol-title-group">
+                                <span style="font-size:1.35rem;">🤰</span>
+                                <h3>Status of ANC Registration Compare to Previous Year</h3>
+                                <span style="font-size:1.35rem;">🤰</span>
+                            </div>
+                            <div class="anmol-table-actions">
+                                <button type="button" class="anmol-btn-action" id="btn-export-anc-yoy-csv" title="Export YoY Registration Table to CSV for Excel">📥 CSV</button>
+                                <button type="button" class="anmol-btn-action" id="btn-copy-anc-yoy-table" title="Copy table to clipboard">📋 Copy</button>
+                            </div>
+                        </div>
+
+                        <div class="anmol-table-subbanner">
+                            <div>
+                                <span class="anmol-subbanner-stat" style="color:#0f172a;">
+                                    District Total: <span id="anc-yoy-curr-total" style="color:#0284c7; font-weight:800;">0</span> 
+                                    vs Last Year: <span id="anc-yoy-prev-total" style="color:#64748b; font-weight:800;">0</span> 
+                                    (District Change: <span id="anc-yoy-district-change" style="font-weight:800;">0.0%</span>)
+                                </span>
+                            </div>
+                            <div class="anmol-subbanner-right">
+                                <span class="subbanner-label">Comparison Window:</span>
+                                <div class="anmol-cohort-toggle">
+                                    <button type="button" class="anmol-yoy-btn active" data-yoy-period="same">Same Period (Apr–Nov YoY)</button>
+                                    <button type="button" class="anmol-yoy-btn" data-yoy-period="full">Cumulative vs Full Year</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="anmol-table-responsive">
+                            <table class="anmol-table" id="table-anmol-anc-yoy" style="max-width: 950px; margin: 0 auto;">
+                                <thead>
+                                    <tr>
+                                        <th class="th-main-dark" style="width:50px;">S.No.</th>
+                                        <th class="th-main-dark th-loc-unit" id="th-anc-yoy-loc-label" style="text-align:left; padding-left:16px;">BLOCK</th>
+                                        <th class="th-main-dark" style="width:150px;" id="th-anc-yoy-prev-label">Last Year (FY 2025-26)</th>
+                                        <th class="th-main-dark" style="width:150px;">Current Year (FY 2026-27)</th>
+                                        <th class="th-main-dark" style="width:140px;">Difference (+ / -)</th>
+                                        <th class="th-main-dark" style="width:160px;">% YoY Change</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-anmol-anc-yoy">
+                                    <!-- Dynamically generated rows -->
+                                </tbody>
+                                <tfoot id="tfoot-anmol-anc-yoy">
+                                    <!-- Dynamically generated grand total row -->
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div class="anmol-footnote" id="footnote-anmol-anc-yoy">
+                            Data Source :- Anmol 2.0 ANC Registration Monthly Cohort Comparison
+                        </div>
+                    </div>
+
+                    <!-- Table 2: Status of 4 ANC Checkup -->
+                    <div class="anmol-report-card">
+                        <div class="anmol-table-header-banner banner-4anc">
+                            <div class="anmol-title-group">
+                                <span style="font-size:1.35rem;">🤰</span>
+                                <h3>Status of 4 ANC Checkup</h3>
+                                <span style="font-size:1.35rem;">🤰</span>
+                            </div>
+                            <div class="anmol-table-actions">
+                                <button type="button" class="anmol-btn-action" id="btn-export-4anc-csv" title="Export 4 ANC Table to CSV for Excel">📥 CSV</button>
+                                <button type="button" class="anmol-btn-action" id="btn-copy-4anc-table" title="Copy table to clipboard">📋 Copy</button>
+                            </div>
+                        </div>
+
+                        <div class="anmol-table-subbanner">
+                            <div>
+                                <span class="anmol-subbanner-stat">District Average :- (<span id="anmol-4anc-district-avg">0.0%</span>)</span>
+                            </div>
+                            <div class="anmol-subbanner-right">
+                                <span class="subbanner-label">Cohort:</span>
+                                <div class="anmol-cohort-toggle">
+                                    <button type="button" class="anmol-cohort-btn active" data-cohort="del">Delivered Women</button>
+                                    <button type="button" class="anmol-cohort-btn" data-cohort="all">All Registered PW</button>
+                                </div>
+                                <button type="button" class="anmol-toggle-filter-btn active" id="btn-toggle-exclude-abort-preterm" title="Toggle exclusion of abortion cases from cohort">
+                                    <span class="toggle-icon">🛡️</span> Exclude Abortions
+                                </button>
+                                <div id="anmol-4anc-exclusion-chips" class="anmol-exclusion-chips-group">
+                                    <div class="anmol-chip-pill chip-excluded" title="Abortion cases excluded from cohort">
+                                        <span class="chip-lbl">🚫 Abortions Excluded:</span>
+                                        <span class="chip-val" id="chip-4anc-abortions">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="anmol-table-responsive">
+                            <table class="anmol-table" id="table-anmol-4anc" style="max-width: 900px; margin: 0 auto;">
+                                <thead>
+                                    <tr>
+                                        <th class="th-main-dark" style="width:60px;">S.No.</th>
+                                        <th class="th-main-dark th-loc-unit" id="th-4anc-loc-label" style="text-align:left; padding-left:16px;">BLOCK</th>
+                                        <th class="th-main-dark" style="width:140px;" id="th-4anc-pw-label">Total PW</th>
+                                        <th class="th-main-dark" style="width:160px;">4 ANC CHECKUP</th>
+                                        <th class="th-main-dark" style="width:140px;">% coverage</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-anmol-4anc">
+                                    <!-- Dynamically generated rows -->
+                                </tbody>
+                                <tfoot id="tfoot-anmol-4anc">
+                                    <!-- Dynamically generated grand total row -->
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div class="anmol-footnote" id="footnote-anmol-4anc">
+                            Data Source :- Anmol 2.0 PW Checkup Report &bull; 4 ANC Protocol: 1st ANC (0–12 Wks), 2nd ANC (13–26 Wks), 3rd ANC (27–34 Wks), 4th ANC (35–Delivery) calculated from LMP
+                        </div>
+                    </div>
+
+                    <!-- Table 3: Status of HRP Identification and Management -->
+                    <div class="anmol-report-card">
+                        <div class="anmol-table-header-banner banner-uhrp">
+                            <div class="anmol-title-group">
+                                <span style="font-size:1.35rem;">🤰</span>
+                                <h3>Status of HRP identification and Management</h3>
+                                <span style="font-size:1.35rem;">🤰</span>
+                            </div>
+                            <div class="anmol-table-actions">
+                                <button type="button" class="anmol-btn-action" id="btn-export-uhrp-csv" title="Export HRP Table to CSV for Excel">📥 CSV</button>
+                                <button type="button" class="anmol-btn-action" id="btn-copy-uhrp-table" title="Copy table to clipboard">📋 Copy</button>
+                            </div>
+                        </div>
+
+                        <div class="anmol-table-subbanner">
+                            <div>
+                                <span class="anmol-subbanner-stat" style="color:#0f172a;">High-Risk Pregnancy Identification & Clinical Intervention Coverage</span>
+                            </div>
+                            <div class="anmol-subbanner-right">
+                                <span class="subbanner-label">Clinical Filter:</span>
+                                <button type="button" class="anmol-toggle-filter-btn active" id="btn-toggle-exclude-t1-ma" title="Exclude 1st Trimester (<=12 Wks) pregnant women with Moderate Anemia from management denominator (IV Iron Sucrose/FCM not clinically indicated in 1st trimester)">
+                                    <span class="toggle-icon">💉</span> Exclude 1st Trimester Mod. Anemia (&le;12 Wks)
+                                </button>
+                                <div id="anmol-uhrp-t1-ma-chips" class="anmol-exclusion-chips-group">
+                                    <div class="anmol-chip-pill chip-excluded" title="Active pregnant women with Moderate Anemia currently in 1st Trimester (<=12 Wks from LMP) on dashboard date">
+                                        <span class="chip-lbl">🚫 1st Trim. MA:</span>
+                                        <span class="chip-val" id="chip-uhrp-t1-ma-excluded">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="anmol-table-responsive">
+                            <table class="anmol-table" id="table-anmol-uhrp">
+                                <thead>
+                                    <!-- Header Row 1 -->
+                                    <tr>
+                                        <th rowspan="3" class="th-main-dark" style="width:40px;">S.N.</th>
+                                        <th rowspan="3" class="th-main-dark th-loc-unit" id="th-uhrp-loc-label" style="width:130px; text-align:left; padding-left:10px;">Block Name</th>
+                                        <th rowspan="3" class="th-main-dark" style="width:75px;">Registered<br>PW</th>
+                                        <th rowspan="3" class="th-main-dark" style="width:75px;">Total<br>HRPW</th>
+                                        <th colspan="4" class="th-mod-anemia">Moderate anemia (25%)</th>
+                                        <th colspan="4" class="th-sev-anemia">Severe anemia (2%)</th>
+                                        <th colspan="4" class="th-pih">High BP (PIH - 5%)</th>
+                                    </tr>
+                                    <!-- Header Row 2 -->
+                                    <tr>
+                                        <th colspan="2" class="th-sub-id">Identification</th>
+                                        <th colspan="2" class="th-sub-mgmt">Management</th>
+                                        <th colspan="2" class="th-sub-id">Identification</th>
+                                        <th colspan="2" class="th-sub-mgmt">Management</th>
+                                        <th colspan="2" class="th-sub-id">Identification</th>
+                                        <th colspan="2" class="th-sub-mgmt">Management</th>
+                                    </tr>
+                                    <!-- Header Row 3 -->
+                                    <tr>
+                                        <th class="th-leaf" style="font-size:0.72rem;">Moderate anemia<br>Any ANC (7 to 9.9)</th>
+                                        <th class="th-leaf" style="width:50px;">%</th>
+                                        <th class="th-leaf" style="font-size:0.72rem;">Moderate Anemia<br>Management (Inj IS / FCM)</th>
+                                        <th class="th-leaf" style="width:50px;">%</th>
+                                        <th class="th-leaf" style="font-size:0.72rem;">Severe Anemia<br>Any ANC (&lt;7gm HB)</th>
+                                        <th class="th-leaf" style="width:50px;">%</th>
+                                        <th class="th-leaf" style="font-size:0.72rem;">Severe Anemia Management<br>(BT / Inj IS / FCM)</th>
+                                        <th class="th-leaf" style="width:50px;">%</th>
+                                        <th class="th-leaf" style="font-size:0.72rem;">PIH</th>
+                                        <th class="th-leaf" style="width:50px;">%</th>
+                                        <th class="th-leaf" style="font-size:0.72rem;">PIH managed<br>(Labetalol/MgSO4/Nifedipine)</th>
+                                        <th class="th-leaf" style="width:50px;">%</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-anmol-uhrp">
+                                    <!-- Dynamically generated rows -->
+                                </tbody>
+                                <tfoot id="tfoot-anmol-uhrp">
+                                    <!-- Dynamically generated total row -->
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div class="anmol-footnote" id="footnote-anmol-uhrp">
+                            Data Source :- Anmol 2.0 Report - Ultra High-Risk Pregnancy EDD Registration
+                        </div>
+                    </div>
+
+                    <!-- Table 4: PHC Facility Performance Review Table -->
+                    <div class="anmol-report-card">
+                        <div class="anmol-table-header-banner banner-facility-perf">
+                            <div class="anmol-title-group">
+                                <span style="font-size:1.35rem;">🏥</span>
+                                <h3 id="facility-table-title">PHC Facility Performance & Clinical Review</h3>
+                                <span style="font-size:1.35rem;">🏥</span>
+                            </div>
+                            <div class="anmol-table-actions">
+                                <button type="button" class="anmol-btn-action" id="btn-export-facility-csv" title="Export Facility Table to CSV">📥 CSV</button>
+                                <button type="button" class="anmol-btn-action" id="btn-copy-facility-table" title="Copy table to clipboard">📋 Copy</button>
+                            </div>
+                        </div>
+
+                        <div class="anmol-table-subbanner">
+                            <div>
+                                <span class="anmol-subbanner-stat" style="color:#0f172a;" id="facility-table-summary">
+                                    Facilities: <span id="facility-count-stat" style="font-weight:800; color:#0f766e;">0</span> | Total Active Pregnancies: <span id="facility-active-stat" style="font-weight:800; color:#2563eb;">0</span>
+                                </span>
+                            </div>
+                            <div class="anmol-subbanner-right">
+                                <span class="anmol-chip-pill" style="font-weight:700; color:#475569;">📊 Registration, Outcomes & Clinical Review</span>
+                            </div>
+                        </div>
+                        </div>
+
+                        <div class="anmol-table-responsive">
+                            <table class="anmol-table" id="table-anmol-facility-kpi" style="max-width: 1100px; margin: 0 auto;">
+                                <thead>
+                                    <tr>
+                                        <th class="th-main-dark sortable" data-col="sno" style="width:45px;">S.No.</th>
+                                        <th class="th-main-dark sortable th-loc-unit" data-col="name" id="th-facility-name-col" style="text-align:left; padding-left:14px;">PHC FACILITY</th>
+                                        <th class="th-main-dark sortable" data-col="totalReg" style="width:125px;">Total Registration</th>
+                                        <th class="th-main-dark sortable" data-col="activePreg" style="width:115px;">Active Pregnancy</th>
+                                        <th class="th-main-dark sortable" data-col="missedAnc" style="width:130px;">Missed 2+ ANC Visits</th>
+                                        <th class="th-main-dark sortable" data-col="deliveryOverdue" style="width:120px;">Delivery Overdue</th>
+                                        <th class="th-main-dark sortable" data-col="delivered" style="width:105px;">Delivered</th>
+                                        <th class="th-main-dark sortable" data-col="abortion" style="width:100px;">Abortion</th>
+                                        <th class="th-main-dark sortable" data-col="death" style="width:95px;">Death</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-anmol-facility-kpi">
+                                    <!-- Dynamically generated rows -->
+                                </tbody>
+                                <tfoot id="tfoot-anmol-facility-kpi">
+                                    <!-- Dynamically generated total row -->
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div class="anmol-footnote" id="footnote-anmol-facility">
+                            Facility Review Line List Data • Sorted dynamically by active KPI card selection • Synchronized with location hierarchy filters
                         </div>
                     </div>
                 </div>

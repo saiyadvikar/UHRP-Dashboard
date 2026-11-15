@@ -21,16 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let visitFilter = null;
     let currentAnalyticsPatients = [];
 
-    // Chart Instances for Section 2
-    let mgmtRiskChartInstance = null;
-    let mgmtBlockChartInstance = null;
-    let moBlockChartInstance = null;
-    let moRiskChartInstance = null;
-    let blockChartInstance = null;
+    // Chart Instances for Section 2 (Charts View)
+    let monthlyTrendChartInstance = null;
     let deliveryChartInstance = null;
-    let yoyChartInstance = null;
-    let periodChartInstance = null;
-    let tpTreemapChartInstance = null;
 
     // Hierarchy Mappings for Cascading Filters
     let blockToPhcMap = {};
@@ -75,12 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Protocol Guidelines in Hindi as per National Health Mission (NHM) Protocols
     const COUNSELLING_POINTS = {
         anc: {
-            title: "📋 संपूर्ण प्रसव पूर्व देखभाल (Comprehensive ANC) प्रोटोकॉल",
+            title: "📋 संपूर्ण प्रसव पूर्व देखभाल (Comprehensive Good ANC Care) दिशानिर्देश",
             points: [
-                "गर्भावस्था का 12 सप्ताह के भीतर शीघ्र पंजीकरण (Early Registration) अनिवार्य रूप से सुनिश्चित करें।",
-                "कम से कम 4 गुणवत्तापूर्ण एएनसी जांच तथा प्रत्येक माह की 9 तारीख को PMSMA क्लीनिक में डॉक्टर से जांच कराएं।",
-                "प्रत्येक जांच पर हीमोग्लोबिन (Hb), रक्तचाप (BP), मूत्र एल्बुमिन एवं वजन की अनिवार्य जांच कराएं।",
-                "उच्च जोखिम लक्षणों की पहचान होते ही तत्काल उच्च स्वास्थ्य केंद्र पर रेफरल एवं संस्थागत प्रसव की योजना बनाएं।"
+                "💊 औषधियां एवं सप्लीमेंट्स: 14 सप्ताह से 180 दिन प्रतिदिन 1 IFA गोली, प्रतिदिन 2 कैल्शियम गोलियां (1000mg) प्रसव उपरांत 6 माह तक, द्वितीय तिमाही में Albendazole 400mg व Td-1/Td-2 टीकाकरण।",
+                "🔬 अनिवार्य जांचें: प्रत्येक विजिट पर Hb, BP, वजन, मूत्र एल्बुमिन/शुगर; प्रथम तिमाही में Blood Group, HIV, VDRL, HBsAg, 24-28 सप्ताह में OGTT 75g तथा 11-14 सप्ताह व 18-20 सप्ताह में अनिवार्य USG सोनोग्राफी।",
+                "🥗 संतुलित पोषण: अतिरिक्त 350-400 kcal ऊर्जा व प्रोटीन (दालें, अंडे, दूध, पनीर, अंकुरित अनाज, मोटे अनाज), सहजन, पालक, गुड़, चना, आंवला/नींबू; प्रतिदिन 8-10 गिलास पानी पिएं।",
+                "🗣️ प्रसव पूर्व तैयारी व खतरे के संकेत: न्यूनतम 4 ANC जांच, बर्थ प्लानिंग (अस्पताल चयन, 108 एम्बुलेंस, 2 रक्तदाता), बाईं करवट विश्राम; रक्तस्राव/तेज सिरदर्द/सूजन पर तत्काल 108 से अस्पताल जाएं।"
             ]
         },
         sa: {
@@ -210,12 +203,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return v.replace(/\s*\([\d\*]+\)\*?/g, '').replace(/\*$/g, '').trim();
     }
 
+    // Helper: Strip numerical census / postal codes from Urban Area PHC facilities (e.g. -250910)
+    function cleanPhcName(name) {
+        if (!name) return '';
+        return name.replace(/\s*-\s*\d+$/g, '').replace(/\s*\(\d+\)$/g, '').trim();
+    }
+
     // Main View Navigation Handler
     function setupMainViewSwitcher() {
         const btns = document.querySelectorAll('.main-view-btn');
         const viewLinelist = document.getElementById('view-linelist');
         const viewAnalytics = document.getElementById('view-analytics');
         const viewProtocols = document.getElementById('view-protocols');
+        const viewDpmu = document.getElementById('view-dpmu');
 
         btns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -227,17 +227,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (viewLinelist) viewLinelist.style.display = 'block';
                     if (viewAnalytics) viewAnalytics.style.display = 'none';
                     if (viewProtocols) viewProtocols.style.display = 'none';
+                    if (viewDpmu) viewDpmu.style.display = 'none';
                 } else if (currentMainView === 'analytics') {
                     if (viewLinelist) viewLinelist.style.display = 'none';
                     if (viewAnalytics) viewAnalytics.style.display = 'block';
                     if (viewProtocols) viewProtocols.style.display = 'none';
+                    if (viewDpmu) viewDpmu.style.display = 'none';
                     const filtered = getFilteredPatients();
                     let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
-                    renderAnalyticsCharts(tabPatients);
+                    setTimeout(() => renderAnalyticsCharts(tabPatients), 30);
                 } else if (currentMainView === 'protocols') {
                     if (viewLinelist) viewLinelist.style.display = 'none';
                     if (viewAnalytics) viewAnalytics.style.display = 'none';
                     if (viewProtocols) viewProtocols.style.display = 'block';
+                    if (viewDpmu) viewDpmu.style.display = 'none';
+                    filterProtocolCards(currentTab);
+                } else if (currentMainView === 'dpmu') {
+                    if (viewLinelist) viewLinelist.style.display = 'none';
+                    if (viewAnalytics) viewAnalytics.style.display = 'none';
+                    if (viewProtocols) viewProtocols.style.display = 'none';
+                    if (viewDpmu) viewDpmu.style.display = 'block';
+                    setTimeout(() => renderDpmuOfficialTables(), 30);
                 }
             });
         });
@@ -298,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const sortedPhcs = Array.from(phcs).sort();
         phcSelect.innerHTML = '<option value="All">All PHCs</option>' + 
-            sortedPhcs.map(p => `<option value="${p}">${p}</option>`).join('');
+            sortedPhcs.map(p => `<option value="${p}">${cleanPhcName(p)}</option>`).join('');
 
         if (sortedPhcs.includes(currentPhcVal)) {
             phcSelect.value = currentPhcVal;
@@ -400,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (blockSelect) blockSelect.value = 'All';
 
         const delSelect = document.getElementById(elementIds.delivery);
-        if (delSelect) delSelect.value = 'All';
+        if (delSelect) delSelect.value = '0'; // Default to Pregnant
 
         const searchInput = document.getElementById(elementIds.searchInput);
         if (searchInput) searchInput.value = '';
@@ -427,7 +437,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         initializedCharts = {};
         renderLineList();
+        renderDpmuOfficialTables();
         scrollToLinelistOnMobile();
+    }
+
+    // Global Maternal Death Determination
+    function isMaternalDeath(p) {
+        if (!p) return false;
+        return (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
     }
 
     // Get Filtered Patients Dataset
@@ -445,11 +462,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (phcVal !== 'All' && (p.phc || '').toLowerCase() !== phcVal.toLowerCase()) return false;
             if (subVal !== 'All' && (p.sub || '').toLowerCase() !== subVal.toLowerCase()) return false;
             if (delVal !== 'All') {
+                const isDead = isMaternalDeath(p);
                 if (delVal === 'death') {
-                    const isDead = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
                     if (!isDead) return false;
+                } else if (isDead) {
+                    // Maternal death cases must NEVER appear in pregnant, delivered, or abortion filters
+                    return false;
                 } else if (delVal === 'abortion') {
                     if (p.del !== 2 && p.is_abortion !== 1) return false;
+                } else if (delVal === '0') {
+                    // Pregnant strictly requires p.del === 0 AND not abortion AND alive
+                    if (p.del !== 0 || p.del === 2 || p.is_abortion === 1) return false;
+                } else if (delVal === '1') {
+                    // Delivered strictly requires p.del === 1 AND alive
+                    if (p.del !== 1) return false;
                 } else {
                     if (String(p.del) !== delVal) return false;
                 }
@@ -481,11 +507,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (phcVal !== 'All' && (p.phc || '').toLowerCase() !== phcVal.toLowerCase()) return false;
             if (subVal !== 'All' && (p.sub || '').toLowerCase() !== subVal.toLowerCase()) return false;
             if (delVal !== 'All') {
+                const isDead = isMaternalDeath(p);
                 if (delVal === 'death') {
-                    const isDead = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
                     if (!isDead) return false;
+                } else if (isDead) {
+                    // Maternal death cases must NEVER appear in pregnant, delivered, or abortion filters
+                    return false;
                 } else if (delVal === 'abortion') {
                     if (p.del !== 2 && p.is_abortion !== 1) return false;
+                } else if (delVal === '0') {
+                    // Pregnant strictly requires p.del === 0 AND not abortion AND alive
+                    if (p.del !== 0 || p.del === 2 || p.is_abortion === 1) return false;
+                } else if (delVal === '1') {
+                    // Delivered strictly requires p.del === 1 AND alive
+                    if (p.del !== 1) return false;
                 } else {
                     if (String(p.del) !== delVal) return false;
                 }
@@ -511,9 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const uhrpPct = totalAncCount > 0 ? ((uhrpOnlyCount / totalAncCount) * 100).toFixed(1) : '0.0';
 
         const totalAncCountEl = document.getElementById('total-anc-count');
-        const totalAncUhrpPctEl = document.getElementById('total-anc-uhrp-pct');
         if (totalAncCountEl) totalAncCountEl.textContent = totalAncCount.toLocaleString();
-        if (totalAncUhrpPctEl) totalAncUhrpPctEl.textContent = `${uhrpPct}% UHRP`;
 
         const counts = { sa: 0, ma: 0, pi: 0, gd: 0, ls: 0, sc: 0, tp: 0, bh: 0, all: uhrpOnlyCount };
         const deaths = { sa: 0, ma: 0, pi: 0, gd: 0, ls: 0, sc: 0, tp: 0, bh: 0, all: 0 };
@@ -572,6 +605,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${(data.points || []).map(pt => `<li>${pt}</li>`).join('')}
             </ul>
         `;
+    }
+
+    // Filter Protocol & Counseling Cards to show only the selected Main KPI risk factor
+    function filterProtocolCards(tabKey) {
+        const cards = document.querySelectorAll('#view-protocols .protocol-card');
+        const subtitle = document.getElementById('protocols-subtitle');
+        if (!cards.length) return;
+
+        const key = (tabKey || currentTab || 'all').toLowerCase();
+        if (key === 'anc') {
+            cards.forEach(c => {
+                c.style.display = c.classList.contains('anc-border') ? '' : 'none';
+            });
+            if (subtitle) {
+                subtitle.textContent = 'Active Clinical Protocol & Counseling: Comprehensive Good ANC Care (All Registered Pregnancies)';
+            }
+        } else if (key === 'all') {
+            cards.forEach(c => c.style.display = '');
+            if (subtitle) {
+                subtitle.textContent = 'Active Protocols & Counseling: All High Risk Factors & Comprehensive Care';
+            }
+        } else {
+            cards.forEach(c => {
+                if (c.classList.contains(`${key}-border`)) {
+                    c.style.display = '';
+                } else {
+                    c.style.display = 'none';
+                }
+            });
+            const tabName = TAB_NAMES[key] || key.toUpperCase();
+            if (subtitle) {
+                subtitle.textContent = `Active Clinical Protocol & Counseling: ${tabName}`;
+            }
+        }
     }
 
     // Helper: Compute Date Object for Patient's Last Attended ANC Visit
@@ -739,21 +806,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return moArr.some(v => isMoDesignation(v));
     }
 
-    // Check if Clinical Management has been done for a condition
+    // Check if Clinical Management has been done for a condition (Canonical Module)
     function isManagementDone(p, condition) {
         if (!condition) condition = currentTab;
-        if (condition === 'sa' || condition === 'ma' || condition === 'sc') {
+        if (condition === 'sa' || condition === 'sc') {
             const hasDoses = Array.isArray(p.is_doses) && p.is_doses.length > 0;
             const hasFcm = p.fcm === 'Yes';
             const hasBt = p.bt && p.bt !== 'No' && p.bt !== '-';
             return hasDoses || hasFcm || hasBt;
+        } else if (condition === 'ma') {
+            const hasDoses = Array.isArray(p.is_doses) && p.is_doses.length > 0;
+            const hasFcm = p.fcm === 'Yes';
+            return hasDoses || hasFcm;
         } else if (condition === 'pi') {
-            return !!(p.pih_mgmt && p.pih_mgmt.trim() !== '' && p.pih_mgmt !== 'None' && p.pih_mgmt !== '-');
+            const m = String(p.pih_mgmt || '').trim().toLowerCase();
+            return !!(m && m !== 'no' && m !== 'none' && m !== '-' && m !== 'nan');
         } else if (condition === 'gd') {
             return (p.gdm_mnt === 'Yes' || p.gdm_met === 'Yes' || p.gdm_ins === 'Yes' || p.gdm_mgmt_at === 'Yes');
         }
         return false;
     }
+
+    const isSaManaged = (p) => isManagementDone(p, 'sa');
+    const isMaManaged = (p) => isManagementDone(p, 'ma');
+    const isPiManaged = (p) => isManagementDone(p, 'pi');
 
     // Classify Clinical Status for Patient
     function getPatientClinicalStatus(p, tabKey) {
@@ -1291,10 +1367,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 const targetKpi = card.getAttribute('data-kpi');
                 if (targetKpi === 'all' || kpiFilter === targetKpi) {
                     kpiFilter = null;
+                    facilitySortCol = 'totalReg';
+                    facilitySortAsc = false;
                 } else {
                     kpiFilter = targetKpi;
+                    if (targetKpi === 'missed_anc') {
+                        facilitySortCol = 'missedAnc';
+                    } else if (targetKpi === 'overdue') {
+                        facilitySortCol = 'deliveryOverdue';
+                    } else if (targetKpi === 'pending_mgmt' || targetKpi === 'mo_pending') {
+                        facilitySortCol = 'mgmtPending';
+                    } else {
+                        facilitySortCol = 'totalReg';
+                    }
+                    facilitySortAsc = false;
                 }
                 renderLineList();
+                renderDpmuOfficialTables();
+                if (currentMainView === 'analytics') {
+                    const filtered = getFilteredPatients();
+                    let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
+                    renderAnalyticsCharts(tabPatients);
+                }
                 scrollToLinelistOnMobile();
             });
         });
@@ -1380,21 +1474,76 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render Delivery Place Distribution Chart
     function renderDeliveryPlaceChart(patients, toolbarConfig) {
         let delPatients = patients || currentAnalyticsPatients;
-        const badgeEl = document.getElementById('chart-delivery-badge');
-        if (badgeEl) {
-            badgeEl.textContent = 'Facility vs Home';
-            badgeEl.style.background = '';
-            badgeEl.style.color = '';
+        const yearVal = document.getElementById(elementIds.year).value;
+        const blockVal = document.getElementById(elementIds.block).value;
+        const phcVal = document.getElementById(elementIds.phc).value;
+        const subVal = document.getElementById(elementIds.subcenter).value;
+        const delVal = document.getElementById(elementIds.delivery).value;
+
+        // Determine delivered cohort:
+        // If current selection is filtered for Pregnant (delVal === '0') or contains no delivered cases,
+        // pull the delivered mothers matching the exact same Year, Block, PHC, Subcenter, and active Risk Factor tab
+        let deliveredCases = delPatients.filter(p => p.del === 1);
+        let isCohortDerived = false;
+
+        if (deliveredCases.length === 0) {
+            const rawPool = currentTab === 'anc' ? (DASHBOARD_DATA.anc_patients || []) : (DASHBOARD_DATA.patients || []);
+            deliveredCases = rawPool.filter(p => {
+                if (p.del !== 1) return false;
+                if (yearVal !== 'All' && p.y !== yearVal) return false;
+                if (blockVal !== 'All' && (p.b || '').toLowerCase() !== blockVal.toLowerCase()) return false;
+                if (phcVal !== 'All' && (p.phc || '').toLowerCase() !== phcVal.toLowerCase()) return false;
+                if (subVal !== 'All' && (p.sub || '').toLowerCase() !== subVal.toLowerCase()) return false;
+                if (currentTab !== 'anc' && currentTab !== 'all') {
+                    if (p[currentTab] !== 1) return false;
+                }
+                return true;
+            });
+            isCohortDerived = true;
         }
 
-        const catOrder = ['DH', 'CHC', 'PHC', 'CH', 'Medical College', 'Private hospitals', 'Home', 'in transit', 'Not Delivered'];
+        const badgeEl = document.getElementById('chart-delivery-badge');
+        if (badgeEl) {
+            badgeEl.textContent = `Delivered (${deliveredCases.length.toLocaleString()})${isCohortDerived ? ' [Delivered Cohort]' : ''}`;
+            badgeEl.style.background = '#e0f2fe';
+            badgeEl.style.color = '#0369a1';
+        }
+
+        const catOrder = ['DH', 'CHC', 'PHC', 'CH', 'Medical College', 'Private hospitals', 'Home', 'in transit', 'Other Facility'];
         const delCounts = {};
-        delPatients.forEach(p => {
-            const cat = p.del_cat || (p.del === 1 ? 'Other Facility' : 'Not Delivered');
+
+        function categorizeDeliveryName(facName) {
+            if (!facName) return 'Other Facility';
+            const s = String(facName).toLowerCase().trim();
+            if (s.includes('home')) return 'Home';
+            if (s.includes('transit') || s.includes('way')) return 'in transit';
+            if (s.includes('private') || s.includes('pvt')) return 'Private hospitals';
+            if (s.includes('medical college') || s.includes('my hospital') || s.startsWith('my ')) return 'Medical College';
+            if (s.includes('district hospital') || s.includes('dh ') || s.startsWith('dh') || s.includes(' dh')) return 'DH';
+            if (s.includes('civil hospital') || s.includes('ch ') || s.startsWith('ch ') || s.includes(' ch')) return 'CH';
+            if (s.includes('community health') || s.includes('chc') || s.startsWith('chc')) return 'CHC';
+            if (s.includes('primary health') || s.includes('phc') || s.startsWith('phc') || s.includes('shc') || s.includes('urban')) return 'PHC';
+            return 'Other Facility';
+        }
+
+        deliveredCases.forEach(p => {
+            let cat = p.del_cat;
+            if (!cat || cat === 'Public Facility' || cat === 'Facility') {
+                cat = categorizeDeliveryName(p.d);
+            }
             delCounts[cat] = (delCounts[cat] || 0) + 1;
         });
 
-        const presentCats = catOrder.filter(c => delCounts[c] > 0);
+        // If user explicitly chose 'All' delivery status, include Not Delivered count for full picture
+        if (delVal === 'All') {
+            const notDelCount = delPatients.filter(p => p.del === 0).length;
+            if (notDelCount > 0) {
+                delCounts['Not Delivered'] = notDelCount;
+                catOrder.push('Not Delivered');
+            }
+        }
+
+        const presentCats = catOrder.filter(c => (delCounts[c] || 0) > 0);
         Object.keys(delCounts).forEach(c => {
             if (!presentCats.includes(c) && delCounts[c] > 0) {
                 presentCats.push(c);
@@ -1422,6 +1571,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'Private hospitals': '#f77f00',
             'Home': '#ff2a6d',
             'in transit': '#db2777',
+            'Other Facility': '#64748b',
             'Not Delivered': '#94a3b8'
         };
         const chartColors = delCategories.map(c => colorMap[c] || '#64748b');
@@ -1430,11 +1580,49 @@ document.addEventListener('DOMContentLoaded', () => {
         const delOptions = {
             series: delSeries,
             labels: delCategories,
-            chart: { type: 'donut', height: 280, toolbar: toolbarConfig || { show: true } },
+            chart: {
+                type: 'donut',
+                height: 280,
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+                toolbar: toolbarConfig || { show: true },
+                background: 'transparent'
+            },
+            theme: {
+                mode: 'light'
+            },
+            plotOptions: {
+                pie: {
+                    donut: {
+                        size: '68%',
+                        labels: {
+                            show: true,
+                            name: { fontSize: '12px', fontWeight: 600, color: '#64748b' },
+                            value: { fontSize: '18px', fontWeight: 800, color: '#0f172a' },
+                            total: {
+                                show: true,
+                                label: 'Total',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: '#64748b',
+                                formatter: function(w) {
+                                    return w.globals.seriesTotals.reduce((a, b) => a + b, 0).toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             colors: chartColors,
-            dataLabels: { enabled: true },
-            legend: { position: 'bottom', fontSize: '11px' },
+            dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: 'bold' } },
+            legend: {
+                position: 'bottom',
+                fontSize: '11.5px',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+                labels: { colors: '#334155' },
+                markers: { radius: 12, width: 9, height: 9 }
+            },
             tooltip: {
+                theme: 'light',
                 y: {
                     formatter: function(val) {
                         const total = delSeries.reduce((a, b) => a + b, 0);
@@ -1449,16 +1637,1159 @@ document.addEventListener('DOMContentLoaded', () => {
         deliveryChartInstance.render();
     }
 
-    // Section 2: Render Dynamic ApexCharts Visualizations
-    function renderAnalyticsCharts(filteredTabPatients) {
-        currentAnalyticsPatients = filteredTabPatients;
-        const blockVal = document.getElementById(elementIds.block).value;
-        const subtitleEl = document.getElementById(elementIds.analyticsSubtitle);
-        if (subtitleEl) {
-            const blockText = blockVal === 'All' ? 'All Blocks' : `${blockVal} Block`;
-            subtitleEl.textContent = `Showing Charts for ${TAB_NAMES[currentTab]} (${blockText})`;
+    // Download any chart directly as SVG file
+    function downloadChartAsSvg(containerId, filename) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            console.warn('SVG Download: Container not found:', containerId);
+            return;
+        }
+        const svgEl = container.querySelector('svg.apexcharts-svg') || container.querySelector('svg');
+        if (!svgEl) {
+            alert('Chart is still rendering. Please try again in a few seconds.');
+            return;
         }
 
+        const clone = svgEl.cloneNode(true);
+        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+        // Insert white background rectangle for crisp export in image viewers
+        const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bgRect.setAttribute('x', '0');
+        bgRect.setAttribute('y', '0');
+        bgRect.setAttribute('width', '100%');
+        bgRect.setAttribute('height', '100%');
+        bgRect.setAttribute('fill', '#ffffff');
+        clone.insertBefore(bgRect, clone.firstChild);
+
+        const svgData = new XMLSerializer().serializeToString(clone);
+        const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (filename || containerId) + '.svg';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // Attach click handlers to all SVG download buttons
+    function setupSvgDownloadButtons() {
+        document.querySelectorAll('.btn-download-svg').forEach(btn => {
+            btn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const targetId = this.getAttribute('data-target');
+                const filename = this.getAttribute('data-filename') || targetId;
+                downloadChartAsSvg(targetId, filename);
+            };
+        });
+    }
+
+    // ==========================================================================
+    // Section 4: Official Anmol 2.0 Indicator & Review Tables (Colour Conditional Formatting)
+    // ==========================================================================
+    // SECTION 4: DPMU OFFICIAL ANMOL 2.0 TABLES & FACILITY REVIEW
+    // ==========================================================================
+    let dpmuSelectedYear = '2026-27';
+    let dpmuSelectedCohort = 'del'; // 'del' or 'all'
+    let dpmuYoyPeriod = 'same'; // 'same' (Apr–Nov like-for-like) or 'full' (cumulative vs full year)
+    let dpmuExcludeAbortPreterm = true; // Exclude abortion & preterm from all registered cohort
+    let dpmuExcludeT1ModAnemia = true; // Exclude 1st trimester pregnant women with Moderate Anemia from parenteral iron management
+    let dpmuEventsBound = false;
+
+    // Facility Performance Table Sorting State
+    let facilitySortCol = 'totalReg';
+    let facilitySortAsc = false;
+    let facilityMgmtScope = 'sync'; // 'sync' (follows currentTab), 'all', 'ma', 'sa', 'pi'
+
+    // Canonical Date Parser Reference (Unified with parseDate)
+    const parseDateDDMMYYYY = parseDate;
+
+    // Dynamic Location Hierarchy: Block -> PHCs of Block -> Subcenters of PHC
+    function getLocationHierarchyUnits() {
+        const blockSelect = document.getElementById(elementIds.block);
+        const phcSelect = document.getElementById(elementIds.phc);
+
+        const blockVal = blockSelect ? blockSelect.value : 'All';
+        const phcVal = phcSelect ? phcSelect.value : 'All';
+
+        const dData = typeof DASHBOARD_DATA !== 'undefined' ? DASHBOARD_DATA : (window.DASHBOARD_DATA || {});
+        const allPatients = dData.patients || [];
+        const allAncPatients = dData.anc_patients || [];
+
+        if (blockVal === 'All') {
+            const units = ['Barwaha', 'Bhagwanpura', 'Bhikangaon', 'Gogaon', 'Jhiranya', 'Kasrawad', 'Khargone', 'Maheshwar', 'Segaon'];
+            return {
+                level: 'block',
+                headerLabel: 'BLOCK NAME',
+                scopeLabel: 'District Scope: All 9 Blocks (Khargone)',
+                units: units,
+                filterFn: (p, unit) => (p.b || '').toLowerCase() === unit.toLowerCase()
+            };
+        } else if (phcVal === 'All') {
+            const phcSet = blockToPhcMap[blockVal] || new Set();
+            let units = Array.from(phcSet).filter(p => p && p !== 'Unknown' && p !== 'N/A').sort();
+            if (units.length === 0) {
+                const found = new Set();
+                [...allPatients, ...allAncPatients].forEach(p => {
+                    if ((p.b || '').toLowerCase() === blockVal.toLowerCase() && p.phc && p.phc !== 'Unknown' && p.phc !== 'N/A') {
+                        found.add(p.phc);
+                    }
+                });
+                units = Array.from(found).sort();
+            }
+            return {
+                level: 'phc',
+                headerLabel: 'PHC FACILITY',
+                scopeLabel: `Block Scope: ${blockVal} (${units.length} PHCs)`,
+                units: units.length > 0 ? units : ['General Block Facility'],
+                filterFn: (p, unit) => (p.b || '').toLowerCase() === blockVal.toLowerCase() && (p.phc || '').toLowerCase() === unit.toLowerCase()
+            };
+        } else {
+            const subSet = phcToSubMap[phcVal] || new Set();
+            let units = Array.from(subSet).filter(s => s && s !== 'Unknown' && s !== 'N/A').sort();
+            if (units.length === 0) {
+                const found = new Set();
+                [...allPatients, ...allAncPatients].forEach(p => {
+                    if ((p.phc || '').toLowerCase() === phcVal.toLowerCase() && p.sub && p.sub !== 'Unknown' && p.sub !== 'N/A') {
+                        found.add(p.sub);
+                    }
+                });
+                units = Array.from(found).sort();
+            }
+            return {
+                level: 'subcenter',
+                headerLabel: 'SUBCENTER / HWC',
+                scopeLabel: `Block: ${blockVal} ➔ PHC: ${phcVal} (${units.length} Subcenters)`,
+                units: units.length > 0 ? units : ['General Subcenter'],
+                filterFn: (p, unit) => (p.phc || '').toLowerCase() === phcVal.toLowerCase() && (p.sub || '').toLowerCase() === unit.toLowerCase()
+            };
+        }
+    }
+
+    // Helper: Identify abortion and pre-term (<35 weeks) delivered cases for exclusion
+    function isAbortionOrPreterm(p) {
+        if (p.is_abortion === 1 || p.del === 2) return { isExcluded: true, type: 'abortion' };
+        const dCat = String(p.del_cat || '').toLowerCase();
+        const dPlc = String(p.d || '').toLowerCase();
+        if (dCat.includes('abortion') || dPlc.includes('abortion')) return { isExcluded: true, type: 'abortion' };
+
+        if (p.del === 1) {
+            const lmpDate = parseDateDDMMYYYY(p.lmp);
+            if (lmpDate) {
+                const delDate = parseDateDDMMYYYY(p.del_date);
+                if (delDate) {
+                    const gaDel = (delDate - lmpDate) / (1000 * 60 * 60 * 24 * 7.0);
+                    // Pre-term defined as <35 weeks because 4th ANC eligibility window starts at 35 weeks
+                    if (gaDel > 0 && gaDel < 35.0) return { isExcluded: true, type: 'preterm' };
+                } else {
+                    const eddDate = parseDateDDMMYYYY(p.edd);
+                    if (eddDate) {
+                        const vDates = (p.v_dates || []).map(parseDateDDMMYYYY).filter(Boolean);
+                        const lastVisit = vDates.length > 0 ? vDates[vDates.length - 1] : null;
+                        if (lastVisit) {
+                            const gaLast = (lastVisit - lmpDate) / (1000 * 60 * 60 * 24 * 7.0);
+                            const daysToEdd = (eddDate - lastVisit) / (1000 * 60 * 60 * 24);
+                            if (daysToEdd > 35 && gaLast < 35.0) {
+                                return { isExcluded: true, type: 'preterm' };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return { isExcluded: false, type: null };
+    }
+
+    // Check if patient is an active pregnant woman with Moderate Anemia currently in 1st Trimester (<=12 weeks from LMP)
+    function isT1PregnantModAnemia(p, refDate) {
+        if (!p || p.ma !== 1) return false;
+        if (p.del !== 0 || isMaternalDeath(p) || p.del === 2 || p.is_abortion === 1) return false;
+        if (!p.lmp || p.lmp === '-' || p.lmp === 'N/A' || p.lmp === 'None') return false;
+        const lmpDate = parseDateDDMMYYYY(p.lmp);
+        if (!lmpDate || isNaN(lmpDate.getTime())) return false;
+        const rDate = refDate || (typeof DASHBOARD_DATA !== 'undefined' && DASHBOARD_DATA.gen_date ? parseDate(DASHBOARD_DATA.gen_date) : new Date());
+        const diffDays = Math.round((rDate.getTime() - lmpDate.getTime()) / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && (diffDays / 7.0) <= 12.0;
+    }
+
+    function renderDpmuOfficialTables() {
+        const topYearSelect = document.getElementById(elementIds.year);
+        if (topYearSelect && topYearSelect.value && topYearSelect.value !== 'All') {
+            dpmuSelectedYear = topYearSelect.value;
+        } else {
+            dpmuSelectedYear = '2026-27';
+        }
+
+        const refDate = (typeof DASHBOARD_DATA !== 'undefined' && DASHBOARD_DATA.gen_date) ? parseDate(DASHBOARD_DATA.gen_date) : new Date();
+        const locInfo = getLocationHierarchyUnits();
+
+        // Update Location Breadcrumb Banner
+        const bcTextEl = document.getElementById('dpmu-breadcrumb-text');
+        if (bcTextEl) bcTextEl.textContent = locInfo.scopeLabel;
+
+        // Update Table Location Column Header Labels
+        const uhrpLocTh = document.getElementById('th-uhrp-loc-label');
+        if (uhrpLocTh) uhrpLocTh.textContent = locInfo.headerLabel;
+        const anc4Th = document.getElementById('th-4anc-loc-label');
+        if (anc4Th) anc4Th.textContent = locInfo.headerLabel;
+        const ancYoyTh = document.getElementById('th-anc-yoy-loc-label');
+        if (ancYoyTh) ancYoyTh.textContent = locInfo.headerLabel;
+        const facNameTh = document.getElementById('th-facility-name-col');
+        if (facNameTh) facNameTh.textContent = locInfo.headerLabel;
+
+        const dData = typeof DASHBOARD_DATA !== 'undefined' ? DASHBOARD_DATA : (window.DASHBOARD_DATA || {});
+        const patients = dData.patients || [];
+        const ancPatients = dData.anc_patients || [];
+
+        const yrPatients = patients.filter(p => p.y === dpmuSelectedYear);
+        const yrAncPatients = ancPatients.filter(p => p.y === dpmuSelectedYear);
+
+        // Canonical verification helpers inherited from module scope (isSaManaged, isMaManaged, isPiManaged)
+
+        // Calculate 4 ANC by Gestational Age (GA) from LMP across all 12 ANC checkup visits:
+        // 1st ANC Checkup (0–12 Wks)
+        // 2nd ANC Checkup (13–26 Wks) 
+        // 3rd ANC Checkup (27–34 Wks)
+        // 4th ANC Checkup (35–Delivery)
+        function check4AncByGestationalAge(p) {
+            const lmpDate = parseDateDDMMYYYY(p.lmp);
+            if (!lmpDate) return { c1: 0, c2: 0, c3: 0, c4: 0, all4: 0 };
+            const vDates = (p.v_dates || []).map(parseDateDDMMYYYY).filter(Boolean);
+            let c1 = 0, c2 = 0, c3 = 0, c4 = 0;
+            vDates.forEach(vd => {
+                const diffDays = (vd - lmpDate) / (1000 * 60 * 60 * 24);
+                if (diffDays >= 0) {
+                    const gaWeeks = diffDays / 7.0;
+                    if (gaWeeks <= 12.0) c1 = 1;
+                    else if (gaWeeks > 12.0 && gaWeeks <= 26.0) c2 = 1;
+                    else if (gaWeeks > 26.0 && gaWeeks <= 34.0) c3 = 1;
+                    else if (gaWeeks > 34.0) c4 = 1;
+                }
+            });
+            return { c1, c2, c3, c4, all4: (c1 && c2 && c3 && c4) ? 1 : 0 };
+        }
+
+        // Clean colour conditional formatting scale matching Anmol 2.0 reference Excel reports (Green - Lime - Yellow - Peach - Red)
+        function getExcelScaleClass(val, minVal, maxVal) {
+            if (minVal === maxVal || isNaN(val)) return 'cond-yellow';
+            const norm = (val - minVal) / (maxVal - minVal);
+            if (norm >= 0.80) return 'cond-green';
+            if (norm >= 0.55) return 'cond-lime';
+            if (norm >= 0.35) return 'cond-yellow';
+            if (norm >= 0.15) return 'cond-peach';
+            return 'cond-red';
+        }
+
+        // =========================================================================
+        // 1. POPULATE TABLE 1: Block/PHC-wise % ANC Registration Compare to Previous Year
+        // =========================================================================
+        const tbodyAncYoY = document.getElementById('tbody-anmol-anc-yoy');
+        const tfootAncYoY = document.getElementById('tfoot-anmol-anc-yoy');
+        const prevLabelEl = document.getElementById('th-anc-yoy-prev-label');
+        const currTotEl = document.getElementById('anc-yoy-curr-total');
+        const prevTotEl = document.getElementById('anc-yoy-prev-total');
+        const diffTotEl = document.getElementById('anc-yoy-district-change');
+
+        if (tbodyAncYoY && tfootAncYoY) {
+            if (prevLabelEl) {
+                prevLabelEl.textContent = dpmuYoyPeriod === 'same' ? 'Last Year Same Period (Apr–Nov)' : 'Last Year Full FY (2025-26)';
+            }
+
+            const currAnc = ancPatients.filter(p => p.y === '2026-27');
+            const prevAnc = ancPatients.filter(p => p.y === '2025-26');
+
+            // Find months active in current year
+            const activeMonths = new Set();
+            currAnc.forEach(p => {
+                const reg = String(p.reg || '');
+                if (reg.includes('-')) {
+                    const parts = reg.split('-');
+                    if (parts.length === 3 && parts[1]) activeMonths.add(parts[1]);
+                }
+            });
+
+            const yoyUnitData = locInfo.units.map((unitName, idx) => {
+                const uCurr = currAnc.filter(p => locInfo.filterFn(p, unitName));
+                const uPrev = prevAnc.filter(p => {
+                    if (!locInfo.filterFn(p, unitName)) return false;
+                    if (dpmuYoyPeriod === 'same') {
+                        const reg = String(p.reg || '');
+                        if (reg.includes('-')) {
+                            const parts = reg.split('-');
+                            return parts.length === 3 && activeMonths.has(parts[1]);
+                        }
+                        return false;
+                    }
+                    return true;
+                });
+
+                const cCount = uCurr.length;
+                const pCount = uPrev.length;
+                const diff = cCount - pCount;
+                const pctChange = pCount > 0 ? ((cCount - pCount) / pCount * 100) : 0;
+
+                return { idx, unitName, cCount, pCount, diff, pctChange };
+            });
+
+            const pctVals = yoyUnitData.map(d => d.pctChange);
+            const minPct = Math.min(...pctVals);
+            const maxPct = Math.max(...pctVals);
+
+            let sumPrev = 0;
+            let sumCurr = 0;
+
+            const yoyRowsHtml = yoyUnitData.map(d => {
+                sumCurr += d.cCount;
+                sumPrev += d.pCount;
+                const sign = d.diff > 0 ? '+' : '';
+
+                return `<tr>
+                    <td>${d.idx + 1}</td>
+                    <td class="col-block">${cleanPhcName(d.unitName)}</td>
+                    <td><strong>${d.pCount.toLocaleString()}</strong></td>
+                    <td><strong>${d.cCount.toLocaleString()}</strong></td>
+                    <td style="font-weight:700; color:${d.diff >= 0 ? '#059669' : '#dc2626'};">${sign}${d.diff.toLocaleString()}</td>
+                    <td class="${getExcelScaleClass(d.pctChange, minPct, maxPct)}">${sign}${d.pctChange.toFixed(2)}%</td>
+                </tr>`;
+            }).join('');
+
+            tbodyAncYoY.innerHTML = yoyRowsHtml;
+
+            const totDiff = sumCurr - sumPrev;
+            const totPctChange = sumPrev > 0 ? ((sumCurr - sumPrev) / sumPrev * 100) : 0;
+            const totSign = totDiff > 0 ? '+' : '';
+
+            tfootAncYoY.innerHTML = `<tr class="anmol-total-row">
+                <td colspan="2" style="text-align:center; font-weight:800;">Grand Total</td>
+                <td>${sumPrev.toLocaleString()}</td>
+                <td>${sumCurr.toLocaleString()}</td>
+                <td style="font-weight:800; color:${totDiff >= 0 ? '#059669' : '#dc2626'};">${totSign}${totDiff.toLocaleString()}</td>
+                <td class="${getExcelScaleClass(totPctChange, minPct, maxPct)}">${totSign}${totPctChange.toFixed(2)}%</td>
+            </tr>`;
+
+            if (currTotEl) currTotEl.textContent = sumCurr.toLocaleString();
+            if (prevTotEl) prevTotEl.textContent = sumPrev.toLocaleString();
+            if (diffTotEl) {
+                diffTotEl.textContent = `${totSign}${totPctChange.toFixed(1)}%`;
+                diffTotEl.style.color = totDiff >= 0 ? '#059669' : '#dc2626';
+            }
+        }
+
+        // =========================================================================
+        // 2. POPULATE TABLE 2: Status of 4 ANC Checkup (with Abortion / Preterm Exclusions)
+        // =========================================================================
+        const tbody4Anc = document.getElementById('tbody-anmol-4anc');
+        const tfoot4Anc = document.getElementById('tfoot-anmol-4anc');
+        const avgEl = document.getElementById('anmol-4anc-district-avg');
+        const pwLabelEl = document.getElementById('th-4anc-pw-label');
+        const chipAbortions = document.getElementById('chip-4anc-abortions');
+        const chipPreterm = document.getElementById('chip-4anc-preterm');
+        const chipsContainer = document.getElementById('anmol-4anc-exclusion-chips');
+
+        if (tbody4Anc && tfoot4Anc) {
+            if (pwLabelEl) {
+                if (dpmuSelectedCohort === 'del') {
+                    pwLabelEl.textContent = dpmuExcludeAbortPreterm ? 'Eligible Delivered PW' : 'Delivered PW';
+                } else {
+                    pwLabelEl.textContent = dpmuExcludeAbortPreterm ? 'Eligible PW' : 'Total PW';
+                }
+            }
+
+            let grandTotalReg = 0;
+            let grandAbortions = 0;
+            let grandPreterm = 0;
+            let grandEligible = 0;
+            let grand4Anc = 0;
+
+            const ancUnitData = locInfo.units.map((unitName, idx) => {
+                const uAll = yrAncPatients.filter(p => locInfo.filterFn(p, unitName));
+                const totalReg = uAll.length;
+                let unitAbortions = 0;
+                let unitPreterm = 0;
+
+                uAll.forEach(p => {
+                    const ex = isAbortionOrPreterm(p);
+                    if (ex.isExcluded) {
+                        if (ex.type === 'abortion') unitAbortions++;
+                        else if (ex.type === 'preterm') unitPreterm++;
+                    }
+                });
+
+                let eligibleList = uAll;
+                if (dpmuSelectedCohort === 'del') {
+                    if (dpmuExcludeAbortPreterm) {
+                        eligibleList = uAll.filter(p => p.del === 1 && !isAbortionOrPreterm(p).isExcluded);
+                    } else {
+                        eligibleList = uAll.filter(p => p.del === 1);
+                    }
+                } else if (dpmuExcludeAbortPreterm) {
+                    eligibleList = uAll.filter(p => !isAbortionOrPreterm(p).isExcluded);
+                }
+
+                let fourAncCount = 0;
+                eligibleList.forEach(p => {
+                    const ga = check4AncByGestationalAge(p);
+                    if (ga.all4 === 1) fourAncCount++;
+                });
+
+                const eligibleCount = eligibleList.length;
+                const covPct = eligibleCount > 0 ? (fourAncCount / eligibleCount * 100) : 0;
+
+                grandTotalReg += totalReg;
+                grandAbortions += unitAbortions;
+                grandPreterm += unitPreterm;
+                grandEligible += eligibleCount;
+                grand4Anc += fourAncCount;
+
+                return { idx, unitName, totalReg, unitAbortions, unitPreterm, eligibleCount, fourAncCount, covPct };
+            });
+
+            // Update Summary KPI Chips: Separate Abortions & Pre-term (<35 Wks)
+            if (chipAbortions) chipAbortions.textContent = grandAbortions.toLocaleString();
+            if (chipPreterm) chipPreterm.textContent = grandPreterm.toLocaleString();
+            if (chipsContainer) {
+                chipsContainer.style.opacity = dpmuExcludeAbortPreterm ? '1' : '0.55';
+            }
+            const grandCovPct = grandEligible > 0 ? (grand4Anc / grandEligible * 100) : 0;
+
+            const covVals = ancUnitData.map(d => d.covPct);
+            const minCov = Math.min(...covVals);
+            const maxCov = Math.max(...covVals);
+
+            const ancRowsHtml = ancUnitData.map(d => {
+                return `<tr>
+                    <td>${d.idx + 1}</td>
+                    <td class="col-block">${cleanPhcName(d.unitName)}</td>
+                    <td><strong>${d.eligibleCount.toLocaleString()}</strong></td>
+                    <td><strong>${d.fourAncCount.toLocaleString()}</strong></td>
+                    <td class="${getExcelScaleClass(d.covPct, minCov, maxCov)}">${d.covPct.toFixed(2)}</td>
+                </tr>`;
+            }).join('');
+
+            tbody4Anc.innerHTML = ancRowsHtml;
+
+            tfoot4Anc.innerHTML = `<tr class="anmol-total-row">
+                <td colspan="2" style="text-align:center; font-weight:800;">Grand Total</td>
+                <td>${grandEligible.toLocaleString()}</td>
+                <td>${grand4Anc.toLocaleString()}</td>
+                <td class="${getExcelScaleClass(grandCovPct, minCov, maxCov)}">${grandCovPct.toFixed(2)}</td>
+            </tr>`;
+
+            if (avgEl) {
+                avgEl.textContent = `${grandCovPct.toFixed(2)}%`;
+            }
+        }
+
+        // =========================================================================
+        // 3. POPULATE TABLE 3: Status of HRP identification and Management
+        // =========================================================================
+        const tbodyUhrp = document.getElementById('tbody-anmol-uhrp');
+        const tfootUhrp = document.getElementById('tfoot-anmol-uhrp');
+
+        if (tbodyUhrp && tfootUhrp) {
+            let totRegPw = 0;
+            let totHrpw = 0;
+            let totMod = 0, totModMgmt = 0;
+            let totSev = 0, totSevMgmt = 0;
+            let totPih = 0, totPihMgmt = 0;
+            let totT1MaExcluded = 0;
+
+            const blockRowsData = locInfo.units.map((unitName, idx) => {
+                const bAnc = yrAncPatients.filter(p => locInfo.filterFn(p, unitName));
+                const bHrp = yrPatients.filter(p => locInfo.filterFn(p, unitName));
+
+                const regCount = bAnc.length;
+                const hrpCount = bHrp.length;
+
+                let modCount = 0, modMgmtCount = 0;
+                let sevCount = 0, sevMgmtCount = 0;
+                let pihCount = 0, pihMgmtCount = 0;
+
+                bHrp.forEach(p => {
+                    if (p.ma === 1) {
+                        const isT1Ma = isT1PregnantModAnemia(p, refDate);
+                        if (isT1Ma) {
+                            totT1MaExcluded++;
+                        }
+                        if (dpmuExcludeT1ModAnemia && isT1Ma) {
+                            // Exclude 1st trimester pregnant women from Moderate Anemia denominator
+                            return;
+                        }
+                        modCount++;
+                        if (isMaManaged(p)) modMgmtCount++;
+                    }
+                    if (p.sa === 1) {
+                        sevCount++;
+                        if (isSaManaged(p)) sevMgmtCount++;
+                    }
+                    if (p.pi === 1) {
+                        pihCount++;
+                        if (isPiManaged(p)) pihMgmtCount++;
+                    }
+                });
+
+                const modIdPct = regCount > 0 ? (modCount / regCount * 100) : 0;
+                const modMgmtPct = modCount > 0 ? (modMgmtCount / modCount * 100) : 0;
+                const sevIdPct = regCount > 0 ? (sevCount / regCount * 100) : 0;
+                const sevMgmtPct = sevCount > 0 ? (sevMgmtCount / sevCount * 100) : 0;
+                const pihIdPct = regCount > 0 ? (pihCount / regCount * 100) : 0;
+                const pihMgmtPct = pihCount > 0 ? (pihMgmtCount / pihCount * 100) : 0;
+
+                return {
+                    idx, unitName, regCount, hrpCount,
+                    modCount, modIdPct, modMgmtCount, modMgmtPct,
+                    sevCount, sevIdPct, sevMgmtCount, sevMgmtPct,
+                    pihCount, pihIdPct, pihMgmtCount, pihMgmtPct
+                };
+            });
+
+            const minMax = (key) => {
+                const vals = blockRowsData.map(d => d[key]);
+                return { min: Math.min(...vals), max: Math.max(...vals) };
+            };
+            const mmModId = minMax('modIdPct');
+            const mmModMgmt = minMax('modMgmtPct');
+            const mmSevId = minMax('sevIdPct');
+            const mmSevMgmt = minMax('sevMgmtPct');
+            const mmPihId = minMax('pihIdPct');
+            const mmPihMgmt = minMax('pihMgmtPct');
+
+            const rowsHtml = blockRowsData.map(d => {
+                totRegPw += d.regCount;
+                totHrpw += d.hrpCount;
+                totMod += d.modCount;
+                totModMgmt += d.modMgmtCount;
+                totSev += d.sevCount;
+                totSevMgmt += d.sevMgmtCount;
+                totPih += d.pihCount;
+                totPihMgmt += d.pihMgmtCount;
+
+                return `<tr>
+                    <td>${d.idx + 1}</td>
+                    <td class="col-block">${cleanPhcName(d.unitName)}</td>
+                    <td><strong>${d.regCount.toLocaleString()}</strong></td>
+                    <td><strong>${d.hrpCount.toLocaleString()}</strong></td>
+                    <td>${d.modCount.toLocaleString()}</td>
+                    <td class="${getExcelScaleClass(d.modIdPct, mmModId.min, mmModId.max)}">${d.modIdPct.toFixed(2)}</td>
+                    <td>${d.modMgmtCount.toLocaleString()}</td>
+                    <td class="${getExcelScaleClass(d.modMgmtPct, mmModMgmt.min, mmModMgmt.max)}">${d.modMgmtPct.toFixed(2)}</td>
+                    <td>${d.sevCount.toLocaleString()}</td>
+                    <td class="${getExcelScaleClass(d.sevIdPct, mmSevId.min, mmSevId.max)}">${d.sevIdPct.toFixed(2)}</td>
+                    <td>${d.sevMgmtCount.toLocaleString()}</td>
+                    <td class="${getExcelScaleClass(d.sevMgmtPct, mmSevMgmt.min, mmSevMgmt.max)}">${d.sevMgmtPct.toFixed(2)}</td>
+                    <td>${d.pihCount.toLocaleString()}</td>
+                    <td class="${getExcelScaleClass(d.pihIdPct, mmPihId.min, mmPihId.max)}">${d.pihIdPct.toFixed(2)}</td>
+                    <td>${d.pihMgmtCount.toLocaleString()}</td>
+                    <td class="${getExcelScaleClass(d.pihMgmtPct, mmPihMgmt.min, mmPihMgmt.max)}">${d.pihMgmtPct.toFixed(2)}</td>
+                </tr>`;
+            }).join('');
+
+            tbodyUhrp.innerHTML = rowsHtml;
+
+            // Sync Table 3 1st Trimester Moderate Anemia Exclusion UI
+            const chipT1Ma = document.getElementById('chip-uhrp-t1-ma-excluded');
+            if (chipT1Ma) {
+                chipT1Ma.textContent = dpmuExcludeT1ModAnemia ? totT1MaExcluded.toLocaleString() : `0 (Toggle Off - ${totT1MaExcluded} Eligible)`;
+            }
+            const btnT1Ma = document.getElementById('btn-toggle-exclude-t1-ma');
+            if (btnT1Ma) {
+                btnT1Ma.classList.toggle('active', dpmuExcludeT1ModAnemia);
+            }
+
+            const totModIdPct = totRegPw > 0 ? (totMod / totRegPw * 100) : 0;
+            const totModMgmtPct = totMod > 0 ? (totModMgmt / totMod * 100) : 0;
+            const totSevIdPct = totRegPw > 0 ? (totSev / totRegPw * 100) : 0;
+            const totSevMgmtPct = totSev > 0 ? (totSevMgmt / totSev * 100) : 0;
+            const totPihIdPct = totRegPw > 0 ? (totPih / totRegPw * 100) : 0;
+            const totPihMgmtPct = totPih > 0 ? (totPihMgmt / totPih * 100) : 0;
+
+            tfootUhrp.innerHTML = `<tr class="anmol-total-row">
+                <td colspan="2" style="text-align:center; font-weight:800;">Total</td>
+                <td>${totRegPw.toLocaleString()}</td>
+                <td>${totHrpw.toLocaleString()}</td>
+                <td>${totMod.toLocaleString()}</td>
+                <td class="${getExcelScaleClass(totModIdPct, mmModId.min, mmModId.max)}">${totModIdPct.toFixed(2)}</td>
+                <td>${totModMgmt.toLocaleString()}</td>
+                <td class="${getExcelScaleClass(totModMgmtPct, mmModMgmt.min, mmModMgmt.max)}">${totModMgmtPct.toFixed(2)}</td>
+                <td>${totSev.toLocaleString()}</td>
+                <td class="${getExcelScaleClass(totSevIdPct, mmSevId.min, mmSevId.max)}">${totSevIdPct.toFixed(2)}</td>
+                <td>${totSevMgmt.toLocaleString()}</td>
+                <td class="${getExcelScaleClass(totSevMgmtPct, mmSevMgmt.min, mmSevMgmt.max)}">${totSevMgmtPct.toFixed(2)}</td>
+                <td>${totPih.toLocaleString()}</td>
+                <td class="${getExcelScaleClass(totPihIdPct, mmPihId.min, mmPihId.max)}">${totPihIdPct.toFixed(2)}</td>
+                <td>${totPihMgmt.toLocaleString()}</td>
+                <td class="${getExcelScaleClass(totPihMgmtPct, mmPihMgmt.min, mmPihMgmt.max)}">${totPihMgmtPct.toFixed(2)}</td>
+            </tr>`;
+        }
+
+        // =========================================================================
+        // 4. POPULATE TABLE 4: PHC Facility Performance Review Table
+        // =========================================================================
+        const tbodyFacility = document.getElementById('tbody-anmol-facility-kpi');
+        const tfootFacility = document.getElementById('tfoot-anmol-facility-kpi');
+        const facilityTitleEl = document.getElementById('facility-table-title');
+        const facilityCountStat = document.getElementById('facility-count-stat');
+        const facilityActiveStat = document.getElementById('facility-active-stat');
+
+        if (tbodyFacility && tfootFacility) {
+            if (facilityTitleEl) {
+                facilityTitleEl.textContent = locInfo.level === 'block' ? 'Block-wise Clinical Performance & Review' : (locInfo.level === 'phc' ? 'PHC Facility Clinical Performance & Review' : 'Subcenter Clinical Performance & Review');
+            }
+
+            let grandTotalReg = 0;
+            let grandActivePreg = 0;
+            let grandMissedAnc = 0;
+            let grandDeliveryOverdue = 0;
+            let grandDelivered = 0;
+            let grandAbortion = 0;
+            let grandDeath = 0;
+
+            const facilityRawData = locInfo.units.map((unitName, idx) => {
+                const uAnc = yrAncPatients.filter(p => locInfo.filterFn(p, unitName));
+
+                const totalReg = uAnc.length;
+                let activePreg = 0;
+                let missedAnc = 0;
+                let deliveryOverdue = 0;
+                let delivered = 0;
+                let abortion = 0;
+                let death = 0;
+
+                uAnc.forEach(p => {
+                    const isDead = isMaternalDeath(p);
+                    const isAb = (p.del === 2 || p.del === '2' || p.is_abortion === 1);
+                    const isDelivered = (p.del === 1 || p.del === '1' || (p.del_date && !isDead && !isAb));
+
+                    if (isDead) {
+                        death++;
+                    } else if (isAb) {
+                        abortion++;
+                    } else if (isDelivered) {
+                        delivered++;
+                    } else if (p.del === 0 || p.del === '0' || !p.del) {
+                        activePreg++;
+                    }
+
+                    if (!isDead && !isAb) {
+                        const ancCheck = checkConsecutiveMissedAnc(p);
+                        if (ancCheck.hasMissed) missedAnc++;
+                    }
+                    if (isEddOverdue(p)) deliveryOverdue++;
+                });
+
+                grandTotalReg += totalReg;
+                grandActivePreg += activePreg;
+                grandMissedAnc += missedAnc;
+                grandDeliveryOverdue += deliveryOverdue;
+                grandDelivered += delivered;
+                grandAbortion += abortion;
+                grandDeath += death;
+
+                return {
+                    sno: idx + 1,
+                    name: unitName,
+                    totalReg,
+                    activePreg,
+                    missedAnc,
+                    deliveryOverdue,
+                    delivered,
+                    abortion,
+                    death
+                };
+            });
+
+            if (facilityCountStat) facilityCountStat.textContent = facilityRawData.length.toLocaleString();
+            if (facilityActiveStat) facilityActiveStat.textContent = grandActivePreg.toLocaleString();
+
+            // Sort data according to facilitySortCol and facilitySortAsc
+            facilityRawData.sort((a, b) => {
+                let va = a[facilitySortCol];
+                let vb = b[facilitySortCol];
+                if (typeof va === 'string') {
+                    return facilitySortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+                }
+                return facilitySortAsc ? (va - vb) : (vb - va);
+            });
+
+            // Update Sort Indicators on Table 4 Header
+            const sortHeaders = document.querySelectorAll('#table-anmol-facility-kpi th.sortable');
+            sortHeaders.forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc', 'col-spotlight');
+                const colKey = th.getAttribute('data-col');
+                if (colKey === facilitySortCol) {
+                    th.classList.add(facilitySortAsc ? 'sort-asc' : 'sort-desc', 'col-spotlight');
+                }
+            });
+
+            const facilityRowsHtml = facilityRawData.map((d, i) => {
+                return `<tr>
+                    <td>${i + 1}</td>
+                    <td class="col-block ${facilitySortCol === 'name' ? 'col-spotlight' : ''}">${cleanPhcName(d.name)}</td>
+                    <td class="${facilitySortCol === 'totalReg' ? 'col-spotlight' : ''}"><strong>${d.totalReg.toLocaleString()}</strong></td>
+                    <td class="${facilitySortCol === 'activePreg' ? 'col-spotlight' : ''}">${d.activePreg.toLocaleString()}</td>
+                    <td class="${facilitySortCol === 'missedAnc' ? 'col-spotlight' : ''}" style="color:${d.missedAnc > 0 ? '#e11d48' : '#64748b'}; font-weight:700;">${d.missedAnc.toLocaleString()}</td>
+                    <td class="${facilitySortCol === 'deliveryOverdue' ? 'col-spotlight' : ''}" style="color:${d.deliveryOverdue > 0 ? '#dc2626' : '#64748b'}; font-weight:700;">${d.deliveryOverdue.toLocaleString()}</td>
+                    <td class="${facilitySortCol === 'delivered' ? 'col-spotlight' : ''}" style="color:${d.delivered > 0 ? '#059669' : '#64748b'}; font-weight:700;">${d.delivered.toLocaleString()}</td>
+                    <td class="${facilitySortCol === 'abortion' ? 'col-spotlight' : ''}" style="color:${d.abortion > 0 ? '#d97706' : '#64748b'}; font-weight:700;">${d.abortion.toLocaleString()}</td>
+                    <td class="${facilitySortCol === 'death' ? 'col-spotlight' : ''}" style="color:${d.death > 0 ? '#dc2626' : '#64748b'}; font-weight:700;">${d.death.toLocaleString()}</td>
+                </tr>`;
+            }).join('');
+
+            tbodyFacility.innerHTML = facilityRowsHtml;
+
+            tfootFacility.innerHTML = `<tr class="anmol-total-row">
+                <td colspan="2" style="text-align:center; font-weight:800;">Total</td>
+                <td class="${facilitySortCol === 'totalReg' ? 'col-spotlight' : ''}">${grandTotalReg.toLocaleString()}</td>
+                <td class="${facilitySortCol === 'activePreg' ? 'col-spotlight' : ''}">${grandActivePreg.toLocaleString()}</td>
+                <td class="${facilitySortCol === 'missedAnc' ? 'col-spotlight' : ''}">${grandMissedAnc.toLocaleString()}</td>
+                <td class="${facilitySortCol === 'deliveryOverdue' ? 'col-spotlight' : ''}">${grandDeliveryOverdue.toLocaleString()}</td>
+                <td class="${facilitySortCol === 'delivered' ? 'col-spotlight' : ''}">${grandDelivered.toLocaleString()}</td>
+                <td class="${facilitySortCol === 'abortion' ? 'col-spotlight' : ''}">${grandAbortion.toLocaleString()}</td>
+                <td class="${facilitySortCol === 'death' ? 'col-spotlight' : ''}">${grandDeath.toLocaleString()}</td>
+            </tr>`;
+        }
+
+        bindDpmuEventsOnce();
+    }
+
+    function bindDpmuEventsOnce() {
+        if (dpmuEventsBound) return;
+        dpmuEventsBound = true;
+
+        // 1st Trimester Moderate Anemia Exclusion Toggle
+        const t1MaToggleBtn = document.getElementById('btn-toggle-exclude-t1-ma');
+        if (t1MaToggleBtn) {
+            t1MaToggleBtn.addEventListener('click', () => {
+                dpmuExcludeT1ModAnemia = !dpmuExcludeT1ModAnemia;
+                t1MaToggleBtn.classList.toggle('active', dpmuExcludeT1ModAnemia);
+                renderDpmuOfficialTables();
+            });
+        }
+
+        // Cohort buttons for 4 ANC
+        const cohortBtns = document.querySelectorAll('.anmol-cohort-btn');
+        cohortBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                cohortBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                dpmuSelectedCohort = btn.getAttribute('data-cohort');
+                renderDpmuOfficialTables();
+            });
+        });
+
+        // Toggle Abortion & Preterm Exclusions
+        const btnToggleAbort = document.getElementById('btn-toggle-exclude-abort-preterm');
+        if (btnToggleAbort) {
+            btnToggleAbort.addEventListener('click', () => {
+                dpmuExcludeAbortPreterm = !dpmuExcludeAbortPreterm;
+                btnToggleAbort.classList.toggle('active', dpmuExcludeAbortPreterm);
+                renderDpmuOfficialTables();
+            });
+        }
+
+        // YoY Period buttons for ANC Registration Comparison
+        const yoyBtns = document.querySelectorAll('.anmol-yoy-btn');
+        yoyBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                yoyBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                dpmuYoyPeriod = btn.getAttribute('data-yoy-period');
+                renderDpmuOfficialTables();
+            });
+        });
+
+        // Table 4 Sorting Header Clicks
+        const sortHeaders = document.querySelectorAll('#table-anmol-facility-kpi th.sortable');
+        sortHeaders.forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.getAttribute('data-col');
+                if (facilitySortCol === col) {
+                    facilitySortAsc = !facilitySortAsc;
+                } else {
+                    facilitySortCol = col;
+                    facilitySortAsc = (col === 'sno' || col === 'name');
+                }
+                renderDpmuOfficialTables();
+            });
+        });
+
+// Table 4 Management View Scope Toggle removed (now automatic dynamic sync)
+
+        // Export to CSV for HRP Table
+        const btnExpUhrp = document.getElementById('btn-export-uhrp-csv');
+        if (btnExpUhrp) {
+            btnExpUhrp.addEventListener('click', () => exportTableToCsv('table-anmol-uhrp', `Anmol_Status_of_HRP_Identification_Management_${dpmuSelectedYear}.csv`));
+        }
+
+        // Copy Table for HRP Table
+        const btnCopyUhrp = document.getElementById('btn-copy-uhrp-table');
+        if (btnCopyUhrp) {
+            btnCopyUhrp.addEventListener('click', () => copyTableToClipboard('table-anmol-uhrp', btnCopyUhrp));
+        }
+
+        // Export to CSV for 4 ANC Table
+        const btnExp4Anc = document.getElementById('btn-export-4anc-csv');
+        if (btnExp4Anc) {
+            btnExp4Anc.addEventListener('click', () => exportTableToCsv('table-anmol-4anc', `Anmol_Status_of_4_ANC_Checkup_${dpmuSelectedYear}.csv`));
+        }
+
+        // Copy Table for 4 ANC Table
+        const btnCopy4Anc = document.getElementById('btn-copy-4anc-table');
+        if (btnCopy4Anc) {
+            btnCopy4Anc.addEventListener('click', () => copyTableToClipboard('table-anmol-4anc', btnCopy4Anc));
+        }
+
+        // Export to CSV for ANC YoY Table
+        const btnExpAncYoY = document.getElementById('btn-export-anc-yoy-csv');
+        if (btnExpAncYoY) {
+            btnExpAncYoY.addEventListener('click', () => exportTableToCsv('table-anmol-anc-yoy', `Anmol_Status_of_ANC_Registration_YoY_${dpmuYoyPeriod}.csv`));
+        }
+
+        // Copy Table for ANC YoY Table
+        const btnCopyAncYoY = document.getElementById('btn-copy-anc-yoy-table');
+        if (btnCopyAncYoY) {
+            btnCopyAncYoY.addEventListener('click', () => copyTableToClipboard('table-anmol-anc-yoy', btnCopyAncYoY));
+        }
+
+        // Export to CSV for Facility Table
+        const btnExpFacility = document.getElementById('btn-export-facility-csv');
+        if (btnExpFacility) {
+            btnExpFacility.addEventListener('click', () => exportTableToCsv('table-anmol-facility-kpi', `Facility_Performance_Review_${dpmuSelectedYear}.csv`));
+        }
+
+        // Copy Table for Facility Table
+        const btnCopyFacility = document.getElementById('btn-copy-facility-table');
+        if (btnCopyFacility) {
+            btnCopyFacility.addEventListener('click', () => copyTableToClipboard('table-anmol-facility-kpi', btnCopyFacility));
+        }
+    }
+
+    function exportTableToCsv(tableId, filename) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        const rows = Array.from(table.querySelectorAll('tr'));
+        const csvContent = rows.map(r => {
+            const cells = Array.from(r.querySelectorAll('th, td'));
+            return cells.map(c => {
+                let txt = (c.innerText || '').replace(/\r?\n|\r/g, ' ').trim();
+                if (txt.includes(',') || txt.includes('"')) {
+                    txt = `"${txt.replace(/"/g, '""')}"`;
+                }
+                return txt;
+            }).join(',');
+        }).join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function copyTableToClipboard(tableId, btn) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        const rows = Array.from(table.querySelectorAll('tr'));
+        const text = rows.map(r => {
+            const cells = Array.from(r.querySelectorAll('th, td'));
+            return cells.map(c => (c.innerText || '').replace(/\r?\n|\r/g, ' ').trim()).join('\t');
+        }).join('\n');
+
+        navigator.clipboard.writeText(text).then(() => {
+            const orig = btn.innerText;
+            btn.innerText = '✓ Copied';
+            setTimeout(() => { btn.innerText = orig; }, 1800);
+        }).catch(err => {
+            console.error('Failed to copy table text: ', err);
+        });
+    }
+
+    // SECTION 2: CHARTS & ANALYTICAL INSIGHTS
+    // ==========================================================================
+
+    function renderMonthlyTrendChart(tabKey, toolbarConfig) {
+        if (monthlyTrendChartInstance) {
+            monthlyTrendChartInstance.destroy();
+            monthlyTrendChartInstance = null;
+        }
+
+        const chartEl = document.getElementById('chart-monthly-trend');
+        if (!chartEl) return;
+        chartEl.innerHTML = '';
+
+        const titleEl = document.getElementById('chart-monthly-trend-title');
+        const badgeEl = document.getElementById('chart-monthly-trend-badge');
+
+        const monthsOrder = ['04', '05', '06', '07', '08', '09', '10', '11', '12', '01', '02', '03'];
+        const monthsLabels = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+
+        const blockVal = document.getElementById(elementIds.block)?.value || 'All';
+        const blockFilter = blockVal === 'All' ? null : blockVal.toLowerCase();
+
+        // Helper to extract registration / earliest attended visit month (MM)
+        function getPatientRegMonth(p) {
+            if (p.reg && typeof p.reg === 'string' && p.reg.includes('-')) {
+                const parts = p.reg.split('-');
+                if (parts.length === 3) return parts[1];
+            }
+            if (p.m && typeof p.m === 'string' && p.m.includes('-')) {
+                const parts = p.m.split('-');
+                if (parts.length === 2) return parts[1];
+            }
+            if (p.v_dates && p.v_dates.length) {
+                for (let i = 0; i < p.v_dates.length; i++) {
+                    const d = p.v_dates[i];
+                    if (d && d !== '-' && d.includes('-')) {
+                        const parts = d.split('-');
+                        if (parts.length === 3) return parts[1];
+                    }
+                }
+            }
+            if (p.lmp && p.lmp !== '-' && p.lmp.includes('-')) {
+                const parts = p.lmp.split('-');
+                if (parts.length === 3) return parts[1];
+            }
+            return null;
+        }
+
+        // Helper to extract date of first clinical diagnosis for SA, MA, and PIH
+        function getPatientDiagnosisMonth(p, conditionKey) {
+            // Severe Anemia: First visit with Hb < 7.0 g/dL
+            if (conditionKey === 'sa') {
+                if (p.hb_v && p.v_dates) {
+                    for (let i = 0; i < p.v_dates.length; i++) {
+                        const d = p.v_dates[i];
+                        const hb = p.hb_v[i];
+                        if (d && d !== '-' && d.includes('-') && typeof hb === 'number' && hb > 0 && hb < 7.0) {
+                            const parts = d.split('-');
+                            if (parts.length === 3) return parts[1];
+                        }
+                    }
+                }
+                return getPatientRegMonth(p);
+            }
+
+            // Moderate Anemia: First visit with 7.0 <= Hb < 10.0 g/dL
+            if (conditionKey === 'ma') {
+                if (p.hb_v && p.v_dates) {
+                    for (let i = 0; i < p.v_dates.length; i++) {
+                        const d = p.v_dates[i];
+                        const hb = p.hb_v[i];
+                        if (d && d !== '-' && d.includes('-') && typeof hb === 'number' && hb >= 7.0 && hb < 10.0) {
+                            const parts = d.split('-');
+                            if (parts.length === 3) return parts[1];
+                        }
+                    }
+                }
+                return getPatientRegMonth(p);
+            }
+
+            // PIH (Pregnancy-Induced Hypertension): First visit with Sys >= 140 or Dia >= 90
+            if (conditionKey === 'pi') {
+                if (p.bp_v && p.v_dates) {
+                    for (let i = 0; i < p.v_dates.length; i++) {
+                        const d = p.v_dates[i];
+                        const bp = p.bp_v[i];
+                        if (d && d !== '-' && d.includes('-') && bp && typeof bp === 'string' && bp.includes('/')) {
+                            const bparts = bp.split('/');
+                            const sys = parseFloat(bparts[0]);
+                            const dia = parseFloat(bparts[1]);
+                            if ((!isNaN(sys) && sys >= 140) || (!isNaN(dia) && dia >= 90)) {
+                                const parts = d.split('-');
+                                if (parts.length === 3) return parts[1];
+                            }
+                        }
+                    }
+                }
+                return getPatientRegMonth(p);
+            }
+
+            // For all other risk factors (gd, ls, sc, tp, bh, all, anc): use registration date
+            return getPatientRegMonth(p);
+        }
+
+        const allAnc = DASHBOARD_DATA.anc_patients || [];
+        const allHrp = DASHBOARD_DATA.patients || [];
+
+        // Apply active block filter if selected
+        const ancPool = blockFilter ? allAnc.filter(p => (p.b || '').toLowerCase() === blockFilter) : allAnc;
+        const hrpPool = blockFilter ? allHrp.filter(p => (p.b || '').toLowerCase() === blockFilter) : allHrp;
+
+        // Aggregate monthly ANC totals for 2026-27 and 2025-26
+        const ancMonthly = { '2026-27': {}, '2025-26': {} };
+        ancPool.forEach(p => {
+            const y = p.y;
+            if (ancMonthly[y]) {
+                const m = getPatientRegMonth(p);
+                if (m && monthsOrder.includes(m)) {
+                    ancMonthly[y][m] = (ancMonthly[y][m] || 0) + 1;
+                }
+            }
+        });
+
+        const activeKey = tabKey || currentTab || 'all';
+        const isAncTab = (activeKey === 'anc');
+        const isAllUhrp = (activeKey === 'all');
+        const tabName = TAB_NAMES[activeKey] || activeKey.toUpperCase();
+        const blockText = blockVal === 'All' ? 'District Khargone' : `${blockVal} Block`;
+
+        if (titleEl) {
+            if (isAncTab) {
+                titleEl.textContent = `📈 Monthly ANC Registrations Trend (${blockText})`;
+            } else if (isAllUhrp) {
+                titleEl.textContent = `📈 All High Risk (UHRP) Monthly Identification Rate (${blockText})`;
+            } else {
+                titleEl.textContent = `📈 ${tabName} Monthly Identification Rate (${blockText})`;
+            }
+        }
+
+        if (badgeEl) {
+            if (isAncTab) {
+                badgeEl.textContent = 'Monthly Registered Pregnant Women (2026-27 vs 2025-26)';
+            } else {
+                badgeEl.textContent = '% Identified Against Total Monthly ANC Registrations (2026-27 vs 2025-26)';
+            }
+        }
+
+        let series = [];
+        let yaxisTitle = isAncTab ? 'Registrations' : '% Identified';
+
+        if (isAncTab) {
+            // Count of ANC registrations YoY
+            const currCounts = monthsOrder.map((m, idx) => {
+                if (idx > 7) return null; // Future months (Dec–Mar)
+                return ancMonthly['2026-27'][m] || 0;
+            });
+            const prevCounts = monthsOrder.map(m => ancMonthly['2025-26'][m] || 0);
+
+            series = [
+                { name: '2026-27 (Current FY)', data: currCounts },
+                { name: '2025-26 (Previous FY)', data: prevCounts }
+            ];
+        } else {
+            // Percentage of monthly ANC registrations YoY
+            const hrpMonthly = { '2026-27': {}, '2025-26': {} };
+            hrpPool.forEach(p => {
+                const y = p.y;
+                if (!hrpMonthly[y]) return;
+
+                let matches = false;
+                if (isAllUhrp) {
+                    matches = (p.uhrp === 1 || p.sa === 1 || p.ma === 1 || p.pi === 1 || p.gd === 1 || p.ls === 1 || p.sc === 1 || p.tp === 1 || p.bh === 1);
+                } else if (activeKey === 'ma') {
+                    matches = (p.ma === 1);
+                } else {
+                    matches = (p[activeKey] === 1);
+                }
+
+                if (matches) {
+                    const m = getPatientDiagnosisMonth(p, activeKey);
+                    if (m && monthsOrder.includes(m)) {
+                        hrpMonthly[y][m] = (hrpMonthly[y][m] || 0) + 1;
+                    }
+                }
+            });
+
+            const currPcts = monthsOrder.map((m, idx) => {
+                if (idx > 7) return null; // Future months (Dec–Mar)
+                const tot = ancMonthly['2026-27'][m] || 0;
+                const cnt = hrpMonthly['2026-27'][m] || 0;
+                return tot > 0 ? parseFloat(((cnt / tot) * 100).toFixed(2)) : 0.0;
+            });
+
+            const prevPcts = monthsOrder.map(m => {
+                const tot = ancMonthly['2025-26'][m] || 0;
+                const cnt = hrpMonthly['2025-26'][m] || 0;
+                return tot > 0 ? parseFloat(((cnt / tot) * 100).toFixed(2)) : 0.0;
+            });
+
+            series = [
+                { name: '2026-27 (Current FY)', data: currPcts },
+                { name: '2025-26 (Previous FY)', data: prevPcts }
+            ];
+        }
+
+        const options = {
+            series: series,
+            chart: {
+                type: 'line',
+                height: 330,
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+                toolbar: toolbarConfig || { show: true },
+                animations: { enabled: true, easing: 'easeinout', speed: 450 },
+                background: 'transparent'
+            },
+            theme: {
+                mode: 'light'
+            },
+            stroke: {
+                curve: 'smooth',
+                width: [3.5, 2.5],
+                dashArray: [0, 4]
+            },
+            colors: ['#ff2a6d', '#0284c7'],
+            markers: {
+                size: [5, 4],
+                strokeColors: '#ffffff',
+                strokeWidth: 2,
+                hover: { size: 7 }
+            },
+            xaxis: {
+                categories: monthsLabels,
+                labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#64748b' } },
+                axisBorder: { show: true, color: '#cbd5e1' },
+                axisTicks: { show: false }
+            },
+            yaxis: {
+                title: {
+                    text: yaxisTitle,
+                    style: { fontSize: '11.5px', fontWeight: 700, color: '#0f172a' }
+                },
+                labels: {
+                    formatter: function (val) {
+                        if (val === null || val === undefined) return '';
+                        return isAncTab ? val.toLocaleString() : `${val.toFixed(1)}%`;
+                    },
+                    style: { fontSize: '11px', fontWeight: 600, colors: '#64748b' }
+                }
+            },
+            legend: {
+                position: 'top',
+                horizontalAlign: 'right',
+                fontSize: '11.5px',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+                labels: { colors: '#334155' },
+                markers: { radius: 12, width: 10, height: 10 }
+            },
+            grid: {
+                borderColor: 'rgba(226, 232, 240, 0.9)',
+                strokeDashArray: 4
+            },
+            tooltip: {
+                theme: 'light',
+                shared: true,
+                intersect: false,
+                y: {
+                    formatter: function (val) {
+                        if (val === null || val === undefined) return 'N/A';
+                        return isAncTab ? `${val.toLocaleString()} PW registered` : `${val.toFixed(2)}% of monthly ANC`;
+                    }
+                }
+            }
+        };
+
+        monthlyTrendChartInstance = new ApexCharts(chartEl, options);
+        monthlyTrendChartInstance.render();
+    }
+
+    function renderAnalyticsCharts(filteredTabPatients) {
+        currentAnalyticsPatients = filteredTabPatients;
         const toolbarConfig = {
             show: true,
             tools: {
@@ -1472,363 +2803,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        const allBlocks = ['Barwaha', 'Bhagwanpura', 'Bhikangaon', 'Gogaon', 'Jhiranya', 'Kasrawad', 'Khargone', 'Maheshwar', 'Segaon'];
+        // 1. Monthly Identification Trend Chart (YoY Comparison)
+        renderMonthlyTrendChart(currentTab, toolbarConfig);
 
-        // 0. Helpers for UHRP Clinical Management Status
-        function isSevereAnemiaManaged(p) {
-            return (p.is_doses && p.is_doses.length > 0) || (p.fcm === 'Yes') || (p.bt && p.bt !== 'No');
-        }
-
-        function isModerateAnemiaManaged(p) {
-            // Requirement: Moderate anemia management is either FCM or Iron Sucrose doses, NOT blood transfusion
-            return (p.is_doses && p.is_doses.length > 0) || (p.fcm === 'Yes');
-        }
-
-        function isPihManaged(p) {
-            return !!(p.pih_mgmt && p.pih_mgmt.trim() !== '' && p.pih_mgmt.toLowerCase() !== 'no');
-        }
-
-        // 0A. Risk Factor-wise Clinical Management Status (Horizontal Stacked Bar)
-        const skipMgmtChartTabs = ['anc', 'sc', 'gd', 'ls', 'tp', 'bh'];
-        const mgmtRiskEl = document.getElementById('chart-mgmt-risk');
-        const mgmtBlockEl = document.getElementById('chart-mgmt-block');
-        const mgmtRiskCard = mgmtRiskEl ? mgmtRiskEl.closest('.chart-card-modern') : null;
-        const mgmtBlockCard = mgmtBlockEl ? mgmtBlockEl.closest('.chart-card-modern') : null;
-
-        if (skipMgmtChartTabs.includes(currentTab)) {
-            // Hide management charts for tabs without clinical management data
-            if (mgmtRiskCard) mgmtRiskCard.style.display = 'none';
-            if (mgmtBlockCard) mgmtBlockCard.style.display = 'none';
-            if (mgmtRiskEl) mgmtRiskEl.innerHTML = '';
-            if (mgmtRiskChartInstance) { mgmtRiskChartInstance.destroy(); mgmtRiskChartInstance = null; }
-            if (mgmtBlockEl) mgmtBlockEl.innerHTML = '';
-            if (mgmtBlockChartInstance) { mgmtBlockChartInstance.destroy(); mgmtBlockChartInstance = null; }
-        } else {
-            if (mgmtRiskCard) mgmtRiskCard.style.display = '';
-            if (mgmtBlockCard) mgmtBlockCard.style.display = '';
-        let mgmtConditions = [];
-        if (currentTab === 'sa') {
-            mgmtConditions = [{ name: 'Severe Anemia (IS / FCM / BT)', key: 'sa', check: isSevereAnemiaManaged }];
-        } else if (currentTab === 'ma') {
-            mgmtConditions = [{ name: 'Moderate Anemia (IS / FCM)', key: 'ma', check: isModerateAnemiaManaged }];
-        } else if (currentTab === 'pi') {
-            mgmtConditions = [{ name: 'PIH (Antihypertensive Regimen)', key: 'pi', check: isPihManaged }];
-        } else {
-            // Default (All UHRP): Severe Anemia, Moderate Anemia, and PIH
-            mgmtConditions = [
-                { name: 'Severe Anemia (IS / FCM / BT)', key: 'sa', check: isSevereAnemiaManaged },
-                { name: 'Moderate Anemia (IS / FCM)', key: 'ma', check: isModerateAnemiaManaged },
-                { name: 'PIH (Antihypertensive Regimen)', key: 'pi', check: isPihManaged }
-            ];
-        }
-
-        const mgmtRiskCats = mgmtConditions.map(c => c.name);
-        const mgmtRiskYes = [];
-        const mgmtRiskNo = [];
-
-        mgmtConditions.forEach(c => {
-            const pool = (currentTab === 'all' || currentTab === c.key)
-                ? filteredTabPatients.filter(p => p[c.key] === 1)
-                : getFilteredPatients().filter(p => p[c.key] === 1);
-
-            let yes = 0, no = 0;
-            pool.forEach(p => {
-                if (c.check(p)) yes++;
-                else no++;
-            });
-            mgmtRiskYes.push(yes);
-            mgmtRiskNo.push(no);
-        });
-
-        const mgmtRiskOptions = {
-            series: [
-                { name: 'On Management (Yes)', data: mgmtRiskYes },
-                { name: 'Pending / Not on Management (No)', data: mgmtRiskNo }
-            ],
-            chart: { type: 'bar', height: 280, stacked: true, toolbar: toolbarConfig },
-            plotOptions: {
-                bar: {
-                    horizontal: true,
-                    barHeight: '50%',
-                    borderRadius: 4
-                }
-            },
-            colors: ['#10b981', '#ff2a6d'],
-            dataLabels: {
-                enabled: true,
-                formatter: function (val, opt) {
-                    if (!val || val === 0) return '';
-                    const series = opt.w.config.series;
-                    const idx = opt.dataPointIndex;
-                    const total = (series[0].data[idx] || 0) + (series[1].data[idx] || 0);
-                    if (total === 0) return val;
-                    const pct = ((val / total) * 100).toFixed(1);
-                    return `${val} (${pct}%)`;
-                },
-                style: { fontSize: '11px', fontWeight: 'bold' }
-            },
-            xaxis: {
-                categories: mgmtRiskCats,
-                labels: { style: { fontSize: '10px' } }
-            },
-            yaxis: {
-                labels: { style: { fontSize: '11px', fontWeight: 600 } }
-            },
-            legend: { position: 'top', fontSize: '11px' },
-            tooltip: {
-                y: {
-                    formatter: function (val, opt) {
-                        const series = opt.w.config.series;
-                        const idx = opt.dataPointIndex;
-                        const total = (series[0].data[idx] || 0) + (series[1].data[idx] || 0);
-                        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                        return `${val} of ${total} cases (${pct}%)`;
-                    }
-                }
-            }
-        };
-
-        if (mgmtRiskChartInstance) mgmtRiskChartInstance.destroy();
-        const mgmtRiskEl = document.getElementById('chart-mgmt-risk');
-        if (mgmtRiskEl) {
-            mgmtRiskEl.innerHTML = '';
-            mgmtRiskChartInstance = new ApexCharts(mgmtRiskEl, mgmtRiskOptions);
-            mgmtRiskChartInstance.render();
-        }
-
-        // 0B. Block-wise Clinical Management Status (Horizontal Stacked Bar)
-        const mgmtBlockYes = [];
-        const mgmtBlockNo = [];
-        const cohortToEval = (currentTab === 'sa' || currentTab === 'ma' || currentTab === 'pi')
-            ? filteredTabPatients
-            : getFilteredPatients().filter(p => p.sa === 1 || p.ma === 1 || p.pi === 1);
-
-        allBlocks.forEach(b => {
-            const bPatients = cohortToEval.filter(p => (p.b || '').toLowerCase() === b.toLowerCase());
-            let yes = 0, no = 0;
-            bPatients.forEach(p => {
-                if (currentTab === 'sa') {
-                    if (isSevereAnemiaManaged(p)) yes++;
-                    else no++;
-                } else if (currentTab === 'ma') {
-                    if (isModerateAnemiaManaged(p)) yes++;
-                    else no++;
-                } else if (currentTab === 'pi') {
-                    if (isPihManaged(p)) yes++;
-                    else no++;
-                } else {
-                    if (p.sa === 1) {
-                        if (isSevereAnemiaManaged(p)) yes++;
-                        else no++;
-                    }
-                    if (p.ma === 1) {
-                        if (isModerateAnemiaManaged(p)) yes++;
-                        else no++;
-                    }
-                    if (p.pi === 1) {
-                        if (isPihManaged(p)) yes++;
-                        else no++;
-                    }
-                }
-            });
-            mgmtBlockYes.push(yes);
-            mgmtBlockNo.push(no);
-        });
-
-        const mgmtBlockOptions = {
-            series: [
-                { name: 'On Management (Yes)', data: mgmtBlockYes },
-                { name: 'Pending / Not on Management (No)', data: mgmtBlockNo }
-            ],
-            chart: { type: 'bar', height: 280, stacked: true, toolbar: toolbarConfig },
-            plotOptions: {
-                bar: {
-                    horizontal: true,
-                    barHeight: '65%',
-                    borderRadius: 4
-                }
-            },
-            colors: ['#10b981', '#ff2a6d'],
-            dataLabels: {
-                enabled: true,
-                formatter: function (val) {
-                    return val > 0 ? val : '';
-                },
-                style: { fontSize: '10px', fontWeight: 'bold' }
-            },
-            xaxis: {
-                categories: allBlocks,
-                labels: { style: { fontSize: '10px' } }
-            },
-            yaxis: {
-                labels: { style: { fontSize: '11px', fontWeight: 600 } }
-            },
-            legend: { position: 'top', fontSize: '11px' },
-            tooltip: {
-                y: {
-                    formatter: function (val, opt) {
-                        const series = opt.w.config.series;
-                        const idx = opt.dataPointIndex;
-                        const total = (series[0].data[idx] || 0) + (series[1].data[idx] || 0);
-                        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                        return `${val} of ${total} cases (${pct}%)`;
-                    }
-                }
-            }
-        };
-
-        if (mgmtBlockChartInstance) mgmtBlockChartInstance.destroy();
-        const mgmtBlockEl = document.getElementById('chart-mgmt-block');
-        if (mgmtBlockEl) {
-            mgmtBlockEl.innerHTML = '';
-            mgmtBlockChartInstance = new ApexCharts(mgmtBlockEl, mgmtBlockOptions);
-            mgmtBlockChartInstance.render();
-        }
-        } // end skipMgmtChartTabs else
-
-        // 1. Block-wise Medical Officer Checkup Status (Horizontal Stacked Bar)
-        const moDoneByBlock = [];
-        const moPendingByBlock = [];
-
-        allBlocks.forEach(b => {
-            const bPatients = filteredTabPatients.filter(p => (p.b || '').toLowerCase() === b.toLowerCase());
-            let done = 0, pending = 0;
-            bPatients.forEach(p => {
-                if (hasMoVisit(p)) done++;
-                else pending++;
-            });
-            moDoneByBlock.push(done);
-            moPendingByBlock.push(pending);
-        });
-
-        const moBlockOptions = {
-            series: [
-                { name: 'MO Checkup Completed', data: moDoneByBlock },
-                { name: 'MO Checkup Pending', data: moPendingByBlock }
-            ],
-            chart: { type: 'bar', height: 320, stacked: true, toolbar: toolbarConfig },
-            plotOptions: {
-                bar: {
-                    horizontal: true,
-                    barHeight: '65%',
-                    borderRadius: 4
-                }
-            },
-            colors: ['#10b981', '#ff2a6d'],
-            dataLabels: {
-                enabled: true,
-                style: { fontSize: '10px', fontWeight: 'bold' }
-            },
-            xaxis: {
-                categories: allBlocks,
-                labels: { style: { fontSize: '10px' } }
-            },
-            yaxis: {
-                labels: { style: { fontSize: '11px', fontWeight: 600 } }
-            },
-            legend: { position: 'top', fontSize: '11px' }
-        };
-
-        if (moBlockChartInstance) moBlockChartInstance.destroy();
-        const moBlockChartEl = document.getElementById('chart-mo-block');
-        if (moBlockChartEl) {
-            moBlockChartEl.innerHTML = '';
-            moBlockChartInstance = new ApexCharts(moBlockChartEl, moBlockOptions);
-            moBlockChartInstance.render();
-        }
-
-        // 2. Risk Factor-wise Medical Officer Checkup Status (Horizontal Stacked Bar)
-        const riskDefList = [
-            { name: 'Severe Anemia', key: 'sa' },
-            { name: 'PIH', key: 'pi' },
-            { name: 'GDM', key: 'gd' },
-            { name: 'Previous LSCS', key: 'ls' },
-            { name: 'Sickle Cell', key: 'sc' },
-            { name: 'Teenage Preg.', key: 'tp' },
-            { name: 'Complication Last Preg.', key: 'bh' }
-        ];
-
-        const rfCategories = riskDefList.map(r => r.name);
-        const rfMoDone = [];
-        const rfMoPending = [];
-
-        riskDefList.forEach(r => {
-            const rPatients = filteredTabPatients.filter(p => p[r.key] === 1);
-            let done = 0, pending = 0;
-            rPatients.forEach(p => {
-                if (hasMoVisit(p)) done++;
-                else pending++;
-            });
-            rfMoDone.push(done);
-            rfMoPending.push(pending);
-        });
-
-        const moRiskOptions = {
-            series: [
-                { name: 'MO Checkup Completed', data: rfMoDone },
-                { name: 'MO Checkup Pending', data: rfMoPending }
-            ],
-            chart: { type: 'bar', height: 280, stacked: true, toolbar: toolbarConfig },
-            plotOptions: {
-                bar: {
-                    horizontal: true,
-                    barHeight: '65%',
-                    borderRadius: 4
-                }
-            },
-            colors: ['#10b981', '#ff2a6d'],
-            dataLabels: {
-                enabled: true,
-                style: { fontSize: '10px', fontWeight: 'bold' }
-            },
-            xaxis: {
-                categories: rfCategories,
-                labels: { style: { fontSize: '10px' } }
-            },
-            yaxis: {
-                labels: { style: { fontSize: '11px', fontWeight: 600 } }
-            },
-            legend: { position: 'top', fontSize: '11px' }
-        };
-
-        if (moRiskChartInstance) moRiskChartInstance.destroy();
-        const moRiskChartEl = document.getElementById('chart-mo-risk');
-        if (moRiskChartEl) {
-            moRiskChartEl.innerHTML = '';
-            moRiskChartInstance = new ApexCharts(moRiskChartEl, moRiskOptions);
-            moRiskChartInstance.render();
-        }
-
-        // 3. Block-wise Distribution (Horizontal Sidebar)
-        const blockCounts = {};
-        filteredTabPatients.forEach(p => {
-            const b = p.b || 'Unknown';
-            blockCounts[b] = (blockCounts[b] || 0) + 1;
-        });
-
-        const blockCategories = Object.keys(blockCounts).sort();
-        const blockData = blockCategories.map(b => blockCounts[b]);
-
-        const blockOptions = {
-            series: [{ name: 'UHRP Cases', data: blockData }],
-            chart: { type: 'bar', height: 280, toolbar: toolbarConfig },
-            plotOptions: { bar: { borderRadius: 6, horizontal: true, distributed: true } },
-            colors: ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#1d4ed8', '#1e40af', '#0284c7', '#0369a1', '#0f766e'],
-            dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: 'bold' } },
-            xaxis: { categories: blockCategories },
-            legend: { show: false }
-        };
-
-        if (blockChartInstance) blockChartInstance.destroy();
-        const blockChartEl = document.getElementById('chart-block');
-        if (blockChartEl) {
-            blockChartEl.innerHTML = '';
-            blockChartInstance = new ApexCharts(blockChartEl, blockOptions);
-            blockChartInstance.render();
-        }
-
-        // 4. Delivery Place Distribution
+        // 2. Delivery Place Distribution Donut Chart
         renderDeliveryPlaceChart(filteredTabPatients, toolbarConfig);
+
+        setupSvgDownloadButtons();
     }
 
     // Update Line List Pagination UI
@@ -1994,7 +2975,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tbody.innerHTML = pagePatients.map(p => {
             const ancCheck = checkConsecutiveMissedAnc(p);
-            const missedBadgeHtml = ancCheck.hasMissed 
+            const missedBadgeHtml = (currentTab !== 'anc' && ancCheck.hasMissed) 
                 ? `<br><span class="badge-missed-anc" title="${ancCheck.daysSinceLastVisit ? `No ANC visit in last ${ancCheck.daysSinceLastVisit} days (Threshold: > 70 days)` : '2+ Consecutive ANC Visits Missed'}">⚠️ 2+ ANC Missed</span>`
                 : '';
 
@@ -2248,7 +3229,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!isMoSeen) {
                         riskTagsHtml += `<span style="background:#e0f2fe; color:#0369a1; font-size:0.68rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:6px;">🩺 MO Pending</span>`;
                     }
-                    if (ancCheck.hasMissed) {
+                    if (ancCheck.hasMissed && currentTab !== 'anc') {
                         riskTagsHtml += `<span style="background:#fef3c7; color:#b45309; font-size:0.68rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:6px;" title="${ancCheck.daysSinceLastVisit ? `No visit in last ${ancCheck.daysSinceLastVisit} days` : '2+ Consecutive ANC Visits Missed'}">⚠️ 2+ Missed</span>`;
                     }
 
@@ -3125,7 +4106,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (tabTitleEl) tabTitleEl.textContent = `${TAB_NAMES[currentTab]} Line List`;
                 renderCounsellingBanner(currentTab);
+                filterProtocolCards(currentTab);
                 renderLineList();
+                renderDpmuOfficialTables();
+                if (currentMainView === 'analytics') {
+                    const filtered = getFilteredPatients();
+                    let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
+                    renderAnalyticsCharts(tabPatients);
+                }
                 scrollToLinelistOnMobile();
             });
         });
@@ -3272,6 +4260,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Attach Event Listeners
     function setupEventListeners() {
         setupMainViewSwitcher();
+        setupSvgDownloadButtons();
 
         const blockSelect = document.getElementById(elementIds.block);
         if (blockSelect) {
@@ -3284,6 +4273,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 initializedCharts = {};
                 currentPage = 1;
                 renderLineList();
+                renderDpmuOfficialTables();
+                if (currentMainView === 'analytics') {
+                    const filtered = getFilteredPatients();
+                    let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
+                    renderAnalyticsCharts(tabPatients);
+                }
                 scrollToLinelistOnMobile();
             });
         }
@@ -3298,6 +4293,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 initializedCharts = {};
                 currentPage = 1;
                 renderLineList();
+                renderDpmuOfficialTables();
+                if (currentMainView === 'analytics') {
+                    const filtered = getFilteredPatients();
+                    let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
+                    renderAnalyticsCharts(tabPatients);
+                }
                 scrollToLinelistOnMobile();
             });
         }
@@ -3317,7 +4318,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentPage = 1;
                     const tabTitleEl = document.getElementById(elementIds.tabTitle);
                     if (tabTitleEl) tabTitleEl.textContent = `${TAB_NAMES[currentTab]} Line List`;
+                    filterProtocolCards(currentTab);
                     renderLineList();
+                    renderDpmuOfficialTables();
                 }
                 scrollToLinelistOnMobile();
             });
@@ -3329,6 +4332,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 initializedCharts = {};
                 currentPage = 1;
                 renderLineList();
+                renderDpmuOfficialTables();
+                if (currentMainView === 'analytics') {
+                    const filtered = getFilteredPatients();
+                    let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
+                    renderAnalyticsCharts(tabPatients);
+                }
                 scrollToLinelistOnMobile();
             });
         });
@@ -3421,6 +4430,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hash === '#analytics') {
             const analyticsBtn = Array.from(document.querySelectorAll('.main-view-btn')).find(b => b.getAttribute('data-view') === 'analytics');
             if (analyticsBtn) analyticsBtn.click();
+        } else if (hash === '#dpmu') {
+            const dpmuBtn = Array.from(document.querySelectorAll('.main-view-btn')).find(b => b.getAttribute('data-view') === 'dpmu');
+            if (dpmuBtn) dpmuBtn.click();
         } else if (hash.startsWith('#tab-')) {
             let cleanHash = hash.replace('#tab-', '');
             let isCharts = false;
@@ -3473,52 +4485,59 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!overlay || !bodyEl) return;
 
         const subName = p.sub || p.subcenter || p.sc || 'Not Mapped';
+        const phcName = cleanPhcName(p.phc || p.phc_name || 'Not Mapped');
         const cleanV = cleanVillageName(p.v);
+        const blockName = p.b || 'Not Mapped';
 
         titleEl.textContent = `📋 12 ANC Visit Record — ${p.n}`;
-        subtitleEl.textContent = `MP ID: ${p.id} • Village: ${cleanV} • Block: ${p.b}`;
+        subtitleEl.textContent = `MP ID: ${p.id}`;
 
         const isMoSeen = hasMoVisit(p);
         const ancCheck = checkConsecutiveMissedAnc(p);
 
         bodyEl.innerHTML = `
-            <!-- 1. 12 ANC visit record (ON TOP) -->
-            <div class="anc-timeline-container" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:0.75rem; margin-bottom:0.65rem;">
-                <div class="anc-timeline-title" style="font-size:0.82rem; font-weight:800; margin-bottom:0.5rem; color:#0f172a;">📋 12 ANC visit record</div>
+            <!-- Top Location Strip (Village, Subcenter, PHC, Block) -->
+            <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:0.4rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem; font-size:0.78rem;">
+                <div><span style="color:#64748b; font-weight:700;">🏠 Village:</span> <strong style="color:#0f172a;">${cleanV}</strong></div>
+                <div><span style="color:#64748b; font-weight:700;">🏠 Subcenter:</span> <strong style="color:#0284c7;">${subName}</strong></div>
+                <div><span style="color:#64748b; font-weight:700;">🏛️ PHC:</span> <strong style="color:#0f172a;">${phcName}</strong></div>
+                <div><span style="color:#64748b; font-weight:700;">🏥 Block:</span> <strong style="color:#0f172a;">${blockName}</strong></div>
+            </div>
+
+            <!-- 1. 12 ANC visit record -->
+            <div class="anc-timeline-container" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:0.75rem;">
+                <div class="anc-timeline-title" style="font-size:0.82rem; font-weight:800; margin-bottom:0.5rem; color:#0f172a;">📋 12 ANC Visit Record</div>
                 <div class="anc-timeline-grid" id="timeline-modal-${p.id}"></div>
             </div>
 
-            <div id="drawer-status-modal-${p.id}" style="margin-bottom:0.45rem;"></div>
+            <div id="drawer-status-modal-${p.id}" style="margin-bottom:0.25rem;"></div>
 
-            <!-- 2. Subcenter Name Above ANM & CHO Contact Numbers -->
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.65rem 0.85rem; margin-bottom:0.65rem; font-size:0.8rem;">
-                <div style="margin-bottom:0.4rem; padding-bottom:0.35rem; border-bottom:1px dashed #cbd5e1; font-size:0.82rem; color:#0f172a;">
-                    🏥 Subcenter: <strong style="color:#0284c7;">${subName}</strong>
-                </div>
+            <!-- 2. ANM & CHO Contact Numbers -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem; font-size:0.8rem;">
                 <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.45rem;">
                     <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
-                        <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong>${p.anm_n || 'Not Mapped'}</strong>
-                        ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM">📞 Call ANM (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                        <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong style="color:#0f172a;">${p.anm_n || 'Not Mapped'}</strong>
+                        ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM">📞 Call (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
                     </div>
                     <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
-                        <span style="color:#0369a1; font-weight:700;">🩺 CHO:</span> <strong>${p.cho_n || 'Not Mapped'}</strong>
-                        ${p.cho_p ? `<a href="tel:${p.cho_p}" class="btn-call-chip btn-call-cho" title="Call CHO">📞 Call CHO (${p.cho_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                        <span style="color:#0369a1; font-weight:700;">🩺 CHO:</span> <strong style="color:#0f172a;">${p.cho_n || 'Not Mapped'}</strong>
+                        ${p.cho_p ? `<a href="tel:${p.cho_p}" class="btn-call-chip btn-call-cho" title="Call CHO">📞 Call (${p.cho_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
                     </div>
                 </div>
             </div>
 
             <!-- 3. Medical Officer & Attendance Status Alert -->
-            <div class="modal-vitals-bar" style="margin-bottom:0.25rem;">
+            <div class="modal-vitals-bar" style="margin-bottom:0.15rem;">
                 <div class="modal-vitals-item">
                     <span class="modal-vitals-label">Medical Officer (MO) Status</span>
-                    <span class="modal-vitals-val" style="color:${isMoSeen ? '#059669' : '#0284c7'}; font-size:0.85rem;">
+                    <span class="modal-vitals-val" style="color:${isMoSeen ? '#059669' : '#0284c7'}; font-size:0.82rem;">
                         ${isMoSeen ? '✓ Examined by Doctor / MO' : '⚠️ Pending Mandatory MO Exam'}
                     </span>
                 </div>
                 <div class="modal-vitals-item">
                     <span class="modal-vitals-label">ANC Attendance Alert</span>
-                    <span class="modal-vitals-val" style="color:${ancCheck.hasMissed ? '#ea580c' : '#059669'}; font-size:0.85rem;">
-                        ${ancCheck.hasMissed ? `⚠️ Missed 2+ ANC Visits${ancCheck.daysSinceLastVisit ? ` (${ancCheck.daysSinceLastVisit}d since last)` : ''}` : '✓ Regular Follow-up'}
+                    <span class="modal-vitals-val" style="color:${ancCheck.hasMissed ? '#ea580c' : '#059669'}; font-size:0.82rem;">
+                        ${ancCheck.hasMissed ? `⚠️ Missed 2+ ANC Visits${ancCheck.daysSinceLastVisit ? ` (${ancCheck.daysSinceLastVisit}d)` : ''}` : '✓ Regular Follow-up'}
                     </span>
                 </div>
             </div>
@@ -3546,10 +4565,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!overlay || !bodyEl) return;
 
         const subName = p.sub || p.subcenter || p.sc || 'Not Mapped';
+        const phcName = cleanPhcName(p.phc || p.phc_name || 'Not Mapped');
         const cleanV = cleanVillageName(p.v);
+        const blockName = p.b || 'Not Mapped';
 
-        titleEl.textContent = `💊 Clinical Management & Vitals — ${p.n}`;
-        subtitleEl.textContent = `MP ID: ${p.id} • Village: ${cleanV} • Block: ${p.b}`;
+        titleEl.textContent = `💊 Clinical Management — ${p.n}`;
+        subtitleEl.textContent = `MP ID: ${p.id}`;
 
         const isDelivered = (p.del === 1 || (p.del_date && p.del_date !== '-'));
 
@@ -3568,8 +4589,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const isModalDeath = (p.mat && p.mat !== 'No' && p.mat !== '-' && p.mat !== '') || (p.mat_death === true);
 
         // Determine active risk factor context:
-        // When user is under a specific tab or has clicked a specific risk KPI card,
-        // show ONLY that respective risk factor's management.
         let targetRisk = null;
         if (currentTab === 'sa' || currentTab === 'ma' || currentTab === 'sc') {
             targetRisk = 'anemia';
@@ -3647,127 +4666,92 @@ document.addEventListener('DOMContentLoaded', () => {
 
         bodyEl.innerHTML = `
             ${isModalDeath ? `
-            <div style="background:#450a0a; color:#fecaca; border:1.5px solid #dc2626; border-radius:10px; padding:0.65rem 0.85rem; margin-bottom:0.6rem; font-size:0.82rem; line-height:1.5;">
+            <div style="background:#450a0a; color:#fecaca; border:1.5px solid #dc2626; border-radius:10px; padding:0.55rem 0.75rem; font-size:0.8rem; line-height:1.4;">
                 🖤 <strong>Maternal Death:</strong> ${(p.mat && p.mat.includes('(')) ? p.mat.replace(/^Yes\s*\(?|\)?$/gi, '').trim() : 'Reported'}
                 ${p.mat_place ? ` | 🏥 <strong>Place:</strong> <strong style="color:#ffffff;">${p.mat_place}</strong>` : ''}
-                ${p.mat_dir ? ` | ⚠️ <strong>Direct Cause:</strong> <strong style="color:#fca5a5;">${p.mat_dir}</strong>` : ''}
-                ${p.mat_indir ? ` | ℹ️ <strong>Indirect Cause:</strong> ${p.mat_indir}` : ''}
+                ${p.mat_dir ? ` | ⚠️ <strong>Cause:</strong> <strong style="color:#fca5a5;">${p.mat_dir}</strong>` : ''}
             </div>
             ` : ''}
 
-            <!-- 1. DETAILS OF MANAGEMENT DONE (ON TOP) -->
-            <!-- Overall Status Highlight Banner (Green for Done, Orange for Pending) -->
-            <div style="border-radius:10px; padding:0.65rem 0.85rem; margin-bottom:0.6rem; display:flex; align-items:center; justify-content:space-between; ${statusDone ? 'background:#ecfdf5; border:1.5px solid #10b981;' : (statusPending ? 'background:#fff7ed; border:1.5px solid #f97316;' : 'background:#f8fafc; border:1px solid #cbd5e1;')}">
-                <div style="display:flex; align-items:center; gap:0.55rem;">
-                    <span style="font-size:1.15rem;">${statusDone ? '🟢' : (statusPending ? '🟠' : 'ℹ️')}</span>
-                    <div>
-                        <div style="font-size:0.82rem; font-weight:800; color:${statusDone ? '#047857' : (statusPending ? '#c2410c' : '#334155')};">
-                            ${statusTitle}
-                        </div>
-                        <div style="font-size:0.72rem; color:${statusDone ? '#065f46' : (statusPending ? '#9a3412' : '#64748b')};">
-                            ${statusSubtext}
-                        </div>
-                    </div>
-                </div>
-                <span style="font-size:0.75rem; font-weight:800; padding:0.25rem 0.6rem; border-radius:6px; ${statusDone ? 'background:#10b981; color:#ffffff;' : (statusPending ? 'background:#f97316; color:#ffffff;' : 'background:#94a3b8; color:#ffffff;')}">
-                    ${statusBadge}
-                </span>
+            <!-- 1. Top Location Strip (Village, Subcenter, PHC, Block) -->
+            <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:0.4rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem; font-size:0.78rem;">
+                <div><span style="color:#64748b; font-weight:700;">🏠 Village:</span> <strong style="color:#0f172a;">${cleanV}</strong></div>
+                <div><span style="color:#64748b; font-weight:700;">🏠 Subcenter:</span> <strong style="color:#0284c7;">${subName}</strong></div>
+                <div><span style="color:#64748b; font-weight:700;">🏛️ PHC:</span> <strong style="color:#0f172a;">${phcName}</strong></div>
+                <div><span style="color:#64748b; font-weight:700;">🏥 Block:</span> <strong style="color:#0f172a;">${blockName}</strong></div>
             </div>
 
-            <!-- Anemia Management Details (Green if done, Orange if pending) -->
-            ${showAnemia ? `
-                <div style="background:${isAnemiaDone ? '#ecfdf5' : '#fff7ed'}; border:1.5px solid ${isAnemiaDone ? '#10b981' : '#f97316'}; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
-                        <div style="font-size:0.8rem; font-weight:800; color:${isAnemiaDone ? '#047857' : '#c2410c'}; text-transform:uppercase;">💉 Anemia Clinical Management</div>
-                        <span style="background:${isAnemiaDone ? '#10b981' : '#f97316'}; color:#ffffff; font-size:0.7rem; font-weight:800; padding:0.15rem 0.45rem; border-radius:5px;">
-                            ${isAnemiaDone ? '✓ Management Done' : '⚠️ Management Pending'}
-                        </span>
+            <!-- 2. Unified Clinical Management Card (Consolidated, No Duplicate Banners) -->
+            <div style="background:${statusDone ? '#ecfdf5' : (statusPending ? '#fff7ed' : '#f8fafc')}; border:1.5px solid ${statusDone ? '#10b981' : (statusPending ? '#f97316' : '#cbd5e1')}; border-radius:12px; padding:0.75rem; display:flex; flex-direction:column; gap:0.5rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px dashed ${statusDone ? '#a7f3d0' : (statusPending ? '#fed7aa' : '#cbd5e1')}; padding-bottom:0.4rem;">
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                        <span style="font-size:1.05rem;">${statusDone ? '🟢' : (statusPending ? '🟠' : 'ℹ️')}</span>
+                        <strong style="font-size:0.825rem; color:${statusDone ? '#047857' : (statusPending ? '#c2410c' : '#334155')};">${statusTitle}</strong>
                     </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.8rem; color:${isAnemiaDone ? '#065f46' : '#9a3412'};">
-                        <div>Inj. FCM: <strong>${p.fcm === 'Yes' ? `✓ Given ${p.fcm_fac ? `(${p.fcm_fac})` : ''}` : '✕ Not Given'}</strong></div>
-                        <div>Blood Transfusion: <strong>${p.bt || 'No'}</strong></div>
-                        <div style="grid-column:1/-1;">Iron Sucrose Doses: <strong>${(p.is_doses && p.is_doses.length > 0) ? p.is_doses.join(', ') : 'None'}</strong></div>
-                    </div>
-                </div>
-            ` : ''}
-
-            <!-- PIH Medications (Green if prescribed, Orange if pending) -->
-            ${showPih ? `
-                <div style="background:${isPihDone ? '#ecfdf5' : '#fff7ed'}; border:1.5px solid ${isPihDone ? '#10b981' : '#f97316'}; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
-                        <div style="font-size:0.8rem; font-weight:800; color:${isPihDone ? '#047857' : '#c2410c'};">🟠 PIH Hypertension Treatment:</div>
-                        <span style="background:${isPihDone ? '#10b981' : '#f97316'}; color:#ffffff; font-size:0.7rem; font-weight:800; padding:0.15rem 0.45rem; border-radius:5px;">
-                            ${isPihDone ? '✓ Prescribed' : '⚠️ Treatment Pending'}
-                        </span>
-                    </div>
-                    <div style="font-size:0.825rem; font-weight:700; color:${isPihDone ? '#065f46' : '#9a3412'};">
-                        ${isPihDone ? `✓ ${p.pih_mgmt}` : '✕ Anti-hypertensive treatment not recorded / Schedule Doctor Exam'}
-                    </div>
-                </div>
-            ` : ''}
-
-            <!-- GDM Management (Green if prescribed, Orange if pending) -->
-            ${showGdm ? `
-                <div style="background:${isGdmDone ? '#ecfdf5' : '#fff7ed'}; border:1.5px solid ${isGdmDone ? '#10b981' : '#f97316'}; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
-                        <div style="font-size:0.8rem; font-weight:800; color:${isGdmDone ? '#047857' : '#c2410c'};">🔵 GDM Diabetes Management:</div>
-                        <span style="background:${isGdmDone ? '#10b981' : '#f97316'}; color:#ffffff; font-size:0.7rem; font-weight:800; padding:0.15rem 0.45rem; border-radius:5px;">
-                            ${isGdmDone ? '✓ Active Therapy' : '⚠️ Therapy Pending'}
-                        </span>
-                    </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; font-size:0.78rem; color:${isGdmDone ? '#065f46' : '#9a3412'};">
-                        <div>MNT: <strong>${p.gdm_mnt === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
-                        <div>Metformin: <strong>${p.gdm_met === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
-                        <div>Insulin: <strong>${p.gdm_ins === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
-                    </div>
-                </div>
-            ` : ''}
-
-            ${(!showAnemia && !showPih && !showGdm) ? `
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.85rem; margin-bottom:0.6rem; color:#64748b; font-size:0.82rem; text-align:center;">
-                    ℹ️ No specialized medical drug therapy indicated for this patient (Routine Antenatal Care).
-                </div>
-            ` : ''}
-
-            <!-- Admission Vitals (Visible strictly for Delivered cases only) -->
-            ${isDelivered ? `
-            <div class="modal-vitals-bar" style="margin-bottom:0.6rem;">
-                <div class="modal-vitals-item">
-                    <span class="modal-vitals-label">🩸 Hb on LR Admission</span>
-                    <span class="modal-vitals-val" style="color:#dc2626;">
-                        ${(p.lr_hb !== null && p.lr_hb !== undefined) ? p.lr_hb + ' g/dL' : ((p.hb_lr !== null && p.hb_lr !== undefined) ? p.hb_lr + ' g/dL' : 'Not Recorded')}
+                    <span style="font-size:0.72rem; font-weight:800; padding:0.18rem 0.55rem; border-radius:6px; ${statusDone ? 'background:#10b981; color:#ffffff;' : (statusPending ? 'background:#f97316; color:#ffffff;' : 'background:#94a3b8; color:#ffffff;')}">
+                        ${statusBadge}
                     </span>
                 </div>
-                <div class="modal-vitals-item">
-                    <span class="modal-vitals-label">🩺 BP at Admission</span>
-                    <span class="modal-vitals-val" style="color:#0284c7;">
-                        ${p.bp_adm ? p.bp_adm + ' mmHg' : 'Not Recorded'}
-                    </span>
+                <div style="font-size:0.75rem; color:${statusDone ? '#065f46' : (statusPending ? '#9a3412' : '#64748b')};">
+                    ${statusSubtext}
                 </div>
-            </div>
-            ` : ''}
 
-            <!-- 2. IDENTIFIED RISK FACTORS & DELIVERY STATUS -->
-            <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:0.6rem 0.8rem; font-size:0.8rem; margin-bottom:0.6rem; display:flex; flex-direction:column; gap:0.35rem;">
+                ${showAnemia ? `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.45rem; background:#ffffff; border-radius:8px; padding:0.55rem 0.65rem; border:1px solid ${statusDone ? '#a7f3d0' : '#fed7aa'}; font-size:0.78rem;">
+                    <div><span style="color:#64748b; font-weight:700;">Inj. FCM:</span> <strong style="color:#0f172a;">${p.fcm === 'Yes' ? `✓ Given ${p.fcm_fac ? `(${p.fcm_fac})` : ''}` : '✕ Not Given'}</strong></div>
+                    <div><span style="color:#64748b; font-weight:700;">Blood Transfusion:</span> <strong style="color:#0f172a;">${p.bt || 'No'}</strong></div>
+                    <div style="grid-column:1/-1;"><span style="color:#64748b; font-weight:700;">Iron Sucrose Doses:</span> <strong style="color:#0f172a;">${(p.is_doses && p.is_doses.length > 0) ? p.is_doses.join(', ') : 'None'}</strong></div>
+                </div>` : ''}
+
+                ${showPih ? `
+                <div style="background:#ffffff; border-radius:8px; padding:0.55rem 0.65rem; border:1px solid ${statusDone ? '#a7f3d0' : '#fed7aa'}; font-size:0.78rem;">
+                    <span style="color:#64748b; font-weight:700;">Antihypertensive Rx:</span> <strong style="color:${isPihDone ? '#059669' : '#ea580c'};">${isPihDone ? `✓ ${p.pih_mgmt}` : '✕ Not Recorded / Doctor Exam Pending'}</strong>
+                </div>` : ''}
+
+                ${showGdm ? `
+                <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.35rem; background:#ffffff; border-radius:8px; padding:0.55rem 0.65rem; border:1px solid ${statusDone ? '#a7f3d0' : '#fed7aa'}; font-size:0.76rem;">
+                    <div><span style="color:#64748b; font-weight:700;">MNT:</span> <strong>${p.gdm_mnt === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
+                    <div><span style="color:#64748b; font-weight:700;">Metformin:</span> <strong>${p.gdm_met === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
+                    <div><span style="color:#64748b; font-weight:700;">Insulin:</span> <strong>${p.gdm_ins === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
+                </div>` : ''}
+
+                ${(!showAnemia && !showPih && !showGdm) ? `
+                <div style="background:#ffffff; border-radius:8px; padding:0.5rem; text-align:center; font-size:0.76rem; color:#64748b;">
+                    No specialized medical drug therapy indicated for this patient (Routine Antenatal Follow-up).
+                </div>` : ''}
+            </div>
+
+            <!-- 3. Risk Factor & Delivery Status -->
+            <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:0.55rem 0.75rem; font-size:0.78rem; display:flex; flex-direction:column; gap:0.3rem;">
                 <div><strong style="color:#991b1b;">⚠️ Identified Risk Factor(s):</strong> <span style="font-weight:700; color:#b91c1c;">${p.f || 'High Risk Pregnancy'}</span></div>
-                <div style="font-size:0.78rem; color:#475569; border-top:1px dashed #fecaca; padding-top:0.35rem;">
+                <div style="font-size:0.76rem; color:#475569; border-top:1px dashed #fecaca; padding-top:0.3rem;">
                     ${isDelivered ? `🏥 <strong>Delivery:</strong> <strong style="color:#059669;">${p.d || '-'}</strong> (${p.del_cat || 'Facility'}) ${p.del_date && p.del_date !== '-' ? `on <strong>${formatDateDDMMYYYY(p.del_date)}</strong>` : ''}` : `🤰 <strong>Delivery Status:</strong> <span style="color:#0284c7; font-weight:700;">Pregnant (Antenatal Care)</span>`}
                 </div>
             </div>
 
-            <!-- 3. SUBCENTER NAME ABOVE ANM & CHO MOBILE NUMBERS -->
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.65rem 0.85rem; margin-bottom:0.35rem; font-size:0.8rem;">
-                <div style="margin-bottom:0.4rem; padding-bottom:0.35rem; border-bottom:1px dashed #cbd5e1; font-size:0.82rem; color:#0f172a;">
-                    🏥 Subcenter: <strong style="color:#0284c7;">${subName}</strong>
+            <!-- 4. Admission Vitals (For Delivered Cases) -->
+            ${isDelivered ? `
+            <div class="modal-vitals-bar" style="margin-bottom:0;">
+                <div class="modal-vitals-item">
+                    <span class="modal-vitals-label">🩸 Hb on LR Admission</span>
+                    <span class="modal-vitals-val" style="color:#dc2626; font-size:0.82rem;">${(p.lr_hb !== null && p.lr_hb !== undefined) ? p.lr_hb + ' g/dL' : ((p.hb_lr !== null && p.hb_lr !== undefined) ? p.hb_lr + ' g/dL' : 'Not Recorded')}</span>
                 </div>
+                <div class="modal-vitals-item">
+                    <span class="modal-vitals-label">🩺 BP at Admission</span>
+                    <span class="modal-vitals-val" style="color:#0284c7; font-size:0.82rem;">${p.bp_adm ? p.bp_adm + ' mmHg' : 'Not Recorded'}</span>
+                </div>
+            </div>` : ''}
+
+            <!-- 5. ANM & CHO Direct Contact Buttons -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem; font-size:0.78rem;">
                 <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.45rem;">
                     <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
-                        <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong>${p.anm_n || 'Not Mapped'}</strong>
-                        ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM">📞 Call ANM (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                        <span style="color:#166534; font-weight:700;">👩‍⚕️ ANM:</span> <strong style="color:#0f172a;">${p.anm_n || 'Not Mapped'}</strong>
+                        ${p.anm_p ? `<a href="tel:${p.anm_p}" class="btn-call-chip btn-call-anm" title="Call ANM">📞 Call (${p.anm_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
                     </div>
                     <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
-                        <span style="color:#0369a1; font-weight:700;">🩺 CHO:</span> <strong>${p.cho_n || 'Not Mapped'}</strong>
-                        ${p.cho_p ? `<a href="tel:${p.cho_p}" class="btn-call-chip btn-call-cho" title="Call CHO">📞 Call CHO (${p.cho_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
+                        <span style="color:#0369a1; font-weight:700;">🩺 CHO:</span> <strong style="color:#0f172a;">${p.cho_n || 'Not Mapped'}</strong>
+                        ${p.cho_p ? `<a href="tel:${p.cho_p}" class="btn-call-chip btn-call-cho" title="Call CHO">📞 Call (${p.cho_p})</a>` : '<span style="color:#94a3b8; font-size:0.75rem;">(No Phone)</span>'}
                     </div>
                 </div>
             </div>
@@ -3806,6 +4790,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTabs();
     setupSorting();
     setupEventListeners();
+    filterProtocolCards(currentTab);
     renderLineList();
+    renderDpmuOfficialTables();
     handleInitialHash();
 });
