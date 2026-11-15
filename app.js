@@ -3240,17 +3240,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                 </div>
                                 ` : ''}
-                                ${currentTab !== 'anc' ? `<div class="drawer-header" id="drawer-header-${p.id}">
-                                    <span class="drawer-title">📈 12-ANC Visit Clinical Trend Chart & Attendance Timeline — ${p.n} (MP ID: ${p.id})</span>
-                                    <div id="drawer-status-${p.id}"></div>
-                                </div>` : ''}
                                 <div class="anc-timeline-container">
                                     <div class="anc-timeline-title">📋 12 ANC visit record</div>
                                     <div class="anc-timeline-grid" id="timeline-${p.id}"></div>
                                 </div>
-                                ${currentTab !== 'anc' ? `<div class="chart-wrapper" id="chart-${p.id}">
-                                    <div style="text-align:center; padding:1.5rem; color:#64748b;">Click to render ANC visit graph...</div>
-                                </div>` : ''}
                             </div>
                         </td>
                     </tr>
@@ -3403,15 +3396,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (p) {
                 renderAncTimelineGrid(mpid, p);
-                if (currentTab !== 'anc') {
-                    setTimeout(() => {
-                        if (currentTab === 'pi') {
-                            renderBpSparkline(mpid, p);
-                        } else {
-                            renderHbSparkline(mpid, p);
-                        }
-                    }, 50);
-                }
             }
         }
     }

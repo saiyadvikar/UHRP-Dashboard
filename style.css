@@ -2469,7 +2469,12 @@ tr.expandable-row.expanded-row-active {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-left: 5px solid #ff2a6d;
+    border-radius: 10px;
     box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+    padding: 0.65rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
 }
 
 
