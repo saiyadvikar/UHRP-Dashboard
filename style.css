@@ -3795,6 +3795,76 @@ tr.expandable-row.expanded-row-active {
         max-height: calc(88vh - 65px) !important;
         gap: 0.5rem !important;
     }
+
+    /* 12 ANC Visits Layout in Mobile View & Popup Window — 4, 4, 4 Vertical Layout (4 Columns × 3 Rows) */
+    .anc-timeline-grid,
+    .uhrp-modal-body .anc-timeline-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 0.35rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .anc-chip,
+    .uhrp-modal-body .anc-chip {
+        padding: 0.35rem 0.25rem !important;
+        border-radius: 8px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        min-height: 84px !important;
+        box-sizing: border-box !important;
+        text-align: center !important;
+    }
+
+    .anc-chip .chip-date,
+    .uhrp-modal-body .anc-chip .chip-date {
+        font-size: 0.6rem !important;
+        font-weight: 800 !important;
+        color: #ff2a6d !important;
+        line-height: 1.15 !important;
+        margin-bottom: 0.05rem !important;
+    }
+
+    .anc-chip .chip-label,
+    .uhrp-modal-body .anc-chip .chip-label {
+        font-size: 0.65rem !important;
+        font-weight: 700 !important;
+        color: #64748b !important;
+        line-height: 1.2 !important;
+    }
+
+    .anc-chip .chip-val,
+    .uhrp-modal-body .anc-chip .chip-val {
+        font-size: 0.68rem !important;
+        font-weight: 800 !important;
+        line-height: 1.25 !important;
+        margin: 0.1rem 0 !important;
+    }
+
+    .anc-chip .chip-provider-badge,
+    .uhrp-modal-body .anc-chip .chip-provider-badge,
+    .anc-chip .chip-alb-badge,
+    .uhrp-modal-body .anc-chip .chip-alb-badge {
+        font-size: 0.58rem !important;
+        padding: 0.1rem 0.2rem !important;
+        border-radius: 4px !important;
+        margin-top: 0.1rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .anc-chip .chip-ga-box,
+    .uhrp-modal-body .anc-chip .chip-ga-box {
+        font-size: 0.6rem !important;
+        padding: 0.1rem 0.25rem !important;
+        border-radius: 4px !important;
+        margin-top: auto !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+    }
 } /* End of @media (max-width: 768px) */
 
 /* ==========================================================================

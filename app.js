@@ -3045,9 +3045,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tbody.innerHTML = pagePatients.map(p => {
             const ancCheck = checkConsecutiveMissedAnc(p);
-            const missedBadgeHtml = (currentTab !== 'anc' && ancCheck.hasMissed) 
-                ? `<br><span class="badge-missed-anc" title="${ancCheck.daysSinceLastVisit ? `No ANC visit in last ${ancCheck.daysSinceLastVisit} days (Threshold: > 70 days)` : '2+ Consecutive ANC Visits Missed'}">⚠️ 2+ ANC Missed</span>`
-                : '';
 
             const isMoSeen = hasMoVisit(p);
             const moBadgeHtml = isMoSeen
@@ -3096,7 +3093,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="col-name">
                         <span style="font-weight:700; color:#0f172a; font-size:0.85rem; display:block;">${p.n}</span>
                         <span style="font-size:0.78rem; color:#64748b; font-weight:500; display:block;">${p.h && p.h !== 'N/A' ? p.h : ''}</span>
-                        ${missedBadgeHtml}
                     </td>
                     <td class="col-age">${p.a}</td>
                     <td class="col-mobile">${p.p}</td>
