@@ -2909,8 +2909,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnLast) btnLast.disabled = (currentPage >= totalPages || totalPages === 0);
     }
 
+    // Update Filter Chip Visual Active State
+    function updateFilterChipActiveStates() {
+        const checkChip = (id, defaultVal) => {
+            const el = document.getElementById(elementIds[id]);
+            if (!el) return;
+            const chip = el.closest('.filter-chip');
+            if (!chip) return;
+            if (el.value !== defaultVal) {
+                chip.classList.add('chip-active');
+            } else {
+                chip.classList.remove('chip-active');
+            }
+        };
+        checkChip('year', 'All');
+        checkChip('block', 'All');
+        checkChip('phc', 'All');
+        checkChip('subcenter', 'All');
+        checkChip('delivery', '0');
+    }
+
     // Render Table Line List
     function renderLineList() {
+        updateFilterChipActiveStates();
         const filtered = getFilteredPatients();
         updateRiskCards(filtered);
 
