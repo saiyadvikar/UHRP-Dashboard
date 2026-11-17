@@ -2134,11 +2134,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const ancUnitData = locInfo.units.map((unitName, idx) => {
                 const uAll = yrAncPatients.filter(p => locInfo.filterFn(p, unitName));
-                const totalReg = uAll.length;
+                const uBase = dpmuSelectedCohort === 'del' ? uAll.filter(p => p.del === 1) : uAll;
+                const totalReg = uBase.length;
                 let unitAbortions = 0;
                 let unitPreterm = 0;
 
-                uAll.forEach(p => {
+                uBase.forEach(p => {
                     const ex = isAbortionOrPreterm(p);
                     if (ex.isExcluded) {
                         if (ex.type === 'abortion') unitAbortions++;
@@ -2154,12 +2155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return false;
                 }
 
-                let eligibleList = uAll;
-                if (dpmuSelectedCohort === 'del') {
-                    eligibleList = uAll.filter(p => p.del === 1 && !shouldExcludeCase(p));
-                } else {
-                    eligibleList = uAll.filter(p => !shouldExcludeCase(p));
-                }
+                const eligibleList = uBase.filter(p => !shouldExcludeCase(p));
 
                 let fourAncCount = 0;
                 eligibleList.forEach(p => {
@@ -2962,13 +2958,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const allAnc = (typeof DASHBOARD_DATA !== 'undefined' ? DASHBOARD_DATA.anc_patients : []) || [];
         const ancPool = blockFilter ? allAnc.filter(p => (p.b || '').toLowerCase() === blockFilter) : allAnc;
 
-        // Group total deliveries and late term (>41 weeks) deliveries by FY and month
+        function getDeliveryFiscalYear(d) {
+            if (!d) return null;
+            const year = d.getFullYear();
+            const month = d.getMonth() + 1;
+            if (month >= 4) {
+                return year + '-' + String(year + 1).slice(-2);
+            } else {
+                return (year - 1) + '-' + String(year).slice(-2);
+            }
+        }
+
+        // Group total deliveries and late term (>41 weeks) deliveries by delivery FY and delivery month
         const monthlyTot = { '2026-27': {}, '2025-26': {} };
         const monthlyLate = { '2026-27': {}, '2025-26': {} };
 
         ancPool.forEach(p => {
-            const y = p.y;
-            if (!monthlyTot[y]) return;
             if (!p.del_date || p.del_date === '-' || !p.lmp || p.lmp === '-') return;
 
             const dDel = parseDate(p.del_date);
@@ -2978,16 +2983,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const gaDays = Math.round((dDel.getTime() - dLmp.getTime()) / (1000 * 60 * 60 * 24));
             // Valid clinical gestational delivery range (140 to 330 days)
             if (gaDays >= 140 && gaDays <= 330) {
+                const delFy = getDeliveryFiscalYear(dDel);
+                if (!monthlyTot[delFy]) return;
                 const m = String(dDel.getMonth() + 1).padStart(2, '0');
-                monthlyTot[y][m] = (monthlyTot[y][m] || 0) + 1;
+                monthlyTot[delFy][m] = (monthlyTot[delFy][m] || 0) + 1;
                 if (gaDays > 287) { // >41 weeks (41 * 7 = 287 days)
-                    monthlyLate[y][m] = (monthlyLate[y][m] || 0) + 1;
+                    monthlyLate[delFy][m] = (monthlyLate[delFy][m] || 0) + 1;
                 }
             }
         });
 
         // Determine latest active month in 2026-27 so future months don't show false 0s
-        let maxActiveIdx26 = 7; // Nov (index 7 in monthsOrder) by default
+        let maxActiveIdx26 = -1;
         for (let i = monthsOrder.length - 1; i >= 0; i--) {
             const m = monthsOrder[i];
             if (monthlyTot['2026-27'][m] && monthlyTot['2026-27'][m] > 0) {
@@ -2995,21 +3002,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             }
         }
+        if (maxActiveIdx26 === -1) maxActiveIdx26 = 7; // Fallback Nov
 
         const seriesCurr = [];
         const seriesPrev = [];
 
         monthsOrder.forEach((m, idx) => {
-            // 2025-26 (Full year)
+            // 2025-26 (Previous FY)
             const tot25 = monthlyTot['2025-26'][m] || 0;
             const late25 = monthlyLate['2025-26'][m] || 0;
-            seriesPrev.push(tot25 > 0 ? parseFloat((late25 / tot25 * 100).toFixed(2)) : 0.0);
+            seriesPrev.push(tot25 > 0 ? parseFloat((late25 / tot25 * 100).toFixed(2)) : null);
 
-            // 2026-27 (Active up to current report month)
+            // 2026-27 (Current FY active up to current report month)
             if (idx <= maxActiveIdx26) {
                 const tot26 = monthlyTot['2026-27'][m] || 0;
                 const late26 = monthlyLate['2026-27'][m] || 0;
-                seriesCurr.push(tot26 > 0 ? parseFloat((late26 / tot26 * 100).toFixed(2)) : 0.0);
+                seriesCurr.push(tot26 > 0 ? parseFloat((late26 / tot26 * 100).toFixed(2)) : null);
             } else {
                 seriesCurr.push(null);
             }
