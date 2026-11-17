@@ -321,7 +321,19 @@
                         <div id="chart-monthly-trend" class="chart-container" style="min-height: 330px;"></div>
                     </div>
 
-                    <!-- 2. Delivery Place Distribution Donut Chart (Full Width Stacked) -->
+                    <!-- 2. Monthly Late Term Deliveries (>41 Weeks) Trend Chart (Full Width Stacked) -->
+                    <div class="chart-card-modern chart-card-fullwidth" style="margin-top: 1.25rem;">
+                        <div class="chart-header">
+                            <div>
+                                <h3 id="chart-late-delivery-title">📅 Monthly Late Term Deliveries (&gt;41 Weeks) Trend (YoY Comparison)</h3>
+                                <span class="chart-badge" id="chart-late-delivery-badge">% of Monthly Deliveries with Gestational Age &gt; 41 Weeks (2026-27 vs 2025-26)</span>
+                            </div>
+                            <button type="button" class="btn-download-svg" data-target="chart-late-delivery" data-filename="Monthly_Late_Term_Deliveries_Trend" title="Download chart as SVG">📥 SVG</button>
+                        </div>
+                        <div id="chart-late-delivery" class="chart-container" style="min-height: 330px;"></div>
+                    </div>
+
+                    <!-- 3. Delivery Place Distribution Donut Chart (Full Width Stacked) -->
                     <div class="chart-card-modern chart-card-fullwidth">
                         <div class="chart-header">
                             <div>
@@ -660,15 +672,17 @@
                         </div>
 
                         <div class="anmol-table-responsive">
-                            <table class="anmol-table" id="table-anmol-anc-yoy" style="max-width: 950px; margin: 0 auto;">
+                            <table class="anmol-table" id="table-anmol-anc-yoy" style="max-width: 1060px; margin: 0 auto;">
                                 <thead>
                                     <tr>
-                                        <th class="th-main-dark" style="width:50px;">S.No.</th>
-                                        <th class="th-main-dark th-loc-unit" id="th-anc-yoy-loc-label" style="text-align:left; padding-left:16px;">BLOCK</th>
-                                        <th class="th-main-dark" style="width:150px;" id="th-anc-yoy-prev-label">Last Year (FY 2025-26)</th>
-                                        <th class="th-main-dark" style="width:150px;">Current Year (FY 2026-27)</th>
-                                        <th class="th-main-dark" style="width:140px;">Difference (+ / -)</th>
-                                        <th class="th-main-dark" style="width:160px;">% YoY Change</th>
+                                        <th class="th-main-dark" style="width:45px;">S.No.</th>
+                                        <th class="th-main-dark th-loc-unit" id="th-anc-yoy-loc-label" style="text-align:left; padding-left:14px;">BLOCK</th>
+                                        <th class="th-main-dark" style="width:130px;" id="th-anc-yoy-prev-label">Last Year (FY 2025-26)</th>
+                                        <th class="th-main-dark" style="width:130px;">Current Year (FY 2026-27)</th>
+                                        <th class="th-main-dark" style="width:115px;">Difference (+ / -)</th>
+                                        <th class="th-main-dark" style="width:125px;">% YoY Change</th>
+                                        <th class="th-main-dark" style="width:120px;">Early ANC Reg.</th>
+                                        <th class="th-main-dark" style="width:120px;">% Early ANC</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbody-anmol-anc-yoy">
@@ -680,7 +694,7 @@
                             </table>
                         </div>
                         <div class="anmol-footnote" id="footnote-anmol-anc-yoy">
-                            Data Source :- Anmol 2.0 ANC Registration Monthly Cohort Comparison
+                            Data Source :- Anmol 2.0 ANC Registration Monthly Cohort Comparison &bull; Early ANC: Registration within 1st Trimester (&le;12 Weeks / 84 Days from LMP)
                         </div>
                     </div>
 
@@ -708,13 +722,20 @@
                                     <button type="button" class="anmol-cohort-btn active" data-cohort="del">Delivered Women</button>
                                     <button type="button" class="anmol-cohort-btn" data-cohort="all">All Registered PW</button>
                                 </div>
-                                <button type="button" class="anmol-toggle-filter-btn active" id="btn-toggle-exclude-abort-preterm" title="Toggle exclusion of abortion cases from cohort">
-                                    <span class="toggle-icon">🛡️</span> Exclude Abortions
+                                <button type="button" class="anmol-toggle-filter-btn active" id="btn-toggle-exclude-abortions" title="Toggle exclusion of abortion cases from cohort">
+                                    <span class="toggle-icon">🚫</span> Exclude Abortions
+                                </button>
+                                <button type="button" class="anmol-toggle-filter-btn active" id="btn-toggle-exclude-preterm" title="Toggle exclusion of pre-term (<35 Wks) deliveries from cohort">
+                                    <span class="toggle-icon">⚠️</span> Exclude Pre-term (&lt;35 Wks)
                                 </button>
                                 <div id="anmol-4anc-exclusion-chips" class="anmol-exclusion-chips-group">
-                                    <div class="anmol-chip-pill chip-excluded" title="Abortion cases excluded from cohort">
+                                    <div class="anmol-chip-pill chip-excluded" id="chip-container-abortions" title="Abortion cases excluded from cohort">
                                         <span class="chip-lbl">🚫 Abortions Excluded:</span>
                                         <span class="chip-val" id="chip-4anc-abortions">0</span>
+                                    </div>
+                                    <div class="anmol-chip-pill chip-excluded" id="chip-container-preterm" title="Pre-term (<35 Wks) deliveries excluded from cohort">
+                                        <span class="chip-lbl">⚠️ Pre-term Excluded:</span>
+                                        <span class="chip-val" id="chip-4anc-preterm">0</span>
                                     </div>
                                 </div>
                             </div>
@@ -919,7 +940,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="data.js?v=20261117-dpmu-fixes"></script>
-    <script src="app.js?v=20261117-dpmu-fixes"></script>
+    <script src="data.js?v=20261117-dpmu-v2"></script>
+    <script src="app.js?v=20261117-dpmu-v2"></script>
 </body>
 </html>

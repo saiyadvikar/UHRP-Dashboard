@@ -1766,9 +1766,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let dpmuSelectedYear = '2026-27';
     let dpmuSelectedCohort = 'del'; // 'del' or 'all'
     let dpmuYoyPeriod = 'same'; // 'same' (Apr–Nov like-for-like) or 'full' (cumulative vs full year)
-    let dpmuExcludeAbortPreterm = true; // Exclude abortion & preterm from all registered cohort
+    let dpmuExcludeAbortions = true; // Exclude abortion cases from cohort
+    let dpmuExcludePreterm = true; // Exclude pre-term (<35 weeks) deliveries from cohort
     let dpmuExcludeT1ModAnemia = true; // Exclude 1st trimester pregnant women with Moderate Anemia from parenteral iron management
     let dpmuEventsBound = false;
+
+    // Helper: Check if registration is Early ANC Registration (within 1st Trimester / <=12 Weeks / 84 days of LMP)
+    function isEarlyAncRegistration(p) {
+        if (!p || !p.reg || !p.lmp || p.reg === '-' || p.lmp === '-') return false;
+        const dReg = parseDate(p.reg);
+        const dLmp = parseDate(p.lmp);
+        if (!dReg || !dLmp) return false;
+        const diffDays = Math.round((dReg.getTime() - dLmp.getTime()) / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 84;
+    }
 
     // Facility Performance Table Sorting State
     let facilitySortCol = 'totalReg';
@@ -2027,19 +2038,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 const diff = cCount - pCount;
                 const pctChange = pCount > 0 ? ((cCount - pCount) / pCount * 100) : 0;
 
-                return { idx, unitName, cCount, pCount, diff, pctChange };
+                let earlyCount = 0;
+                uCurr.forEach(p => {
+                    if (isEarlyAncRegistration(p)) earlyCount++;
+                });
+                const earlyPct = cCount > 0 ? (earlyCount / cCount * 100) : 0;
+
+                return { idx, unitName, cCount, pCount, diff, pctChange, earlyCount, earlyPct };
             });
 
             const pctVals = yoyUnitData.map(d => d.pctChange);
             const minPct = Math.min(...pctVals);
             const maxPct = Math.max(...pctVals);
 
+            const earlyVals = yoyUnitData.map(d => d.earlyPct);
+            const minEarly = Math.min(...earlyVals);
+            const maxEarly = Math.max(...earlyVals);
+
             let sumPrev = 0;
             let sumCurr = 0;
+            let sumEarly = 0;
 
             const yoyRowsHtml = yoyUnitData.map(d => {
                 sumCurr += d.cCount;
                 sumPrev += d.pCount;
+                sumEarly += d.earlyCount;
                 const sign = d.diff > 0 ? '+' : '';
 
                 return `<tr>
@@ -2049,6 +2072,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td><strong>${d.cCount.toLocaleString()}</strong></td>
                     <td style="font-weight:700; color:${d.diff >= 0 ? '#059669' : '#dc2626'};">${sign}${d.diff.toLocaleString()}</td>
                     <td class="${getExcelScaleClass(d.pctChange, minPct, maxPct)}">${sign}${d.pctChange.toFixed(2)}%</td>
+                    <td style="font-weight:700; color:#0284c7;">${d.earlyCount.toLocaleString()}</td>
+                    <td class="${getExcelScaleClass(d.earlyPct, minEarly, maxEarly)}">${d.earlyPct.toFixed(2)}%</td>
                 </tr>`;
             }).join('');
 
@@ -2056,6 +2081,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const totDiff = sumCurr - sumPrev;
             const totPctChange = sumPrev > 0 ? ((sumCurr - sumPrev) / sumPrev * 100) : 0;
+            const totEarlyPct = sumCurr > 0 ? (sumEarly / sumCurr * 100) : 0;
             const totSign = totDiff > 0 ? '+' : '';
 
             tfootAncYoY.innerHTML = `<tr class="anmol-total-row">
@@ -2064,6 +2090,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${sumCurr.toLocaleString()}</td>
                 <td style="font-weight:800; color:${totDiff >= 0 ? '#059669' : '#dc2626'};">${totSign}${totDiff.toLocaleString()}</td>
                 <td class="${getExcelScaleClass(totPctChange, minPct, maxPct)}">${totSign}${totPctChange.toFixed(2)}%</td>
+                <td style="font-weight:800; color:#0284c7;">${sumEarly.toLocaleString()}</td>
+                <td class="${getExcelScaleClass(totEarlyPct, minEarly, maxEarly)}">${totEarlyPct.toFixed(2)}%</td>
             </tr>`;
 
             if (currTotEl) currTotEl.textContent = sumCurr.toLocaleString();
@@ -2083,14 +2111,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const pwLabelEl = document.getElementById('th-4anc-pw-label');
         const chipAbortions = document.getElementById('chip-4anc-abortions');
         const chipPreterm = document.getElementById('chip-4anc-preterm');
-        const chipsContainer = document.getElementById('anmol-4anc-exclusion-chips');
+        const chipContAbortions = document.getElementById('chip-container-abortions');
+        const chipContPreterm = document.getElementById('chip-container-preterm');
+        const btnToggleAbort = document.getElementById('btn-toggle-exclude-abortions');
+        const btnTogglePreterm = document.getElementById('btn-toggle-exclude-preterm');
 
         if (tbody4Anc && tfoot4Anc) {
+            const isAnyExcluded = dpmuExcludeAbortions || dpmuExcludePreterm;
             if (pwLabelEl) {
                 if (dpmuSelectedCohort === 'del') {
-                    pwLabelEl.textContent = dpmuExcludeAbortPreterm ? 'Eligible Delivered PW' : 'Delivered PW';
+                    pwLabelEl.textContent = isAnyExcluded ? 'Eligible Delivered PW' : 'Delivered PW';
                 } else {
-                    pwLabelEl.textContent = dpmuExcludeAbortPreterm ? 'Eligible PW' : 'Total PW';
+                    pwLabelEl.textContent = isAnyExcluded ? 'Eligible PW' : 'Total PW';
                 }
             }
 
@@ -2114,15 +2146,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
+                function shouldExcludeCase(p) {
+                    const ex = isAbortionOrPreterm(p);
+                    if (!ex.isExcluded) return false;
+                    if (dpmuExcludeAbortions && ex.type === 'abortion') return true;
+                    if (dpmuExcludePreterm && ex.type === 'preterm') return true;
+                    return false;
+                }
+
                 let eligibleList = uAll;
                 if (dpmuSelectedCohort === 'del') {
-                    if (dpmuExcludeAbortPreterm) {
-                        eligibleList = uAll.filter(p => p.del === 1 && !isAbortionOrPreterm(p).isExcluded);
-                    } else {
-                        eligibleList = uAll.filter(p => p.del === 1);
-                    }
-                } else if (dpmuExcludeAbortPreterm) {
-                    eligibleList = uAll.filter(p => !isAbortionOrPreterm(p).isExcluded);
+                    eligibleList = uAll.filter(p => p.del === 1 && !shouldExcludeCase(p));
+                } else {
+                    eligibleList = uAll.filter(p => !shouldExcludeCase(p));
                 }
 
                 let fourAncCount = 0;
@@ -2146,9 +2182,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update Summary KPI Chips: Separate Abortions & Pre-term (<35 Wks)
             if (chipAbortions) chipAbortions.textContent = grandAbortions.toLocaleString();
             if (chipPreterm) chipPreterm.textContent = grandPreterm.toLocaleString();
-            if (chipsContainer) {
-                chipsContainer.style.opacity = dpmuExcludeAbortPreterm ? '1' : '0.55';
-            }
+            if (chipContAbortions) chipContAbortions.style.opacity = dpmuExcludeAbortions ? '1' : '0.45';
+            if (chipContPreterm) chipContPreterm.style.opacity = dpmuExcludePreterm ? '1' : '0.45';
+            if (btnToggleAbort) btnToggleAbort.classList.toggle('active', dpmuExcludeAbortions);
+            if (btnTogglePreterm) btnTogglePreterm.classList.toggle('active', dpmuExcludePreterm);
             const grandCovPct = grandEligible > 0 ? (grand4Anc / grandEligible * 100) : 0;
 
             const covVals = ancUnitData.map(d => d.covPct);
@@ -2476,12 +2513,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Toggle Abortion & Preterm Exclusions
-        const btnToggleAbort = document.getElementById('btn-toggle-exclude-abort-preterm');
+        // Toggle Abortion Exclusion
+        const btnToggleAbort = document.getElementById('btn-toggle-exclude-abortions');
         if (btnToggleAbort) {
             btnToggleAbort.addEventListener('click', () => {
-                dpmuExcludeAbortPreterm = !dpmuExcludeAbortPreterm;
-                btnToggleAbort.classList.toggle('active', dpmuExcludeAbortPreterm);
+                dpmuExcludeAbortions = !dpmuExcludeAbortions;
+                btnToggleAbort.classList.toggle('active', dpmuExcludeAbortions);
+                renderDpmuOfficialTables();
+            });
+        }
+
+        // Toggle Pre-term Exclusion
+        const btnTogglePreterm = document.getElementById('btn-toggle-exclude-preterm');
+        if (btnTogglePreterm) {
+            btnTogglePreterm.addEventListener('click', () => {
+                dpmuExcludePreterm = !dpmuExcludePreterm;
+                btnTogglePreterm.classList.toggle('active', dpmuExcludePreterm);
                 renderDpmuOfficialTables();
             });
         }
@@ -2883,6 +2930,172 @@ document.addEventListener('DOMContentLoaded', () => {
         monthlyTrendChartInstance.render();
     }
 
+    let lateDeliveryChartInstance = null;
+
+    function renderLateDeliveryTrendChart(toolbarConfig) {
+        if (lateDeliveryChartInstance) {
+            lateDeliveryChartInstance.destroy();
+            lateDeliveryChartInstance = null;
+        }
+
+        const chartEl = document.getElementById('chart-late-delivery');
+        if (!chartEl) return;
+        chartEl.innerHTML = '';
+
+        const titleEl = document.getElementById('chart-late-delivery-title');
+        const badgeEl = document.getElementById('chart-late-delivery-badge');
+
+        const monthsOrder = ['04', '05', '06', '07', '08', '09', '10', '11', '12', '01', '02', '03'];
+        const monthsLabels = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+
+        const blockVal = document.getElementById(elementIds.block)?.value || 'All';
+        const blockFilter = blockVal === 'All' ? null : blockVal.toLowerCase();
+        const blockText = blockVal === 'All' ? 'District Khargone' : `Block: ${blockVal}`;
+
+        if (titleEl) {
+            titleEl.textContent = `📅 Monthly Late Term Deliveries (>41 Weeks) Rate (${blockText})`;
+        }
+        if (badgeEl) {
+            badgeEl.textContent = `% of Monthly Deliveries with Gestational Age > 41 Weeks (2026-27 vs 2025-26)`;
+        }
+
+        const allAnc = (typeof DASHBOARD_DATA !== 'undefined' ? DASHBOARD_DATA.anc_patients : []) || [];
+        const ancPool = blockFilter ? allAnc.filter(p => (p.b || '').toLowerCase() === blockFilter) : allAnc;
+
+        // Group total deliveries and late term (>41 weeks) deliveries by FY and month
+        const monthlyTot = { '2026-27': {}, '2025-26': {} };
+        const monthlyLate = { '2026-27': {}, '2025-26': {} };
+
+        ancPool.forEach(p => {
+            const y = p.y;
+            if (!monthlyTot[y]) return;
+            if (!p.del_date || p.del_date === '-' || !p.lmp || p.lmp === '-') return;
+
+            const dDel = parseDate(p.del_date);
+            const dLmp = parseDate(p.lmp);
+            if (!dDel || !dLmp) return;
+
+            const gaDays = Math.round((dDel.getTime() - dLmp.getTime()) / (1000 * 60 * 60 * 24));
+            // Valid clinical gestational delivery range (140 to 330 days)
+            if (gaDays >= 140 && gaDays <= 330) {
+                const m = String(dDel.getMonth() + 1).padStart(2, '0');
+                monthlyTot[y][m] = (monthlyTot[y][m] || 0) + 1;
+                if (gaDays > 287) { // >41 weeks (41 * 7 = 287 days)
+                    monthlyLate[y][m] = (monthlyLate[y][m] || 0) + 1;
+                }
+            }
+        });
+
+        // Determine latest active month in 2026-27 so future months don't show false 0s
+        let maxActiveIdx26 = 7; // Nov (index 7 in monthsOrder) by default
+        for (let i = monthsOrder.length - 1; i >= 0; i--) {
+            const m = monthsOrder[i];
+            if (monthlyTot['2026-27'][m] && monthlyTot['2026-27'][m] > 0) {
+                maxActiveIdx26 = i;
+                break;
+            }
+        }
+
+        const seriesCurr = [];
+        const seriesPrev = [];
+
+        monthsOrder.forEach((m, idx) => {
+            // 2025-26 (Full year)
+            const tot25 = monthlyTot['2025-26'][m] || 0;
+            const late25 = monthlyLate['2025-26'][m] || 0;
+            seriesPrev.push(tot25 > 0 ? parseFloat((late25 / tot25 * 100).toFixed(2)) : 0.0);
+
+            // 2026-27 (Active up to current report month)
+            if (idx <= maxActiveIdx26) {
+                const tot26 = monthlyTot['2026-27'][m] || 0;
+                const late26 = monthlyLate['2026-27'][m] || 0;
+                seriesCurr.push(tot26 > 0 ? parseFloat((late26 / tot26 * 100).toFixed(2)) : 0.0);
+            } else {
+                seriesCurr.push(null);
+            }
+        });
+
+        const options = {
+            series: [
+                { name: '2026-27 (Current FY)', data: seriesCurr },
+                { name: '2025-26 (Previous FY)', data: seriesPrev }
+            ],
+            chart: {
+                type: 'line',
+                height: 330,
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+                toolbar: toolbarConfig || { show: true },
+                animations: { enabled: true, easing: 'easeinout', speed: 450 },
+                background: 'transparent',
+                dropShadow: { enabled: true, top: 4, left: 0, blur: 6, opacity: 0.12 }
+            },
+            theme: {
+                mode: 'light'
+            },
+            stroke: {
+                curve: 'smooth',
+                width: [3.5, 2.5],
+                dashArray: [0, 4]
+            },
+            colors: ['#ff2a6d', '#7928ca'],
+            markers: {
+                size: [5, 4],
+                strokeColors: '#ffffff',
+                strokeWidth: 2,
+                hover: { size: 7 }
+            },
+            xaxis: {
+                categories: monthsLabels,
+                labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#64748b' } },
+                axisBorder: { show: true, color: '#cbd5e1' },
+                axisTicks: { show: false }
+            },
+            yaxis: {
+                title: {
+                    text: 'Late Term Deliveries (% of Deliveries)',
+                    style: { fontSize: '11.5px', fontWeight: 700, color: '#0f172a' }
+                },
+                labels: {
+                    formatter: function (val) {
+                        if (val === null || val === undefined) return '';
+                        return `${val.toFixed(1)}%`;
+                    },
+                    style: { fontSize: '11px', fontWeight: 600, colors: '#64748b' }
+                }
+            },
+            legend: {
+                position: 'top',
+                horizontalAlign: 'right',
+                fontSize: '11.5px',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+                labels: { colors: '#334155' },
+                markers: { radius: 12, width: 10, height: 10 }
+            },
+            grid: {
+                borderColor: 'rgba(226, 232, 240, 0.9)',
+                strokeDashArray: 4
+            },
+            tooltip: {
+                theme: 'light',
+                shared: true,
+                intersect: false,
+                y: {
+                    formatter: function (val, { seriesIndex, dataPointIndex }) {
+                        if (val === null || val === undefined) return 'No data';
+                        const m = monthsOrder[dataPointIndex];
+                        const fy = seriesIndex === 0 ? '2026-27' : '2025-26';
+                        const tot = monthlyTot[fy][m] || 0;
+                        const lateC = monthlyLate[fy][m] || 0;
+                        return `${val.toFixed(2)}% (${lateC.toLocaleString()} / ${tot.toLocaleString()} deliveries)`;
+                    }
+                }
+            }
+        };
+
+        lateDeliveryChartInstance = new ApexCharts(chartEl, options);
+        lateDeliveryChartInstance.render();
+    }
+
     function renderAnalyticsCharts(filteredTabPatients) {
         currentAnalyticsPatients = filteredTabPatients;
         const toolbarConfig = {
@@ -2901,7 +3114,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Monthly Identification Trend Chart (YoY Comparison)
         renderMonthlyTrendChart(currentTab, toolbarConfig);
 
-        // 2. Delivery Place Distribution Donut Chart
+        // 2. Monthly Late Term Deliveries (>41 Weeks) Trend Chart (YoY Comparison)
+        renderLateDeliveryTrendChart(toolbarConfig);
+
+        // 3. Delivery Place Distribution Donut Chart
         renderDeliveryPlaceChart(filteredTabPatients, toolbarConfig);
 
         setupSvgDownloadButtons();
