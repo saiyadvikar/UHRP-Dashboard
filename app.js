@@ -1764,7 +1764,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // SECTION 4: DPMU OFFICIAL ANMOL 2.0 TABLES & FACILITY REVIEW
     // ==========================================================================
     let dpmuSelectedYear = '2026-27';
-    let dpmuSelectedCohort = 'del'; // 'del' or 'all'
+    let dpmuSelectedCohort = 'matured'; // 'matured' (Anmol 2.0 standard), 'del', or 'all'
     let dpmuYoyPeriod = 'same'; // 'same' (Apr–Nov like-for-like) or 'full' (cumulative vs full year)
     let dpmuExcludeAbortions = true; // Exclude abortion cases from cohort
     let dpmuExcludePreterm = true; // Exclude pre-term (<35 weeks) deliveries from cohort
@@ -2119,7 +2119,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tbody4Anc && tfoot4Anc) {
             const isAnyExcluded = dpmuExcludeAbortions || dpmuExcludePreterm;
             if (pwLabelEl) {
-                if (dpmuSelectedCohort === 'del') {
+                if (dpmuSelectedCohort === 'matured') {
+                    pwLabelEl.textContent = isAnyExcluded ? 'Eligible Matured PW' : 'Matured PW (EDD / Delivered)';
+                } else if (dpmuSelectedCohort === 'del') {
                     pwLabelEl.textContent = isAnyExcluded ? 'Eligible Delivered PW' : 'Delivered PW';
                 } else {
                     pwLabelEl.textContent = isAnyExcluded ? 'Eligible PW' : 'Total PW';
@@ -2134,7 +2136,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const ancUnitData = locInfo.units.map((unitName, idx) => {
                 const uAll = yrAncPatients.filter(p => locInfo.filterFn(p, unitName));
-                const uBase = dpmuSelectedCohort === 'del' ? uAll.filter(p => p.del === 1) : uAll;
+                let uBase;
+                if (dpmuSelectedCohort === 'matured') {
+                    uBase = uAll.filter(p => {
+                        if (p.del === 1 || p.del === 2 || p.is_abortion === 1) return true;
+                        if (p.edd && p.edd !== '-' && p.edd !== 'None') {
+                            const dEdd = parseDate(p.edd);
+                            if (dEdd && dEdd <= refDate) return true;
+                        }
+                        return false;
+                    });
+                } else if (dpmuSelectedCohort === 'del') {
+                    uBase = uAll.filter(p => p.del === 1);
+                } else {
+                    uBase = uAll;
+                }
+
                 const totalReg = uBase.length;
                 let unitAbortions = 0;
                 let unitPreterm = 0;
@@ -2159,8 +2176,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let fourAncCount = 0;
                 eligibleList.forEach(p => {
-                    const ga = check4AncByGestationalAge(p);
-                    if (ga.all4 === 1) fourAncCount++;
+                    const isAll4 = p.all4 === 1 || (p.c1 === 1 && p.c2 === 1 && p.c3 === 1 && p.c4 === 1) || (check4AncByGestationalAge(p).all4 === 1);
+                    if (isAll4) fourAncCount++;
                 });
 
                 const eligibleCount = eligibleList.length;
@@ -2955,72 +2972,38 @@ document.addEventListener('DOMContentLoaded', () => {
             badgeEl.textContent = `% of Monthly Deliveries with Gestational Age > 41 Weeks (2026-27 vs 2025-26)`;
         }
 
-        const allAnc = (typeof DASHBOARD_DATA !== 'undefined' ? DASHBOARD_DATA.anc_patients : []) || [];
-        const ancPool = blockFilter ? allAnc.filter(p => (p.b || '').toLowerCase() === blockFilter) : allAnc;
-
-        function getDeliveryFiscalYear(d) {
-            if (!d) return null;
-            const year = d.getFullYear();
-            const month = d.getMonth() + 1;
-            if (month >= 4) {
-                return year + '-' + String(year + 1).slice(-2);
-            } else {
-                return (year - 1) + '-' + String(year).slice(-2);
-            }
+        const dData = (typeof DASHBOARD_DATA !== 'undefined' ? DASHBOARD_DATA : (window.DASHBOARD_DATA || {})) || {};
+        const deliveryStats = dData.monthly_delivery_stats;
+        let statsBlockKey = 'All';
+        if (deliveryStats && blockFilter) {
+            const availBlocks = Object.keys(deliveryStats['2025-26'] || deliveryStats['2026-27'] || {});
+            const matched = availBlocks.find(b => b.toLowerCase() === blockFilter);
+            if (matched) statsBlockKey = matched;
         }
-
-        // Group total deliveries and late term (>41 weeks) deliveries by delivery FY and delivery month
-        const monthlyTot = { '2026-27': {}, '2025-26': {} };
-        const monthlyLate = { '2026-27': {}, '2025-26': {} };
-
-        ancPool.forEach(p => {
-            if (!p.del_date || p.del_date === '-' || !p.lmp || p.lmp === '-') return;
-
-            const dDel = parseDate(p.del_date);
-            const dLmp = parseDate(p.lmp);
-            if (!dDel || !dLmp) return;
-
-            const gaDays = Math.round((dDel.getTime() - dLmp.getTime()) / (1000 * 60 * 60 * 24));
-            // Valid clinical gestational delivery range (140 to 330 days)
-            if (gaDays >= 140 && gaDays <= 330) {
-                const delFy = getDeliveryFiscalYear(dDel);
-                if (!monthlyTot[delFy]) return;
-                const m = String(dDel.getMonth() + 1).padStart(2, '0');
-                monthlyTot[delFy][m] = (monthlyTot[delFy][m] || 0) + 1;
-                if (gaDays > 287) { // >41 weeks (41 * 7 = 287 days)
-                    monthlyLate[delFy][m] = (monthlyLate[delFy][m] || 0) + 1;
-                }
-            }
-        });
-
-        // Determine latest active month in 2026-27 so future months don't show false 0s
-        let maxActiveIdx26 = -1;
-        for (let i = monthsOrder.length - 1; i >= 0; i--) {
-            const m = monthsOrder[i];
-            if (monthlyTot['2026-27'][m] && monthlyTot['2026-27'][m] > 0) {
-                maxActiveIdx26 = i;
-                break;
-            }
-        }
-        if (maxActiveIdx26 === -1) maxActiveIdx26 = 7; // Fallback Nov
 
         const seriesCurr = [];
         const seriesPrev = [];
 
         monthsOrder.forEach((m, idx) => {
-            // 2025-26 (Previous FY)
-            const tot25 = monthlyTot['2025-26'][m] || 0;
-            const late25 = monthlyLate['2025-26'][m] || 0;
-            seriesPrev.push(tot25 > 0 ? parseFloat((late25 / tot25 * 100).toFixed(2)) : null);
-
-            // 2026-27 (Current FY active up to current report month)
-            if (idx <= maxActiveIdx26) {
-                const tot26 = monthlyTot['2026-27'][m] || 0;
-                const late26 = monthlyLate['2026-27'][m] || 0;
-                seriesCurr.push(tot26 > 0 ? parseFloat((late26 / tot26 * 100).toFixed(2)) : null);
-            } else {
-                seriesCurr.push(null);
+            // 2025-26 (Previous FY from complete Delivery Report)
+            let pct25 = null;
+            if (deliveryStats && deliveryStats['2025-26'] && deliveryStats['2025-26'][statsBlockKey] && deliveryStats['2025-26'][statsBlockKey][m]) {
+                const item25 = deliveryStats['2025-26'][statsBlockKey][m];
+                if (item25.tot > 0) {
+                    pct25 = parseFloat((item25.late / item25.tot * 100).toFixed(2));
+                }
             }
+            seriesPrev.push(pct25);
+
+            // 2026-27 (Current FY up to current report month)
+            let pct26 = null;
+            if (deliveryStats && deliveryStats['2026-27'] && deliveryStats['2026-27'][statsBlockKey] && deliveryStats['2026-27'][statsBlockKey][m]) {
+                const item26 = deliveryStats['2026-27'][statsBlockKey][m];
+                if (item26.tot > 0) {
+                    pct26 = parseFloat((item26.late / item26.tot * 100).toFixed(2));
+                }
+            }
+            seriesCurr.push(pct26);
         });
 
         const options = {

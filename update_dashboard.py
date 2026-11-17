@@ -456,9 +456,14 @@ def load_delivery_linelist(del_dir=None):
     del_files = discover_excel_files(["Delivery_Line_List_Report*.xlsx", "Delivery_Line_List*.xlsx"], fallback_dirs=fallback)
     if not del_files:
         print("  ⚠️ No Delivery Line List files found.")
-        return {}
+        return {}, {'2025-26': {}, '2026-27': {}}
 
     delivery_map = {}
+    monthly_stats = {
+        '2025-26': {},
+        '2026-27': {}
+    }
+
     for del_path in del_files:
         try:
             print(f"  → Loading Delivery Line List: {os.path.basename(del_path)}")
@@ -476,6 +481,8 @@ def load_delivery_linelist(del_dir=None):
             bp_adm_idx = headers.index('BP At Admission') if 'BP At Admission' in headers else 20
             hb_adm_idx = headers.index('HB on LR admission') if 'HB on LR admission' in headers else 28
             del_date_idx = headers.index('Date of Delivery') if 'Date of Delivery' in headers else 35
+            lmp_indices = [i for i, h in enumerate(headers) if 'lmp' in str(h).lower()]
+            lmp_idx = lmp_indices[0] if lmp_indices else 12
             mat_death_indices = [i for i, h in enumerate(headers) if 'maternal death' in h.lower()]
             mat_death_idx = mat_death_indices[0] if mat_death_indices else 58
 
@@ -484,6 +491,27 @@ def load_delivery_linelist(del_dir=None):
             vil_idx = headers.index('Village') if 'Village' in headers else 5
 
             for r in rows_iter:
+                # 1. Monthly delivery & late term (>41 weeks) statistics directly from delivery line list
+                raw_d = r[del_date_idx] if del_date_idx < len(r) else None
+                raw_lmp = r[lmp_idx] if lmp_idx < len(r) else None
+                b_str = str(r[b_idx] or '').strip().title() if b_idx < len(r) else 'Unknown'
+
+                dt_del = parse_date_to_datetime(raw_d)
+                dt_lmp = parse_date_to_datetime(raw_lmp)
+                if dt_del:
+                    del_fy = f"{dt_del.year}-{str(dt_del.year+1)[-2:]}" if dt_del.month >= 4 else f"{dt_del.year-1}-{str(dt_del.year)[-2:]}"
+                    if del_fy in monthly_stats and dt_lmp:
+                        ga_days = (dt_del - dt_lmp).days
+                        if 140 <= ga_days <= 330:
+                            m_str = f"{dt_del.month:02d}"
+                            for scope in ['All', b_str]:
+                                monthly_stats[del_fy].setdefault(scope, {})
+                                monthly_stats[del_fy][scope].setdefault(m_str, {'tot': 0, 'late': 0})
+                                monthly_stats[del_fy][scope][m_str]['tot'] += 1
+                                if ga_days > 287: # >41 weeks
+                                    monthly_stats[del_fy][scope][m_str]['late'] += 1
+
+                # 2. Map patient delivery information
                 if mpid_idx < len(r) and r[mpid_idx] is not None:
                     mpid = clean_str(r[mpid_idx]).split('.')[0]
                     if mpid and mpid not in ('None', 'nan', ''):
@@ -501,13 +529,13 @@ def load_delivery_linelist(del_dir=None):
                             'del_date': del_date,
                             'del_cat': cat,
                             'mat_death': mat_death in ('yes', 'true', '1'),
-                            'b': str(r[b_idx] or '').strip() if b_idx < len(r) else '',
+                            'b': b_str,
                             'sub': str(r[sub_idx] or '').strip() if sub_idx < len(r) else '',
                             'v': str(r[vil_idx] or '').strip() if vil_idx < len(r) else ''
                         }
         except Exception as e:
             print(f"  ❌ Error loading {os.path.basename(del_path)}: {e}")
-    return delivery_map
+    return delivery_map, monthly_stats
 
 def categorize_delivery_facility(fac_name, fac_type, place_val):
     """Categorize delivery facility into standard dashboard categories."""
@@ -693,7 +721,7 @@ def main():
     # STEP 4: LOAD DELIVERY LINE LIST & ANC DENOMINATOR
     # ===================================================================
     print("\n[4/5] Loading Delivery Line List & ANC files...")
-    delivery_lookup = load_delivery_linelist(DELIVERY_DIR)
+    delivery_lookup, monthly_delivery_stats = load_delivery_linelist(DELIVERY_DIR)
     sub_to_phc_map, village_to_loc_map, anm_map, cho_map = load_location_hierarchy(LOCATION_DIR)
 
     anc_files = discover_excel_files(["ANC_Line_list_Report*.xlsx", "ANC_Line_List*.xlsx", "*ANC_Line_list*"], fallback_dirs=[ANC_DIR])
@@ -755,6 +783,16 @@ def main():
         abort_p_idx = abort_p_indices[0] if abort_p_indices else 173
         anc_mat_death_indices = [i for i, h in enumerate(headers) if h and 'maternal death' in str(h).lower()]
         anc_mat_death_idx = anc_mat_death_indices[0] if anc_mat_death_indices else 176
+
+        # Official Anmol 4 ANC Checkup indicator columns (Cols 153-156)
+        c1_indices = [i for i, h in enumerate(headers) if h and 'first anc check-up' in str(h).lower()]
+        c1_col_idx = c1_indices[0] if c1_indices else 153
+        c2_indices = [i for i, h in enumerate(headers) if h and 'second anc check-up' in str(h).lower()]
+        c2_col_idx = c2_indices[0] if c2_indices else 154
+        c3_indices = [i for i, h in enumerate(headers) if h and 'third anc check-up' in str(h).lower()]
+        c3_col_idx = c3_indices[0] if c3_indices else 155
+        c4_indices = [i for i, h in enumerate(headers) if h and 'fourth anc check-up' in str(h).lower()]
+        c4_col_idx = c4_indices[0] if c4_indices else 156
 
         count_indexed = 0
         total_anc_mpids_by_year = {}
@@ -858,12 +896,17 @@ def main():
                     mo_done = 1 if any(is_mo_str(x) for x in mo_list) else 0
                     anm_n_anc, anm_p_anc, cho_n_anc, cho_p_anc = get_hr_contacts(b_str, sub_str, str(row[vil_idx] or '').strip() if vil_idx < len(row) else '', anm_map, cho_map, village_to_loc_map)
 
-                    # 4 ANC Checkup by Gestational Age (GA) from LMP:
-                    # 1st ANC Checkup (0–12 Wks)
-                    # 2nd ANC Checkup (13–26 Wks) 
-                    # 3rd ANC Checkup (27–34 Wks)
-                    # 4th ANC Checkup (35–Delivery)
-                    c1_done, c2_done, c3_done, c4_done = 0, 0, 0, 0
+                    # 4 ANC Checkup: Official Anmol indicator flags (Cols 153-156) combined with visit dates
+                    raw_c1 = (str(row[c1_col_idx]).strip().lower() == 'yes') if c1_col_idx < len(row) else False
+                    raw_c2 = (str(row[c2_col_idx]).strip().lower() == 'yes') if c2_col_idx < len(row) else False
+                    raw_c3 = (str(row[c3_col_idx]).strip().lower() == 'yes') if c3_col_idx < len(row) else False
+                    raw_c4 = (str(row[c4_col_idx]).strip().lower() == 'yes') if c4_col_idx < len(row) else False
+
+                    c1_done = 1 if raw_c1 else 0
+                    c2_done = 1 if raw_c2 else 0
+                    c3_done = 1 if raw_c3 else 0
+                    c4_done = 1 if raw_c4 else 0
+
                     dt_lmp = parse_date_to_datetime(raw_lmp_date)
                     if dt_lmp:
                         for raw_vd in date_list:
@@ -1401,6 +1444,7 @@ def main():
         'gen_date': datetime.datetime.now().strftime('%d-%m-%Y'),
         'hrp_raw_counts': hrp_raw_counts,
         'anc_counts': anc_counts,
+        'monthly_delivery_stats': monthly_delivery_stats,
         'nmr_by_factor': nmr_by_factor,
         'nmr_total_matched': 0,
         'nmr_total_nnd': 0,
