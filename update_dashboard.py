@@ -774,6 +774,7 @@ def main():
                     raw_del_flag = (del_comp_idx < len(row) and str(row[del_comp_idx] or '').strip().lower() == 'yes')
                     is_hrp_anc = 1 if (hrp_id_idx < len(row) and str(row[hrp_id_idx] or '').strip().lower() == 'yes') else 0
                     lmp_val = format_to_dd_mmyyyy(raw_lmp_date)
+                    reg_val = format_to_dd_mmyyyy(raw_reg_date)
                     edd_val = format_to_dd_mmyyyy(row[edd_idx] if edd_idx < len(row) else None)
                     age_str = str(row[age_idx] if age_idx < len(row) and row[age_idx] is not None else '-').split('.')[0].strip()
                     mob_str = clean_mobile(row[mob_idx]) if mob_idx < len(row) else ''
@@ -889,6 +890,7 @@ def main():
                         'sub': sub_str,
                         'v': str(row[vil_idx] or 'Unknown').strip().title() if vil_idx < len(row) else 'Unknown',
                         'lmp': lmp_val,
+                        'reg': reg_val,
                         'edd': edd_val,
                         'a': age_str if age_str not in ('nan', 'None', '', 'NaT') else '-',
                         'p': mob_str if mob_str else 'N/A',

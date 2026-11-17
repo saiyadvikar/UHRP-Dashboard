@@ -1965,34 +1965,59 @@ document.addEventListener('DOMContentLoaded', () => {
         const diffTotEl = document.getElementById('anc-yoy-district-change');
 
         if (tbodyAncYoY && tfootAncYoY) {
-            if (prevLabelEl) {
-                prevLabelEl.textContent = dpmuYoyPeriod === 'same' ? 'Last Year Same Period (Apr–Nov)' : 'Last Year Full FY (2025-26)';
-            }
-
             const currAnc = ancPatients.filter(p => p.y === '2026-27');
             const prevAnc = ancPatients.filter(p => p.y === '2025-26');
 
-            // Find months active in current year
-            const activeMonths = new Set();
+            // Helper to parse date string (DD-MM-YYYY or YYYY-MM-DD)
+            const parseDMY = (dStr) => {
+                if (!dStr) return null;
+                const s = String(dStr).trim();
+                const mDD = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+                if (mDD) return { day: parseInt(mDD[1], 10), month: parseInt(mDD[2], 10), year: parseInt(mDD[3], 10) };
+                const mYY = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                if (mYY) return { day: parseInt(mYY[3], 10), month: parseInt(mYY[2], 10), year: parseInt(mYY[1], 10) };
+                return null;
+            };
+
+            // Fiscal month rank: Apr(4)=0, May(5)=1, ..., Nov(11)=7, Dec(12)=8, Jan(1)=9, Mar(3)=11
+            const getFyRank = (m) => (m >= 4 ? m - 4 : m + 8);
+
+            // Determine latest registration date cutoff in current FY (e.g. 17 Nov)
+            let maxCutRank = 7; // default Nov (rank 7)
+            let maxCutDay = 17; // default 17th
+            let maxCutFound = false;
+
             currAnc.forEach(p => {
-                const reg = String(p.reg || '');
-                if (reg.includes('-')) {
-                    const parts = reg.split('-');
-                    if (parts.length === 3 && parts[1]) activeMonths.add(parts[1]);
+                const pd = parseDMY(p.reg || p.lmp);
+                if (pd) {
+                    const r = getFyRank(pd.month);
+                    if (!maxCutFound || r > maxCutRank || (r === maxCutRank && pd.day > maxCutDay)) {
+                        maxCutRank = r;
+                        maxCutDay = pd.day;
+                        maxCutFound = true;
+                    }
                 }
             });
+
+            if (prevLabelEl) {
+                const monthNames = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+                const cutMonthName = monthNames[maxCutRank] || 'Nov';
+                prevLabelEl.textContent = dpmuYoyPeriod === 'same' ? `Last Year Same Period (Apr 1–${cutMonthName} ${maxCutDay})` : 'Last Year Full FY (2025-26)';
+            }
+
+            const isWithinSamePeriod = (p) => {
+                const pd = parseDMY(p.reg || p.lmp);
+                if (!pd) return false;
+                const r = getFyRank(pd.month);
+                return r < maxCutRank || (r === maxCutRank && pd.day <= maxCutDay);
+            };
 
             const yoyUnitData = locInfo.units.map((unitName, idx) => {
                 const uCurr = currAnc.filter(p => locInfo.filterFn(p, unitName));
                 const uPrev = prevAnc.filter(p => {
                     if (!locInfo.filterFn(p, unitName)) return false;
                     if (dpmuYoyPeriod === 'same') {
-                        const reg = String(p.reg || '');
-                        if (reg.includes('-')) {
-                            const parts = reg.split('-');
-                            return parts.length === 3 && activeMonths.has(parts[1]);
-                        }
-                        return false;
+                        return isWithinSamePeriod(p);
                     }
                     return true;
                 });
@@ -2332,7 +2357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 uAnc.forEach(p => {
                     const isDead = isMaternalDeath(p);
                     const isAb = (p.del === 2 || p.del === '2' || p.is_abortion === 1);
-                    const isDelivered = (p.del === 1 || p.del === '1' || (p.del_date && !isDead && !isAb));
+                    const isDelivered = (p.del === 1 || p.del === '1' || (p.del_date && p.del_date !== '-' && !isDead && !isAb));
 
                     if (isDead) {
                         death++;
