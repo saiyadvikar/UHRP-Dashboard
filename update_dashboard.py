@@ -14,8 +14,52 @@ sys.stdout.reconfigure(encoding='utf-8')
 WORKSPACE = os.path.dirname(os.path.abspath(__file__))
 HRP_DIR = os.path.join(WORKSPACE, "HRP line list")
 ANC_DIR = os.path.join(WORKSPACE, "ANC line list")
-LOCATION_DIR = os.path.join(WORKSPACE, "Location Hirarchy")
+LOCATION_DIR = os.path.join(WORKSPACE, "Location Hirarchy") if os.path.exists(os.path.join(WORKSPACE, "Location Hirarchy")) else os.path.join(WORKSPACE, "Location Hierarchy")
 DELIVERY_DIR = os.path.join(WORKSPACE, "Delivery linelist")
+
+def discover_excel_files(file_patterns, fallback_dirs=None):
+    """
+    Search for Excel files matching patterns in:
+    1. WORKSPACE subdirectories (e.g., '2025-26', '2026-27')
+    2. WORKSPACE root
+    3. Any specified fallback directories (e.g., 'HRP line list')
+    Filters out temporary lock files (~$*) and non-source files.
+    """
+    candidates = []
+    if isinstance(file_patterns, str):
+        file_patterns = [file_patterns]
+    if isinstance(fallback_dirs, str):
+        fallback_dirs = [fallback_dirs]
+    elif fallback_dirs is None:
+        fallback_dirs = []
+
+    # 1. Search in subdirectories of WORKSPACE (e.g. 2025-26, 2026-27)
+    for pat in file_patterns:
+        candidates.extend(glob.glob(os.path.join(WORKSPACE, "*", pat)))
+        candidates.extend(glob.glob(os.path.join(WORKSPACE, pat)))
+
+    # 2. Search in fallback directories
+    for fdir in fallback_dirs:
+        if fdir and os.path.exists(fdir):
+            for pat in file_patterns:
+                candidates.extend(glob.glob(os.path.join(fdir, pat)))
+                candidates.extend(glob.glob(os.path.join(fdir, "*", pat)))
+            candidates.extend(glob.glob(os.path.join(fdir, "*.xlsx")))
+
+    seen = set()
+    result = []
+    for f in sorted(candidates):
+        bname = os.path.basename(f)
+        if bname.startswith("~$") or not (bname.endswith(".xlsx") or bname.endswith(".xls")):
+            continue
+        # Avoid picking up generated/actual linelist sheets as raw reports
+        if "Actual line list" in f or "UHRP Line List" in bname:
+            continue
+        norm_path = os.path.abspath(f)
+        if norm_path not in seen:
+            seen.add(norm_path)
+            result.append(norm_path)
+    return result
 
 def format_to_dd_mmyyyy(val):
     """Format any date representation to strict DD-MM-YYYY string."""
@@ -65,10 +109,10 @@ def parse_date_to_datetime(val):
             return None
     return None
 
-def get_fiscal_year(date_val):
+def get_fiscal_year(date_val, default='2025-26'):
     """Determine fiscal year string (e.g. '2025-26', '2026-27') from any date string or object."""
     if not date_val or date_val is None or str(date_val).strip() in ('', 'nan', 'None', 'NaT', '-'):
-        return '2025-26' # default fallback
+        return default
     s = str(date_val).strip()
     # Check YYYY-MM-DD or YYYY-MM
     m_yyyy = re.match(r'^(\d{4})[-/](\d{1,2})', s)
@@ -91,7 +135,7 @@ def get_fiscal_year(date_val):
     if m_any:
         y = int(m_any.group(1))
         return f"{y}-{str(y+1)[2:]}"
-    return '2025-26'
+    return default
 
 def is_mo_str(s):
     """Detect if designation string corresponds to a Medical Officer / Doctor."""
@@ -408,10 +452,8 @@ def get_hr_contacts(b_str, sub_str, vil_str, anm_map, cho_map, village_to_loc_ma
 
 def load_delivery_linelist(del_dir=None):
     """Load Delivery Line List report from workspace (including FY subdirectories)."""
-    del_files = glob.glob(os.path.join(WORKSPACE, "*", "Delivery_Line_List_Report*.xlsx"))
-    if not del_files and del_dir and os.path.exists(del_dir):
-        del_files = glob.glob(os.path.join(del_dir, "*.xlsx"))
-    del_files = sorted([f for f in del_files if not os.path.basename(f).startswith("~$")])
+    fallback = [del_dir] if del_dir else [DELIVERY_DIR]
+    del_files = discover_excel_files(["Delivery_Line_List_Report*.xlsx", "Delivery_Line_List*.xlsx"], fallback_dirs=fallback)
     if not del_files:
         print("  ⚠️ No Delivery Line List files found.")
         return {}
@@ -522,18 +564,24 @@ def main():
     # STEP 1: LOAD HRP LINE LIST FILES
     # ===================================================================
     print("\n[1/5] Loading HRP Line List files...")
-    hrp_files = sorted([f for f in glob.glob(os.path.join(HRP_DIR, "*.xlsx"))
-                        if not os.path.basename(f).startswith("~$")])
+    hrp_files = discover_excel_files(["HRP_Line_List_Report*.xlsx", "HRP_Line_List*.xlsx"], fallback_dirs=[HRP_DIR])
     print(f"  Found {len(hrp_files)} HRP file(s)")
+    if not hrp_files:
+        raise FileNotFoundError(
+            f"No HRP Line List Excel files found in {WORKSPACE}. "
+            f"Please verify files exist in FY folders (e.g. 2025-26, 2026-27) or '{HRP_DIR}'."
+        )
 
     hrp_frames = []
     hrp_raw_counts = {}
 
     for fpath in hrp_files:
         fname = os.path.basename(fpath)
+        folder_name = os.path.basename(os.path.dirname(os.path.abspath(fpath)))
         meta = read_file_metadata(fpath, from_row=3, to_row=4)
-        fy = get_fiscal_year(meta.get('from_date', ''))
-        print(f"  → {fname}: FY {fy} ({meta.get('from_date','')} to {meta.get('to_date','')})")
+        fy_meta = get_fiscal_year(meta.get('from_date', ''))
+        file_fy = folder_name if re.match(r'^\d{4}-\d{2}$', folder_name) else fy_meta
+        print(f"  → {fname}: FY {file_fy} (meta: {meta.get('from_date','')} to {meta.get('to_date','')})")
         df = load_excel_fast(fpath, skip_rows=7)
         # Assign fiscal year dynamically per record based on PW Registration Date (or LMP Date)
         reg_col = 'PW Registration Date' if 'PW Registration Date' in df.columns else None
@@ -543,7 +591,9 @@ def main():
             dt = row.get(reg_col) if reg_col else None
             if dt is None or pd.isna(dt) or str(dt).strip() in ('', '-', 'nan', 'None', 'NaT'):
                 dt = row.get(lmp_col) if lmp_col else None
-            return get_fiscal_year(dt)
+            if dt is None or pd.isna(dt) or str(dt).strip() in ('', '-', 'nan', 'None', 'NaT'):
+                return file_fy
+            return get_fiscal_year(dt, default=file_fy)
 
         df['Year'] = df.apply(extract_row_fy, axis=1)
         df['SourceFile'] = fname
@@ -646,9 +696,13 @@ def main():
     delivery_lookup = load_delivery_linelist(DELIVERY_DIR)
     sub_to_phc_map, village_to_loc_map, anm_map, cho_map = load_location_hierarchy(LOCATION_DIR)
 
-    anc_files = sorted([f for f in glob.glob(os.path.join(ANC_DIR, "*.xlsx"))
-                        if not os.path.basename(f).startswith("~$")])
+    anc_files = discover_excel_files(["ANC_Line_list_Report*.xlsx", "ANC_Line_List*.xlsx", "*ANC_Line_list*"], fallback_dirs=[ANC_DIR])
     print(f"  Found {len(anc_files)} ANC file(s)")
+    if not anc_files:
+        raise FileNotFoundError(
+            f"No ANC Line List Excel files found in {WORKSPACE}. "
+            f"Please verify files exist in FY folders (e.g. 2025-26, 2026-27) or '{ANC_DIR}'."
+        )
 
     anc_counts = {}
     anc_visit_lookup = {}
@@ -657,9 +711,11 @@ def main():
 
     for fpath in anc_files:
         fname = os.path.basename(fpath)
+        folder_name = os.path.basename(os.path.dirname(os.path.abspath(fpath)))
         meta = read_file_metadata(fpath, from_row=4, to_row=5)
-        fy = get_fiscal_year(meta.get('from_date', ''))
-        print(f"  → {fname}: FY {fy}")
+        fy_meta = get_fiscal_year(meta.get('from_date', ''))
+        file_fy = folder_name if re.match(r'^\d{4}-\d{2}$', folder_name) else fy_meta
+        print(f"  → {fname}: FY {file_fy}")
 
         wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
         sheet = wb[wb.sheetnames[0]]
@@ -709,7 +765,7 @@ def main():
                 if mpid and mpid not in ('None', 'nan', ''):
                     raw_reg_date = row[reg_date_idx] if reg_date_idx < len(row) else None
                     raw_lmp_date = row[lmp_idx] if lmp_idx < len(row) else None
-                    fy_row = get_fiscal_year(raw_reg_date or raw_lmp_date)
+                    fy_row = get_fiscal_year(raw_reg_date or raw_lmp_date, default=file_fy)
                     if fy_row not in total_anc_mpids_by_year:
                         total_anc_mpids_by_year[fy_row] = set()
                     total_anc_mpids_by_year[fy_row].add(mpid)
