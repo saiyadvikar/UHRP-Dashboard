@@ -1,8 +1,23 @@
 /* Ultra High Risk Pregnancy Care Dashboard JavaScript */
 
+// Safety fallback to ensure loader never blocks user interface if an unexpected error occurs
+setTimeout(() => {
+    const loader = document.getElementById('uhrp-app-loader');
+    if (loader && !loader.classList.contains('loader-hidden')) {
+        loader.classList.add('loader-hidden');
+        setTimeout(() => { loader.style.display = 'none'; }, 460);
+    }
+}, 10000);
+
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof DASHBOARD_DATA === 'undefined') {
         console.error('DASHBOARD_DATA is missing!');
+        const statusEl = document.getElementById('uhrp-loader-status');
+        if (statusEl) statusEl.textContent = '⚠️ Dataset loading delayed or unavailable. Please refresh.';
+        setTimeout(() => {
+            const loader = document.getElementById('uhrp-app-loader');
+            if (loader) loader.classList.add('loader-hidden');
+        }, 2500);
         return;
     }
 
@@ -210,45 +225,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Main View Navigation Handler
-    function setupMainViewSwitcher() {
+    function switchMainView(viewName, skipSave) {
         const btns = document.querySelectorAll('.main-view-btn');
         const viewLinelist = document.getElementById('view-linelist');
         const viewAnalytics = document.getElementById('view-analytics');
         const viewProtocols = document.getElementById('view-protocols');
         const viewDpmu = document.getElementById('view-dpmu');
 
+        btns.forEach(b => {
+            b.classList.toggle('active', b.getAttribute('data-view') === viewName);
+        });
+
+        currentMainView = viewName;
+        if (currentMainView === 'linelist') {
+            if (viewLinelist) viewLinelist.style.display = 'block';
+            if (viewAnalytics) viewAnalytics.style.display = 'none';
+            if (viewProtocols) viewProtocols.style.display = 'none';
+            if (viewDpmu) viewDpmu.style.display = 'none';
+        } else if (currentMainView === 'analytics') {
+            if (viewLinelist) viewLinelist.style.display = 'none';
+            if (viewAnalytics) viewAnalytics.style.display = 'block';
+            if (viewProtocols) viewProtocols.style.display = 'none';
+            if (viewDpmu) viewDpmu.style.display = 'none';
+            const filtered = getFilteredPatients();
+            let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
+            setTimeout(() => renderAnalyticsCharts(tabPatients), 30);
+        } else if (currentMainView === 'protocols') {
+            if (viewLinelist) viewLinelist.style.display = 'none';
+            if (viewAnalytics) viewAnalytics.style.display = 'none';
+            if (viewProtocols) viewProtocols.style.display = 'block';
+            if (viewDpmu) viewDpmu.style.display = 'none';
+            filterProtocolCards(currentTab);
+        } else if (currentMainView === 'dpmu') {
+            if (viewLinelist) viewLinelist.style.display = 'none';
+            if (viewAnalytics) viewAnalytics.style.display = 'none';
+            if (viewProtocols) viewProtocols.style.display = 'none';
+            if (viewDpmu) viewDpmu.style.display = 'block';
+            setTimeout(() => renderDpmuOfficialTables(), 30);
+        }
+        if (!skipSave) saveDashboardState();
+    }
+
+    function setupMainViewSwitcher() {
+        const btns = document.querySelectorAll('.main-view-btn');
         btns.forEach(btn => {
             btn.addEventListener('click', () => {
-                btns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                currentMainView = btn.getAttribute('data-view');
-                if (currentMainView === 'linelist') {
-                    if (viewLinelist) viewLinelist.style.display = 'block';
-                    if (viewAnalytics) viewAnalytics.style.display = 'none';
-                    if (viewProtocols) viewProtocols.style.display = 'none';
-                    if (viewDpmu) viewDpmu.style.display = 'none';
-                } else if (currentMainView === 'analytics') {
-                    if (viewLinelist) viewLinelist.style.display = 'none';
-                    if (viewAnalytics) viewAnalytics.style.display = 'block';
-                    if (viewProtocols) viewProtocols.style.display = 'none';
-                    if (viewDpmu) viewDpmu.style.display = 'none';
-                    const filtered = getFilteredPatients();
-                    let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
-                    setTimeout(() => renderAnalyticsCharts(tabPatients), 30);
-                } else if (currentMainView === 'protocols') {
-                    if (viewLinelist) viewLinelist.style.display = 'none';
-                    if (viewAnalytics) viewAnalytics.style.display = 'none';
-                    if (viewProtocols) viewProtocols.style.display = 'block';
-                    if (viewDpmu) viewDpmu.style.display = 'none';
-                    filterProtocolCards(currentTab);
-                } else if (currentMainView === 'dpmu') {
-                    if (viewLinelist) viewLinelist.style.display = 'none';
-                    if (viewAnalytics) viewAnalytics.style.display = 'none';
-                    if (viewProtocols) viewProtocols.style.display = 'none';
-                    if (viewDpmu) viewDpmu.style.display = 'block';
-                    setTimeout(() => renderDpmuOfficialTables(), 30);
-                }
+                const targetView = btn.getAttribute('data-view');
+                switchMainView(targetView);
             });
         });
     }
@@ -295,9 +318,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Populate PHC Filter
-    function updatePhcDropdown(selectedBlock) {
+    function updatePhcDropdown(selectedBlock, targetPhc) {
         const phcSelect = document.getElementById(elementIds.phc);
-        const currentPhcVal = phcSelect.value;
+        if (!phcSelect) return;
+        const currentPhcVal = targetPhc !== undefined ? targetPhc : phcSelect.value;
 
         let phcs = new Set();
         if (selectedBlock === 'All') {
@@ -318,9 +342,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Populate Subcenter Filter
-    function updateSubcenterDropdown(selectedBlock, selectedPhc) {
+    function updateSubcenterDropdown(selectedBlock, selectedPhc, targetSub) {
         const subSelect = document.getElementById(elementIds.subcenter);
-        const currentSubVal = subSelect.value;
+        if (!subSelect) return;
+        const currentSubVal = targetSub !== undefined ? targetSub : subSelect.value;
 
         let subcenters = new Set();
 
@@ -436,6 +461,13 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSortIcons();
 
         initializedCharts = {};
+        try {
+            localStorage.removeItem(DASHBOARD_STATE_KEY);
+            if (window.location.hash) {
+                history.replaceState(null, '', window.location.pathname);
+            }
+        } catch (e) {}
+        saveDashboardState();
         renderLineList();
         renderDpmuOfficialTables();
         scrollToLinelistOnMobile();
@@ -2518,6 +2550,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cohortBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 dpmuSelectedCohort = btn.getAttribute('data-cohort');
+                saveDashboardState();
                 renderDpmuOfficialTables();
             });
         });
@@ -2528,6 +2561,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnToggleAbort.addEventListener('click', () => {
                 dpmuExcludeAbortions = !dpmuExcludeAbortions;
                 btnToggleAbort.classList.toggle('active', dpmuExcludeAbortions);
+                saveDashboardState();
                 renderDpmuOfficialTables();
             });
         }
@@ -2538,6 +2572,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnTogglePreterm.addEventListener('click', () => {
                 dpmuExcludePreterm = !dpmuExcludePreterm;
                 btnTogglePreterm.classList.toggle('active', dpmuExcludePreterm);
+                saveDashboardState();
                 renderDpmuOfficialTables();
             });
         }
@@ -2916,7 +2951,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 fontSize: '11.5px',
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
                 labels: { colors: '#334155' },
-                markers: { radius: 12, width: 10, height: 10 }
+                markers: { radius: 12, width: 10, height: 10 },
+                onItemHover: { highlightDataSeries: true }
             },
             grid: {
                 borderColor: 'rgba(226, 232, 240, 0.9)',
@@ -2980,13 +3016,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const seriesCurr = [];
         const seriesPrev = [];
 
+        const monthlyTot = { '2025-26': {}, '2026-27': {} };
+        const monthlyLate = { '2025-26': {}, '2026-27': {} };
+        let totLate26 = 0, totDeliv26 = 0;
+        let totLate25 = 0, totDeliv25 = 0;
+
         monthsOrder.forEach((m, idx) => {
             // 2025-26 (Previous FY from complete Delivery Report)
             let pct25 = null;
             if (deliveryStats && deliveryStats['2025-26'] && deliveryStats['2025-26'][statsBlockKey] && deliveryStats['2025-26'][statsBlockKey][m]) {
                 const item25 = deliveryStats['2025-26'][statsBlockKey][m];
-                if (item25.tot > 0) {
-                    pct25 = parseFloat((item25.late / item25.tot * 100).toFixed(2));
+                const tot = item25.tot || 0;
+                const late = item25.late || 0;
+                monthlyTot['2025-26'][m] = tot;
+                monthlyLate['2025-26'][m] = late;
+                totDeliv25 += tot;
+                totLate25 += late;
+                if (tot > 0) {
+                    pct25 = parseFloat(((late / tot) * 100).toFixed(2));
                 }
             }
             seriesPrev.push(pct25);
@@ -2995,8 +3042,14 @@ document.addEventListener('DOMContentLoaded', () => {
             let pct26 = null;
             if (deliveryStats && deliveryStats['2026-27'] && deliveryStats['2026-27'][statsBlockKey] && deliveryStats['2026-27'][statsBlockKey][m]) {
                 const item26 = deliveryStats['2026-27'][statsBlockKey][m];
-                if (item26.tot > 0) {
-                    pct26 = parseFloat((item26.late / item26.tot * 100).toFixed(2));
+                const tot = item26.tot || 0;
+                const late = item26.late || 0;
+                monthlyTot['2026-27'][m] = tot;
+                monthlyLate['2026-27'][m] = late;
+                totDeliv26 += tot;
+                totLate26 += late;
+                if (tot > 0) {
+                    pct26 = parseFloat(((late / tot) * 100).toFixed(2));
                 }
             }
             seriesCurr.push(pct26);
@@ -3056,7 +3109,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 fontSize: '11.5px',
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
                 labels: { colors: '#334155' },
-                markers: { radius: 12, width: 10, height: 10 }
+                markers: { radius: 12, width: 10, height: 10 },
+                onItemHover: { highlightDataSeries: true },
+                formatter: function (seriesName) {
+                    const isCurr = seriesName.includes('2026-27');
+                    const late = isCurr ? totLate26 : totLate25;
+                    const tot = isCurr ? totDeliv26 : totDeliv25;
+                    const rate = tot > 0 ? ((late / tot) * 100).toFixed(2) + '%' : '0.00%';
+                    return `${seriesName} — ${rate} (${late.toLocaleString()} / ${tot.toLocaleString()})`;
+                }
             },
             grid: {
                 borderColor: 'rgba(226, 232, 240, 0.9)',
@@ -3068,11 +3129,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 intersect: false,
                 y: {
                     formatter: function (val, { seriesIndex, dataPointIndex }) {
-                        if (val === null || val === undefined) return 'No data';
+                        if (val === null || val === undefined) return 'No data (Future Month)';
                         const m = monthsOrder[dataPointIndex];
                         const fy = seriesIndex === 0 ? '2026-27' : '2025-26';
-                        const tot = monthlyTot[fy][m] || 0;
-                        const lateC = monthlyLate[fy][m] || 0;
+                        const tot = (monthlyTot[fy] && monthlyTot[fy][m]) || 0;
+                        const lateC = (monthlyLate[fy] && monthlyLate[fy][m]) || 0;
                         return `${val.toFixed(2)}% (${lateC.toLocaleString()} / ${tot.toLocaleString()} deliveries)`;
                     }
                 }
@@ -4425,6 +4486,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
                     renderAnalyticsCharts(tabPatients);
                 }
+                saveDashboardState();
                 scrollToLinelistOnMobile();
             });
         });
@@ -4590,6 +4652,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
                     renderAnalyticsCharts(tabPatients);
                 }
+                saveDashboardState();
                 scrollToLinelistOnMobile();
             });
         }
@@ -4610,6 +4673,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
                     renderAnalyticsCharts(tabPatients);
                 }
+                saveDashboardState();
                 scrollToLinelistOnMobile();
             });
         }
@@ -4633,6 +4697,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderLineList();
                     renderDpmuOfficialTables();
                 }
+                saveDashboardState();
                 scrollToLinelistOnMobile();
             });
         }
@@ -4649,6 +4714,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
                     renderAnalyticsCharts(tabPatients);
                 }
+                saveDashboardState();
                 scrollToLinelistOnMobile();
             });
         });
@@ -4731,6 +4797,172 @@ document.addEventListener('DOMContentLoaded', () => {
         const exportTabBtn = document.getElementById(elementIds.exportTabBtn);
         if (exportTabBtn) {
             exportTabBtn.addEventListener('click', () => exportToExcel(currentTab));
+        }
+    }
+
+    // =========================================================================
+    // Dual-Layer State Persistence & Loader Management
+    // =========================================================================
+    const DASHBOARD_STATE_KEY = 'uhrp_dashboard_state_v1';
+    let isRestoringState = false;
+
+    // Hide Application Loading Screen
+    function hideAppLoader() {
+        const loader = document.getElementById('uhrp-app-loader');
+        if (!loader) return;
+        loader.classList.add('loader-hidden');
+        setTimeout(() => {
+            loader.style.display = 'none';
+        }, 460);
+    }
+
+    // Save active state to LocalStorage and sync URL Hash
+    function saveDashboardState() {
+        if (isRestoringState) return;
+        try {
+            const yearVal = document.getElementById(elementIds.year)?.value || 'All';
+            const blockVal = document.getElementById(elementIds.block)?.value || 'All';
+            const phcVal = document.getElementById(elementIds.phc)?.value || 'All';
+            const subVal = document.getElementById(elementIds.subcenter)?.value || 'All';
+            const delVal = document.getElementById(elementIds.delivery)?.value || '0';
+
+            const state = {
+                view: currentMainView || 'linelist',
+                tab: currentTab || 'anc',
+                year: yearVal,
+                block: blockVal,
+                phc: phcVal,
+                subcenter: subVal,
+                delivery: delVal,
+                dpmuCohort: dpmuSelectedCohort || 'matured',
+                dpmuExcludeAbortions: !!dpmuExcludeAbortions,
+                dpmuExcludePreterm: !!dpmuExcludePreterm
+            };
+            localStorage.setItem(DASHBOARD_STATE_KEY, JSON.stringify(state));
+
+            // Sync URL Hash for deep-linking & refresh preservation without adding history clutter
+            const params = new URLSearchParams();
+            if (state.view && state.view !== 'linelist') params.set('view', state.view);
+            if (state.tab && state.tab !== 'anc') params.set('tab', state.tab);
+            if (state.year && state.year !== 'All') params.set('year', state.year);
+            if (state.block && state.block !== 'All') params.set('block', state.block);
+            if (state.phc && state.phc !== 'All') params.set('phc', state.phc);
+            if (state.subcenter && state.subcenter !== 'All') params.set('sub', state.subcenter);
+            if (state.delivery && state.delivery !== '0') params.set('del', state.delivery);
+            if (state.view === 'dpmu') {
+                if (state.dpmuCohort && state.dpmuCohort !== 'matured') params.set('cohort', state.dpmuCohort);
+                if (state.dpmuExcludeAbortions) params.set('ex_ab', '1');
+                if (state.dpmuExcludePreterm) params.set('ex_pt', '1');
+            }
+            const qs = params.toString();
+            const targetHash = qs ? '#' + qs : '';
+            if (window.location.hash !== targetHash) {
+                history.replaceState(null, '', targetHash || window.location.pathname);
+            }
+        } catch (e) {
+            console.warn('Unable to persist dashboard state:', e);
+        }
+    }
+
+    // Restore saved state from URL Hash or LocalStorage
+    function restoreDashboardState() {
+        isRestoringState = true;
+        try {
+            let saved = null;
+            // 1. Check URL Hash params first
+            const hash = window.location.hash;
+            if (hash && hash.length > 1 && hash.includes('=')) {
+                const params = new URLSearchParams(hash.substring(1));
+                saved = {
+                    view: params.get('view') || 'linelist',
+                    tab: params.get('tab') || 'anc',
+                    year: params.get('year') || 'All',
+                    block: params.get('block') || 'All',
+                    phc: params.get('phc') || 'All',
+                    subcenter: params.get('sub') || 'All',
+                    delivery: params.get('del') || '0',
+                    dpmuCohort: params.get('cohort') || 'matured',
+                    dpmuExcludeAbortions: params.get('ex_ab') === '1',
+                    dpmuExcludePreterm: params.get('ex_pt') === '1'
+                };
+            }
+            // 2. If not in URL Hash, check localStorage
+            if (!saved) {
+                const raw = localStorage.getItem(DASHBOARD_STATE_KEY);
+                if (raw) saved = JSON.parse(raw);
+            }
+
+            if (!saved) {
+                isRestoringState = false;
+                return false;
+            }
+
+            // Restore Year
+            const yearSelect = document.getElementById(elementIds.year);
+            if (yearSelect && saved.year) {
+                const hasOpt = Array.from(yearSelect.options).some(o => o.value === saved.year);
+                if (hasOpt) yearSelect.value = saved.year;
+            }
+
+            // Restore Block
+            const blockSelect = document.getElementById(elementIds.block);
+            if (blockSelect && saved.block) {
+                const hasOpt = Array.from(blockSelect.options).some(o => o.value === saved.block);
+                if (hasOpt) blockSelect.value = saved.block;
+            }
+
+            // Update PHC Dropdown for restored Block
+            updatePhcDropdown(saved.block || 'All', saved.phc);
+
+            // Update Subcenter Dropdown for restored Block & PHC
+            updateSubcenterDropdown(saved.block || 'All', saved.phc || 'All', saved.subcenter);
+
+            // Restore Delivery Status
+            const delSelect = document.getElementById(elementIds.delivery);
+            if (delSelect && saved.delivery !== undefined && saved.delivery !== null) {
+                const hasOpt = Array.from(delSelect.options).some(o => o.value === saved.delivery);
+                if (hasOpt) delSelect.value = saved.delivery;
+            }
+
+            // Restore Tab
+            if (saved.tab && TAB_NAMES[saved.tab]) {
+                currentTab = saved.tab;
+                const tabTitleEl = document.getElementById(elementIds.tabTitle);
+                if (tabTitleEl) tabTitleEl.textContent = `${TAB_NAMES[currentTab]} Line List`;
+                const riskSelect = document.getElementById(elementIds.riskFactor);
+                if (riskSelect) riskSelect.value = currentTab;
+            }
+
+            // Restore Main View
+            if (saved.view && ['linelist', 'analytics', 'protocols', 'dpmu'].includes(saved.view)) {
+                currentMainView = saved.view;
+            }
+
+            // Restore DPMU Cohort & Exclusions
+            if (saved.dpmuCohort) {
+                dpmuSelectedCohort = saved.dpmuCohort;
+                const cohortBtns = document.querySelectorAll('.anmol-cohort-btn');
+                cohortBtns.forEach(b => {
+                    b.classList.toggle('active', b.getAttribute('data-cohort') === dpmuSelectedCohort);
+                });
+            }
+            if (saved.dpmuExcludeAbortions !== undefined) {
+                dpmuExcludeAbortions = !!saved.dpmuExcludeAbortions;
+                const btnToggleAbort = document.getElementById('btn-toggle-exclude-abortions');
+                if (btnToggleAbort) btnToggleAbort.classList.toggle('active', dpmuExcludeAbortions);
+            }
+            if (saved.dpmuExcludePreterm !== undefined) {
+                dpmuExcludePreterm = !!saved.dpmuExcludePreterm;
+                const btnTogglePreterm = document.getElementById('btn-toggle-exclude-preterm');
+                if (btnTogglePreterm) btnTogglePreterm.classList.toggle('active', dpmuExcludePreterm);
+            }
+
+            isRestoringState = false;
+            return true;
+        } catch (e) {
+            console.warn('Error restoring dashboard state:', e);
+            isRestoringState = false;
+            return false;
         }
     }
 
@@ -5102,11 +5334,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     setupDropdowns();
+    restoreDashboardState();
     setupTabs();
+    // Synchronize UI active states with restored state
+    document.querySelectorAll('.risk-tab-card').forEach(c => {
+        c.classList.toggle('active', c.getAttribute('data-tab') === currentTab);
+    });
+    switchMainView(currentMainView, true);
     setupSorting();
     setupEventListeners();
     filterProtocolCards(currentTab);
     renderLineList();
     renderDpmuOfficialTables();
+    if (currentMainView === 'analytics') {
+        const filtered = getFilteredPatients();
+        let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
+        setTimeout(() => renderAnalyticsCharts(tabPatients), 50);
+    }
+    updateFilterChipActiveStates();
     handleInitialHash();
+    hideAppLoader();
 });

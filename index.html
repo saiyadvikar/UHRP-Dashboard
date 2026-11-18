@@ -5,9 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Ultra High Risk Pregnancy (UHRP) Care Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20261116-v3-filter-glass">
+    <link rel="stylesheet" href="style.css?v=20261118-v6-loader-state">
+    <style>
+        /* Instant 0ms Critical Startup Loader Styling */
+        .uhrp-app-loader {
+            position: fixed; inset: 0; z-index: 999999; display: flex; align-items: center; justify-content: center; padding: 1.25rem;
+            background: radial-gradient(circle at 18% 22%, rgba(255, 42, 109, 0.15) 0%, transparent 45%),
+                        radial-gradient(circle at 82% 25%, rgba(121, 40, 202, 0.16) 0%, transparent 48%),
+                        radial-gradient(circle at 50% 85%, rgba(0, 180, 216, 0.15) 0%, transparent 50%),
+                        rgba(248, 250, 252, 0.94);
+            backdrop-filter: blur(28px) saturate(200%); -webkit-backdrop-filter: blur(28px) saturate(200%);
+            opacity: 1; transform: scale(1);
+            transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .uhrp-app-loader.loader-hidden { opacity: 0 !important; pointer-events: none !important; transform: scale(1.025) !important; }
+        .uhrp-loader-card {
+            position: relative; width: 100%; max-width: 480px; background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(24px) saturate(190%); -webkit-backdrop-filter: blur(24px) saturate(190%);
+            border: 1.5px solid rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 1.75rem 1.85rem;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(226, 232, 240, 0.85), inset 0 1.5px 1px rgba(255, 255, 255, 1);
+            display: flex; flex-direction: column; gap: 1.25rem; text-align: center;
+        }
+        .uhrp-loader-brand { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
+        .uhrp-loader-logo-ring {
+            position: relative; width: 68px; height: 68px; border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 42, 109, 0.12), rgba(121, 40, 202, 0.15));
+            border: 2px solid rgba(255, 42, 109, 0.35); display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 24px rgba(255, 42, 109, 0.2);
+        }
+        .uhrp-loader-icon { font-size: 2.1rem; line-height: 1; filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.12)); animation: uhrpHeartbeat 1.8s ease-in-out infinite; }
+        @keyframes uhrpHeartbeat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } 60% { transform: scale(1); } }
+        .uhrp-loader-pulse-ring {
+            position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(255, 42, 109, 0.45);
+            animation: uhrpPulseRing 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes uhrpPulseRing { 0% { transform: scale(0.92); opacity: 0.9; } 50% { transform: scale(1.22); opacity: 0.15; } 100% { transform: scale(0.92); opacity: 0.9; } }
+        .uhrp-loader-title { margin: 0; font-size: 1.25rem; font-weight: 800; color: #0f172a; letter-spacing: -0.025em; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
+        .uhrp-loader-subtitle { font-size: 0.8rem; font-weight: 600; color: #64748b; letter-spacing: 0.01em; }
+        .uhrp-loader-bar-bg { width: 100%; height: 8px; background: rgba(226, 232, 240, 0.85); border-radius: 9999px; overflow: hidden; position: relative; }
+        .uhrp-loader-bar-fill {
+            width: 100%; height: 100%; background: linear-gradient(90deg, #ff2a6d, #7928ca, #00b4d8, #10b981, #ff2a6d);
+            background-size: 300% 100%; border-radius: 9999px; animation: uhrpShimmerBar 1.8s linear infinite;
+        }
+        @keyframes uhrpShimmerBar { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+        .uhrp-loader-status-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; padding: 0 0.2rem; }
+        .uhrp-loader-status-text { font-weight: 700; color: #0284c7; }
+        .uhrp-loader-badge { background: rgba(121, 40, 202, 0.08); color: #7928ca; padding: 0.15rem 0.55rem; border-radius: 9999px; font-size: 0.68rem; font-weight: 800; border: 1px solid rgba(121, 40, 202, 0.2); }
+        .uhrp-loader-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-top: 0.2rem; }
+        .uhrp-loader-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; color: #334155; }
+        .uhrp-loader-chip .chip-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .dot-pink { background: #ff2a6d; } .dot-orange { background: #f77f00; } .dot-cyan { background: #00b4d8; } .dot-purple { background: #7928ca; } .dot-green { background: #10b981; }
+    </style>
 </head>
 <body>
+    <!-- Apple iOS 26 Liquid Glass Startup Loader / Splash Screen -->
+    <div id="uhrp-app-loader" class="uhrp-app-loader">
+        <div class="uhrp-loader-card">
+            <div class="uhrp-loader-brand">
+                <div class="uhrp-loader-logo-ring">
+                    <span class="uhrp-loader-icon">🤰</span>
+                    <div class="uhrp-loader-pulse-ring"></div>
+                </div>
+                <div class="uhrp-loader-title-wrap">
+                    <h2 class="uhrp-loader-title">UHRP Care Command Center</h2>
+                    <span class="uhrp-loader-subtitle">District Khargone (West Nimar) • NHM Madhya Pradesh</span>
+                </div>
+            </div>
+            
+            <div class="uhrp-loader-progress-wrap">
+                <div class="uhrp-loader-bar-bg">
+                    <div class="uhrp-loader-bar-fill"></div>
+                </div>
+                <div class="uhrp-loader-status-row">
+                    <span class="uhrp-loader-status-text" id="uhrp-loader-status">Initializing 1,00,000+ Maternal Health Records...</span>
+                    <span class="uhrp-loader-badge">Sample 2 • iOS 26</span>
+                </div>
+            </div>
+            
+            <div class="uhrp-loader-chips">
+                <span class="uhrp-loader-chip"><span class="chip-dot dot-pink"></span> Severe Anemia</span>
+                <span class="uhrp-loader-chip"><span class="chip-dot dot-orange"></span> Moderate Anemia</span>
+                <span class="uhrp-loader-chip"><span class="chip-dot dot-cyan"></span> High-Risk PIH</span>
+                <span class="uhrp-loader-chip"><span class="chip-dot dot-purple"></span> GDM Screening</span>
+                <span class="uhrp-loader-chip"><span class="chip-dot dot-green"></span> Anmol 2.0</span>
+            </div>
+        </div>
+    </div>
+
     <header class="mobile-header">
         <div class="header-container">
             <div class="brand">
@@ -942,6 +1026,6 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="data.js?v=20261117-v5-anmol-groundtruth"></script>
-    <script src="app.js?v=20261117-v5-anmol-groundtruth"></script>
+    <script src="app.js?v=20261118-v6-loader-state"></script>
 </body>
 </html>
