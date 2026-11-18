@@ -38,7 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Chart Instances for Section 2 (Charts View)
     let monthlyTrendChartInstance = null;
-    let deliveryChartInstance = null;
+    let deliveryChart2026Instance = null;
+    let deliveryChart2025Instance = null;
+    let currentDeliveryGaFilter = 'all'; // 'all', 'preterm', 'lateterm'
 
     // Hierarchy Mappings for Cascading Filters
     let blockToPhcMap = {};
@@ -459,6 +461,13 @@ document.addEventListener('DOMContentLoaded', () => {
         visitFilter = null;
         currentPage = 1;
         updateSortIcons();
+
+        // Reset Delivery Place GA Filter
+        currentDeliveryGaFilter = 'all';
+        const gaBtns = document.querySelectorAll('.delivery-ga-btn');
+        gaBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-ga') === 'all');
+        });
 
         initializedCharts = {};
         try {
@@ -1569,77 +1578,64 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Render Delivery Place Distribution Chart
-    function renderDeliveryPlaceChart(patients, toolbarConfig) {
-        let delPatients = patients || currentAnalyticsPatients;
-        const yearVal = document.getElementById(elementIds.year).value;
-        const blockVal = document.getElementById(elementIds.block).value;
-        const phcVal = document.getElementById(elementIds.phc).value;
-        const subVal = document.getElementById(elementIds.subcenter).value;
-        const delVal = document.getElementById(elementIds.delivery).value;
+    // Categorize delivery facility name into standard tiers
+    function categorizeDeliveryName(facName) {
+        if (!facName) return 'Other Facility';
+        const s = String(facName).toLowerCase().trim();
+        if (s.includes('home')) return 'Home';
+        if (s.includes('transit') || s.includes('way')) return 'in transit';
+        if (s.includes('private') || s.includes('pvt')) return 'Private hospitals';
+        if (s.includes('medical college') || s.includes('my hospital') || s.startsWith('my ')) return 'Medical College';
+        if (s.includes('district hospital') || s.includes('dh ') || s.startsWith('dh') || s.includes(' dh')) return 'DH';
+        if (s.includes('civil hospital') || s.includes('ch ') || s.startsWith('ch ') || s.includes(' ch')) return 'CH';
+        if (s.includes('community health') || s.includes('chc') || s.startsWith('chc')) return 'CHC';
+        if (s.includes('primary health') || s.includes('phc') || s.startsWith('phc') || s.includes('shc') || s.includes('urban')) return 'PHC';
+        return 'Other Facility';
+    }
 
-        // Determine delivered cohort:
-        // If current selection is filtered for Pregnant (delVal === '0') or contains no delivered cases,
-        // pull the delivered mothers matching the exact same Year, Block, PHC, Subcenter, and active Risk Factor tab
-        let deliveredCases = delPatients.filter(p => p.del === 1);
-        let isCohortDerived = false;
+    const deliveryColorMap = {
+        'DH': '#10b981',
+        'CHC': '#00b4d8',
+        'PHC': '#7928ca',
+        'CH': '#0284c7',
+        'Medical College': '#2563eb',
+        'Private hospitals': '#f77f00',
+        'Home': '#ff2a6d',
+        'in transit': '#db2777',
+        'Other Facility': '#64748b'
+    };
 
-        if (deliveredCases.length === 0) {
-            const rawPool = currentTab === 'anc' ? (DASHBOARD_DATA.anc_patients || []) : (DASHBOARD_DATA.patients || []);
-            deliveredCases = rawPool.filter(p => {
-                if (p.del !== 1) return false;
-                if (yearVal !== 'All' && p.y !== yearVal) return false;
-                if (blockVal !== 'All' && (p.b || '').toLowerCase() !== blockVal.toLowerCase()) return false;
-                if (phcVal !== 'All' && (p.phc || '').toLowerCase() !== phcVal.toLowerCase()) return false;
-                if (subVal !== 'All' && (p.sub || '').toLowerCase() !== subVal.toLowerCase()) return false;
-                if (currentTab !== 'anc' && currentTab !== 'all') {
-                    if (p[currentTab] !== 1) return false;
-                }
-                return true;
-            });
-            isCohortDerived = true;
+    // Render a single financial year's delivery place donut chart
+    function renderSingleDeliveryDonut(fy, cases, toolbarConfig) {
+        const chartElId = `chart-delivery-${fy}`;
+        const chartEl = document.getElementById(chartElId);
+        if (!chartEl) return;
+
+        if (fy === '2026-27' && deliveryChart2026Instance) {
+            deliveryChart2026Instance.destroy();
+            deliveryChart2026Instance = null;
+        } else if (fy === '2025-26' && deliveryChart2025Instance) {
+            deliveryChart2025Instance.destroy();
+            deliveryChart2025Instance = null;
         }
 
-        const badgeEl = document.getElementById('chart-delivery-badge');
-        if (badgeEl) {
-            badgeEl.textContent = `Delivered (${deliveredCases.length.toLocaleString()})${isCohortDerived ? ' [Delivered Cohort]' : ''}`;
-            badgeEl.style.background = '#e0f2fe';
-            badgeEl.style.color = '#0369a1';
+        chartEl.innerHTML = '';
+
+        if (!cases || cases.length === 0) {
+            chartEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:280px;color:#64748b;font-size:12.5px;font-weight:600;">No delivery records for this selection (0 deliveries)</div>`;
+            return;
         }
 
         const catOrder = ['DH', 'CHC', 'PHC', 'CH', 'Medical College', 'Private hospitals', 'Home', 'in transit', 'Other Facility'];
         const delCounts = {};
 
-        function categorizeDeliveryName(facName) {
-            if (!facName) return 'Other Facility';
-            const s = String(facName).toLowerCase().trim();
-            if (s.includes('home')) return 'Home';
-            if (s.includes('transit') || s.includes('way')) return 'in transit';
-            if (s.includes('private') || s.includes('pvt')) return 'Private hospitals';
-            if (s.includes('medical college') || s.includes('my hospital') || s.startsWith('my ')) return 'Medical College';
-            if (s.includes('district hospital') || s.includes('dh ') || s.startsWith('dh') || s.includes(' dh')) return 'DH';
-            if (s.includes('civil hospital') || s.includes('ch ') || s.startsWith('ch ') || s.includes(' ch')) return 'CH';
-            if (s.includes('community health') || s.includes('chc') || s.startsWith('chc')) return 'CHC';
-            if (s.includes('primary health') || s.includes('phc') || s.startsWith('phc') || s.includes('shc') || s.includes('urban')) return 'PHC';
-            return 'Other Facility';
-        }
-
-        deliveredCases.forEach(p => {
+        cases.forEach(p => {
             let cat = p.del_cat;
             if (!cat || cat === 'Public Facility' || cat === 'Facility') {
                 cat = categorizeDeliveryName(p.d);
             }
             delCounts[cat] = (delCounts[cat] || 0) + 1;
         });
-
-        // If user explicitly chose 'All' delivery status, include Not Delivered count for full picture
-        if (delVal === 'All') {
-            const notDelCount = delPatients.filter(p => p.del === 0).length;
-            if (notDelCount > 0) {
-                delCounts['Not Delivered'] = notDelCount;
-                catOrder.push('Not Delivered');
-            }
-        }
 
         const presentCats = catOrder.filter(c => (delCounts[c] || 0) > 0);
         Object.keys(delCounts).forEach(c => {
@@ -1650,44 +1646,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const delCategories = presentCats;
         const delSeries = delCategories.map(d => delCounts[d]);
+        const chartColors = delCategories.map(c => deliveryColorMap[c] || '#64748b');
 
-        if (deliveryChartInstance) deliveryChartInstance.destroy();
-        const delChartEl = document.getElementById('chart-delivery');
-        if (!delChartEl) return;
-
-        if (delSeries.length === 0) {
-            delChartEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:280px;color:#64748b;font-size:13px;font-weight:600;">No delivery records for this selection</div>';
-            return;
-        }
-
-        const colorMap = {
-            'DH': '#10b981',
-            'CHC': '#00b4d8',
-            'PHC': '#7928ca',
-            'CH': '#0284c7',
-            'Medical College': '#2563eb',
-            'Private hospitals': '#f77f00',
-            'Home': '#ff2a6d',
-            'in transit': '#db2777',
-            'Other Facility': '#64748b',
-            'Not Delivered': '#94a3b8'
-        };
-        const chartColors = delCategories.map(c => colorMap[c] || '#64748b');
-
-        delChartEl.innerHTML = '';
-        const delOptions = {
+        const options = {
             series: delSeries,
             labels: delCategories,
             chart: {
                 type: 'donut',
-                height: 280,
+                height: 290,
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
                 toolbar: toolbarConfig || { show: true },
-                background: 'transparent'
+                background: 'transparent',
+                animations: { enabled: true, easing: 'easeinout', speed: 400 }
             },
-            theme: {
-                mode: 'light'
-            },
+            theme: { mode: 'light' },
             plotOptions: {
                 pie: {
                     donut: {
@@ -1695,7 +1667,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         labels: {
                             show: true,
                             name: { fontSize: '12px', fontWeight: 600, color: '#64748b' },
-                            value: { fontSize: '18px', fontWeight: 800, color: '#0f172a' },
+                            value: { fontSize: '17px', fontWeight: 800, color: '#0f172a' },
                             total: {
                                 show: true,
                                 label: 'Total',
@@ -1714,10 +1686,11 @@ document.addEventListener('DOMContentLoaded', () => {
             dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: 'bold' } },
             legend: {
                 position: 'bottom',
-                fontSize: '11.5px',
+                fontSize: '11px',
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
                 labels: { colors: '#334155' },
-                markers: { radius: 12, width: 9, height: 9 }
+                markers: { radius: 12, width: 8, height: 8 },
+                onItemHover: { highlightDataSeries: true }
             },
             tooltip: {
                 theme: 'light',
@@ -1725,14 +1698,83 @@ document.addEventListener('DOMContentLoaded', () => {
                     formatter: function(val) {
                         const total = delSeries.reduce((a, b) => a + b, 0);
                         const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                        return `${val} (${pct}%)`;
+                        return `${val.toLocaleString()} (${pct}%)`;
                     }
                 }
             }
         };
 
-        deliveryChartInstance = new ApexCharts(delChartEl, delOptions);
-        deliveryChartInstance.render();
+        const chartInstance = new ApexCharts(chartEl, options);
+        chartInstance.render();
+
+        if (fy === '2026-27') deliveryChart2026Instance = chartInstance;
+        else deliveryChart2025Instance = chartInstance;
+    }
+
+    // Render Delivery Place Distribution Charts (Side-by-Side YoY)
+    function renderDeliveryPlaceChart(patients, toolbarConfig) {
+        const blockVal = document.getElementById(elementIds.block)?.value || 'All';
+        const phcVal = document.getElementById(elementIds.phc)?.value || 'All';
+        const subVal = document.getElementById(elementIds.subcenter)?.value || 'All';
+
+        const rawPool = currentTab === 'anc' ? (DASHBOARD_DATA.anc_patients || []) : (DASHBOARD_DATA.patients || []);
+
+        function getDeliveredCasesForFY(fy) {
+            let cases = rawPool.filter(p => {
+                if (p.del !== 1) return false;
+                if (p.y !== fy) return false;
+                if (blockVal !== 'All' && (p.b || '').toLowerCase() !== blockVal.toLowerCase()) return false;
+                if (phcVal !== 'All' && (p.phc || '').toLowerCase() !== phcVal.toLowerCase()) return false;
+                if (subVal !== 'All' && (p.sub || '').toLowerCase() !== subVal.toLowerCase()) return false;
+                if (currentTab !== 'anc' && currentTab !== 'all') {
+                    if (p[currentTab] !== 1) return false;
+                }
+                return true;
+            });
+
+            // Filter by selected Gestational Age cohort
+            if (currentDeliveryGaFilter === 'preterm') {
+                cases = cases.filter(p => {
+                    const ga = getPatientCurrentGaWeeks(p);
+                    return ga !== null && ga < 34;
+                });
+            } else if (currentDeliveryGaFilter === 'lateterm') {
+                cases = cases.filter(p => {
+                    const ga = getPatientCurrentGaWeeks(p);
+                    return ga !== null && ga > 42;
+                });
+            }
+            return cases;
+        }
+
+        const cases26 = getDeliveredCasesForFY('2026-27');
+        const cases25 = getDeliveredCasesForFY('2025-26');
+
+        // Update overall badge and title
+        const badgeEl = document.getElementById('chart-delivery-badge');
+        let gaLabel = 'All Deliveries';
+        if (currentDeliveryGaFilter === 'preterm') gaLabel = 'Pre-term (<34 Weeks)';
+        else if (currentDeliveryGaFilter === 'lateterm') gaLabel = 'Late Term (>42 Weeks)';
+
+        if (badgeEl) {
+            badgeEl.textContent = `${gaLabel}: ${(cases26.length + cases25.length).toLocaleString()} Total (26-27: ${cases26.length.toLocaleString()} | 25-26: ${cases25.length.toLocaleString()})`;
+            badgeEl.style.background = '#e0f2fe';
+            badgeEl.style.color = '#0369a1';
+        }
+
+        const badge26El = document.getElementById('badge-delivery-2026-27');
+        if (badge26El) {
+            badge26El.textContent = `${cases26.length.toLocaleString()} Deliveries`;
+        }
+        const badge25El = document.getElementById('badge-delivery-2025-26');
+        if (badge25El) {
+            badge25El.textContent = `${cases25.length.toLocaleString()} Deliveries`;
+        }
+
+        const effectiveToolbar = toolbarConfig || { show: true, tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false } };
+
+        renderSingleDeliveryDonut('2026-27', cases26, effectiveToolbar);
+        renderSingleDeliveryDonut('2025-26', cases25, effectiveToolbar);
     }
 
     // Download any chart directly as SVG file
@@ -4724,6 +4766,18 @@ document.addEventListener('DOMContentLoaded', () => {
             clearBtn.addEventListener('click', clearFilters);
         }
 
+        // Delivery Place Gestational Age Toggles
+        const gaBtns = document.querySelectorAll('.delivery-ga-btn');
+        gaBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                gaBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentDeliveryGaFilter = btn.getAttribute('data-ga');
+                saveDashboardState();
+                renderDeliveryPlaceChart();
+            });
+        });
+
         const searchInput = document.getElementById(elementIds.searchInput);
         if (searchInput) {
             searchInput.addEventListener('input', () => {
@@ -4834,6 +4888,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 phc: phcVal,
                 subcenter: subVal,
                 delivery: delVal,
+                deliveryGa: currentDeliveryGaFilter || 'all',
                 dpmuCohort: dpmuSelectedCohort || 'matured',
                 dpmuExcludeAbortions: !!dpmuExcludeAbortions,
                 dpmuExcludePreterm: !!dpmuExcludePreterm
@@ -4849,6 +4904,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (state.phc && state.phc !== 'All') params.set('phc', state.phc);
             if (state.subcenter && state.subcenter !== 'All') params.set('sub', state.subcenter);
             if (state.delivery && state.delivery !== '0') params.set('del', state.delivery);
+            if (state.deliveryGa && state.deliveryGa !== 'all') params.set('ga', state.deliveryGa);
             if (state.view === 'dpmu') {
                 if (state.dpmuCohort && state.dpmuCohort !== 'matured') params.set('cohort', state.dpmuCohort);
                 if (state.dpmuExcludeAbortions) params.set('ex_ab', '1');
@@ -4881,6 +4937,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     phc: params.get('phc') || 'All',
                     subcenter: params.get('sub') || 'All',
                     delivery: params.get('del') || '0',
+                    deliveryGa: params.get('ga') || 'all',
                     dpmuCohort: params.get('cohort') || 'matured',
                     dpmuExcludeAbortions: params.get('ex_ab') === '1',
                     dpmuExcludePreterm: params.get('ex_pt') === '1'
@@ -4955,6 +5012,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 dpmuExcludePreterm = !!saved.dpmuExcludePreterm;
                 const btnTogglePreterm = document.getElementById('btn-toggle-exclude-preterm');
                 if (btnTogglePreterm) btnTogglePreterm.classList.toggle('active', dpmuExcludePreterm);
+            }
+
+            // Restore Delivery Place Gestational Age Filter
+            if (saved.deliveryGa && ['all', 'preterm', 'lateterm'].includes(saved.deliveryGa)) {
+                currentDeliveryGaFilter = saved.deliveryGa;
+                const gaBtns = document.querySelectorAll('.delivery-ga-btn');
+                gaBtns.forEach(btn => {
+                    btn.classList.toggle('active', btn.getAttribute('data-ga') === currentDeliveryGaFilter);
+                });
             }
 
             isRestoringState = false;

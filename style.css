@@ -3188,11 +3188,107 @@ tr.expandable-row.expanded-row-active {
 
 
 .chart-container {
-
     min-height: 280px;
-
     width: 100%;
+}
 
+/* Delivery Place Gestational Age Toggles & Side-by-Side YoY Grid */
+.delivery-ga-toggle-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(241, 245, 249, 0.85);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    border-radius: 9999px;
+    padding: 0.22rem 0.35rem;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.delivery-ga-toggle-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #475569;
+    padding: 0 0.4rem;
+    white-space: nowrap;
+}
+
+.delivery-ga-btn {
+    border: none;
+    background: transparent;
+    padding: 0.32rem 0.65rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    font-family: inherit;
+    color: #64748b;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+
+.delivery-ga-btn:hover {
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.65);
+}
+
+.delivery-ga-btn.active {
+    background: #ffffff;
+    color: #0284c7;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.15), 0 0 0 1px rgba(2, 132, 199, 0.3);
+}
+
+.delivery-charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+    width: 100%;
+    margin-top: 0.65rem;
+}
+
+.delivery-chart-pane {
+    background: rgba(248, 250, 252, 0.65);
+    border: 1px solid rgba(226, 232, 240, 0.85);
+    border-radius: 14px;
+    padding: 1rem 1.15rem;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+.delivery-pane-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+}
+
+.delivery-pane-title {
+    margin: 0;
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: #0f172a;
+    font-family: inherit;
+}
+
+.delivery-pane-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    background: #e0f2fe;
+    color: #0284c7;
+    border: 1px solid rgba(2, 132, 199, 0.2);
+}
+
+@media (max-width: 900px) {
+    .delivery-charts-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
 }
 
 

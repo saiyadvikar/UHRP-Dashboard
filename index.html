@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Ultra High Risk Pregnancy (UHRP) Care Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20261118-v7-sankalp-splash">
+    <link rel="stylesheet" href="style.css?v=20261118-v8-delivery-yoy-ga">
     <style>
         /* Instant 0ms Critical Startup Loader Styling */
         .uhrp-app-loader {
@@ -415,16 +415,48 @@
                         <div id="chart-late-delivery" class="chart-container" style="min-height: 330px;"></div>
                     </div>
 
-                    <!-- 3. Delivery Place Distribution Donut Chart (Full Width Stacked) -->
+                    <!-- 3. Delivery Place Distribution Donut Charts (Side-by-Side YoY with Gestational Age Toggles) -->
                     <div class="chart-card-modern chart-card-fullwidth">
-                        <div class="chart-header">
+                        <div class="chart-header" style="flex-wrap: wrap; gap: 0.75rem;">
                             <div>
-                                <h3>🏥 Delivery Place Distribution</h3>
+                                <h3 id="chart-delivery-title">🏥 Delivery Place Distribution (YoY Comparison)</h3>
                                 <span class="chart-badge" id="chart-delivery-badge">Institutional vs Home Deliveries</span>
                             </div>
-                            <button type="button" class="btn-download-svg" data-target="chart-delivery" data-filename="Delivery_Place_Distribution" title="Download chart as SVG">📥 SVG</button>
+
+                            <!-- Gestational Weeks Toggles -->
+                            <div class="delivery-ga-toggle-group" id="delivery-ga-toggle-group">
+                                <span class="delivery-ga-toggle-label">⏳ Gestational Age:</span>
+                                <button type="button" class="delivery-ga-btn active" data-ga="all" id="btn-ga-all">ALL</button>
+                                <button type="button" class="delivery-ga-btn" data-ga="preterm" id="btn-ga-preterm">⚠️ Pre-term (&lt;34 Wks)</button>
+                                <button type="button" class="delivery-ga-btn" data-ga="lateterm" id="btn-ga-lateterm">📅 Late Term (&gt;42 Wks)</button>
+                            </div>
+
+                            <div style="display: flex; gap: 0.45rem; align-items: center;">
+                                <button type="button" class="btn-download-svg" data-target="chart-delivery-2026-27" data-filename="Delivery_Place_2026-27" title="Download 2026-27 chart as SVG">📥 2026-27 SVG</button>
+                                <button type="button" class="btn-download-svg" data-target="chart-delivery-2025-26" data-filename="Delivery_Place_2025-26" title="Download 2025-26 chart as SVG">📥 2025-26 SVG</button>
+                            </div>
                         </div>
-                        <div id="chart-delivery" class="chart-container" style="min-height: 300px;"></div>
+
+                        <!-- Side by Side Financial Year Donut Charts -->
+                        <div class="delivery-charts-grid">
+                            <!-- 2026-27 (Current FY) Donut Pane -->
+                            <div class="delivery-chart-pane">
+                                <div class="delivery-pane-header">
+                                    <h4 class="delivery-pane-title">2026-27 (Current FY)</h4>
+                                    <span class="delivery-pane-badge" id="badge-delivery-2026-27">0 Deliveries</span>
+                                </div>
+                                <div id="chart-delivery-2026-27" class="chart-container" style="min-height: 290px;"></div>
+                            </div>
+
+                            <!-- 2025-26 (Previous FY) Donut Pane -->
+                            <div class="delivery-chart-pane">
+                                <div class="delivery-pane-header">
+                                    <h4 class="delivery-pane-title">2025-26 (Previous FY)</h4>
+                                    <span class="delivery-pane-badge" id="badge-delivery-2025-26">0 Deliveries</span>
+                                </div>
+                                <div id="chart-delivery-2025-26" class="chart-container" style="min-height: 290px;"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -1024,6 +1056,6 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="data.js?v=20261117-v5-anmol-groundtruth"></script>
-    <script src="app.js?v=20261118-v7-sankalp-splash"></script>
+    <script src="app.js?v=20261118-v8-delivery-yoy-ga"></script>
 </body>
 </html>
