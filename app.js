@@ -819,15 +819,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (p.sc === 1 && !isManagementDone(p, 'sc')) return false;
             return true;
         }
-        if (condition === 'sa' || condition === 'sc') {
+        if (condition === 'sa' || condition === 'sc' || condition === 'ma') {
             const hasDoses = Array.isArray(p.is_doses) && p.is_doses.length > 0;
             const hasFcm = p.fcm === 'Yes';
             const hasBt = p.bt && p.bt !== 'No' && p.bt !== '-';
             return hasDoses || hasFcm || hasBt;
-        } else if (condition === 'ma') {
-            const hasDoses = Array.isArray(p.is_doses) && p.is_doses.length > 0;
-            const hasFcm = p.fcm === 'Yes';
-            return hasDoses || hasFcm;
         } else if (condition === 'pi') {
             const m = String(p.pih_mgmt || '').trim().toLowerCase();
             return !!(m && m !== 'no' && m !== 'none' && m !== '-' && m !== 'nan');
@@ -3470,8 +3466,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ` : ''}
                                 ${showGdmMgmt ? `
                                 <div class="drawer-management-bar drawer-gdm-bar" style="background:#f0f9ff; border: 1px solid #bae6fd; border-left:4px solid #00b4d8; margin-bottom: 0.6rem;">
-                                    <span class="d-mgt-heading" style="color:#0369a1;">💊 GDM Clinical Management (Diabetes Regimen):</span>
+                                    <span class="d-mgt-heading" style="color:#0369a1;">💊 GDM Clinical Management & OGTT Screen:</span>
                                     <div class="d-mgt-grid">
+                                        <div class="d-mgt-item">
+                                            <span class="d-mgt-label">OGTT-1 (Col FE):</span>
+                                            <span class="d-mgt-badge ${p.og1 ? (p.og1 > 140 ? 'mgt-yes' : 'mgt-no') : 'mgt-no'}" style="font-size: 0.75rem; font-weight: 700;">
+                                                ${p.og1 ? `${p.og1} mg/dL ${p.og1 > 140 ? '(>140 Positive)' : '(Normal)'}` : '✕ Not Recorded'}
+                                            </span>
+                                        </div>
+                                        <div class="d-mgt-item">
+                                            <span class="d-mgt-label">OGTT-2 (Col FG):</span>
+                                            <span class="d-mgt-badge ${p.og2 ? (p.og2 > 140 ? 'mgt-yes' : 'mgt-no') : 'mgt-no'}" style="font-size: 0.75rem; font-weight: 700;">
+                                                ${p.og2 ? `${p.og2} mg/dL ${p.og2 > 140 ? '(>140 Positive)' : '(Normal)'}` : '✕ Not Recorded'}
+                                            </span>
+                                        </div>
                                         <div class="d-mgt-item">
                                             <span class="d-mgt-label">Medical Nutrition Therapy (MNT):</span>
                                             <span class="d-mgt-badge ${p.gdm_mnt === 'Yes' ? 'mgt-yes' : 'mgt-no'}" style="font-size: 0.75rem; font-weight: 700;">
@@ -5012,6 +5020,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>` : ''}
 
                 ${showGdm ? `
+                <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:0.35rem; background:#ffffff; border-radius:8px; padding:0.45rem 0.65rem; border:1px solid ${statusDone ? '#a7f3d0' : '#fed7aa'}; font-size:0.75rem; margin-bottom:0.35rem;">
+                    <div><span style="color:#64748b; font-weight:700;">OGTT-1:</span> <strong style="color:${p.og1 && p.og1 > 140 ? '#dc2626' : '#0f172a'};">${p.og1 ? `${p.og1} mg/dL ${p.og1 > 140 ? '(High)' : ''}` : 'Not done'}</strong></div>
+                    <div><span style="color:#64748b; font-weight:700;">OGTT-2:</span> <strong style="color:${p.og2 && p.og2 > 140 ? '#dc2626' : '#0f172a'};">${p.og2 ? `${p.og2} mg/dL ${p.og2 > 140 ? '(High)' : ''}` : 'Not done'}</strong></div>
+                </div>
                 <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.35rem; background:#ffffff; border-radius:8px; padding:0.55rem 0.65rem; border:1px solid ${statusDone ? '#a7f3d0' : '#fed7aa'}; font-size:0.76rem;">
                     <div><span style="color:#64748b; font-weight:700;">MNT:</span> <strong>${p.gdm_mnt === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>
                     <div><span style="color:#64748b; font-weight:700;">Metformin:</span> <strong>${p.gdm_met === 'Yes' ? '✓ Yes' : '✕ No'}</strong></div>

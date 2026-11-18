@@ -805,6 +805,7 @@ def main():
     anc_counts = {}
     anc_visit_lookup = {}
     anc_records = []
+    anc_ogtt_lookup = {}
     uhrp_mpids = set(df_risk['MP_ID_clean'].dropna())
 
     for fpath in anc_files:
@@ -863,6 +864,12 @@ def main():
         c3_col_idx = c3_indices[0] if c3_indices else 155
         c4_indices = [i for i, h in enumerate(headers) if h and 'fourth anc check-up' in str(h).lower()]
         c4_col_idx = c4_indices[0] if c4_indices else 156
+
+        # GDM Screening: OGTT 1 (Col FE / 160) & OGTT 2 (Col FG / 162)
+        ogtt1_indices = [i for i, h in enumerate(headers) if h and str(h).strip().lower() == 'ogtt 1']
+        ogtt1_col_idx = ogtt1_indices[0] if ogtt1_indices else 160
+        ogtt2_indices = [i for i, h in enumerate(headers) if h and str(h).strip().lower() == 'ogtt 2']
+        ogtt2_col_idx = ogtt2_indices[0] if ogtt2_indices else 162
 
         count_indexed = 0
         total_anc_mpids_by_year = {}
@@ -995,7 +1002,37 @@ def main():
                                         c4_done = 1
                     all4_done = 1 if (c1_done and c2_done and c3_done and c4_done) else 0
 
-                    anc_records.append({
+                    # OGTT 1 (Col FE / 160) & OGTT 2 (Col FG / 162) - GDM positive if either > 140 mg/dL
+                    raw_ogtt1 = row[ogtt1_col_idx] if ogtt1_col_idx < len(row) else None
+                    raw_ogtt2 = row[ogtt2_col_idx] if ogtt2_col_idx < len(row) else None
+                    val_ogtt1 = None
+                    val_ogtt2 = None
+                    try:
+                        if raw_ogtt1 is not None and str(raw_ogtt1).strip() not in ('', 'nan', 'None', '-'):
+                            val_ogtt1 = float(raw_ogtt1)
+                    except:
+                        pass
+                    try:
+                        if raw_ogtt2 is not None and str(raw_ogtt2).strip() not in ('', 'nan', 'None', '-'):
+                            val_ogtt2 = float(raw_ogtt2)
+                    except:
+                        pass
+                    is_gdm_ogtt = ((val_ogtt1 is not None and val_ogtt1 > 140) or (val_ogtt2 is not None and val_ogtt2 > 140))
+                    if is_gdm_ogtt or mpid in anc_ogtt_lookup:
+                        prev_og = anc_ogtt_lookup.get(mpid, {})
+                        anc_ogtt_lookup[mpid] = {
+                            'og1': round(val_ogtt1, 1) if val_ogtt1 is not None else prev_og.get('og1'),
+                            'og2': round(val_ogtt2, 1) if val_ogtt2 is not None else prev_og.get('og2'),
+                            'is_gdm': is_gdm_ogtt or prev_og.get('is_gdm', False)
+                        }
+                    elif val_ogtt1 is not None or val_ogtt2 is not None:
+                        anc_ogtt_lookup[mpid] = {
+                            'og1': round(val_ogtt1, 1) if val_ogtt1 is not None else None,
+                            'og2': round(val_ogtt2, 1) if val_ogtt2 is not None else None,
+                            'is_gdm': False
+                        }
+
+                    anc_rec_item = {
                         'id': mpid,
                         'n': str(row[pw_name_idx] or 'N/A').strip().title() if pw_name_idx < len(row) else 'N/A',
                         'h': str(row[husb_idx] or 'N/A').strip().title() if husb_idx < len(row) else 'N/A',
@@ -1012,7 +1049,7 @@ def main():
                         'd': deliv_place_anc,
                         'del_cat': del_cat_anc,
                         'del_date': '-',
-                        'hrp': is_hrp_anc,
+                        'hrp': 1 if (is_hrp_anc or is_gdm_ogtt) else 0,
                         'phc': phc_str,
                         'y': fy_row,
                         'mat': anc_mat_val,
@@ -1031,7 +1068,15 @@ def main():
                         'anm_p': anm_p_anc,
                         'cho_n': cho_n_anc,
                         'cho_p': cho_p_anc
-                    })
+                    }
+                    if is_gdm_ogtt:
+                        anc_rec_item['gd'] = 1
+                        anc_rec_item['uhrp'] = 1
+                    if val_ogtt1 is not None:
+                        anc_rec_item['og1'] = int(val_ogtt1) if val_ogtt1.is_integer() else round(val_ogtt1, 1)
+                    if val_ogtt2 is not None:
+                        anc_rec_item['og2'] = int(val_ogtt2) if val_ogtt2.is_integer() else round(val_ogtt2, 1)
+                    anc_records.append(anc_rec_item)
 
                     if mpid in uhrp_mpids:
                         if mpid not in anc_visit_lookup:
@@ -1069,11 +1114,16 @@ def main():
     print("\n[5/5] Processing HRP patient records with delivery and LR admission Hb...")
     patients_list = []
     for _, row in df_risk.iterrows():
+        mpid_key = row['MP_ID_clean']
+        og_info = anc_ogtt_lookup.get(mpid_key, {})
+        ogtt_is_gdm = og_info.get('is_gdm', False)
+        is_gdm_final = 1 if (row['is_gdm'] or ogtt_is_gdm) else 0
+
         factors = []
         if row['is_severe_anemia']: factors.append('Severe Anemia')
         if row['is_moderate_anemia']: factors.append('Moderate Anemia')
         if row['is_pih']: factors.append('PIH')
-        if row['is_gdm']: factors.append('GDM')
+        if is_gdm_final: factors.append('GDM')
         if row['is_lscs']: factors.append('Previous LSCS')
         if row['is_sickle']: factors.append('Sickle Cell')
         if row['is_teenage']: factors.append('Teenage Pregnancy')
@@ -1123,7 +1173,9 @@ def main():
             pass
 
         hiv_raw = str(row.get('HIV Screening Test (1. Refer to ICTC 2. Non Reactive 3. Not done)', '')).strip().lower()
-        if 'ictc' in hiv_raw or 'refer' in hiv_raw or 'reactive' in hiv_raw:
+        if 'refer' in hiv_raw or 'ictc' in hiv_raw:
+            factors.append('HIV Screen (Refer to ICTC)')
+        elif 'reactive' in hiv_raw and 'non' not in hiv_raw:
             factors.append('HIV Reactive')
 
         past_ill = clean_str(row.get('Past Illness History', ''))
@@ -1232,10 +1284,23 @@ def main():
         # Anemia Management: Iron Sucrose doses 1-5, BT units, Inj FCM
         is_doses = []
         for d_idx in range(1, 6):
-            col_name = f'Iron sucrose dose {d_idx} (Date)'
-            d_raw = row.get(col_name)
+            d_raw = None
+            for cand in [
+                f'Iron sucrose dose {d_idx} (Date)',
+                f'Iron Sucrose dose {d_idx} (Date)',
+                f'Iron Sucrose Dose {d_idx} (Date)',
+                f'Iron Sucrose {d_idx}st Dose Date',
+                f'Iron Sucrose {d_idx}nd Dose Date',
+                f'Iron Sucrose {d_idx}rd Dose Date',
+                f'Iron Sucrose {d_idx}th Dose Date'
+            ]:
+                if cand in row and pd.notna(row.get(cand)):
+                    cand_v = str(row.get(cand)).strip()
+                    if cand_v not in ('', 'nan', 'None', 'NaT', '-'):
+                        d_raw = cand_v
+                        break
             d_formatted = format_to_dd_mmyyyy(d_raw)
-            if d_formatted != '-':
+            if d_formatted and d_formatted != '-':
                 is_doses.append(d_formatted)
 
         bt_units_val = row.get('Number of Blood transfusion units (If BT Given Only)')
@@ -1338,12 +1403,12 @@ def main():
             'sa': 1 if row['is_severe_anemia'] else 0,
             'ma': 1 if row['is_moderate_anemia'] else 0,
             'pi': 1 if row['is_pih'] else 0,
-            'gd': 1 if row['is_gdm'] else 0,
+            'gd': is_gdm_final,
             'ls': 1 if row['is_lscs'] else 0,
             'sc': 1 if row['is_sickle'] else 0,
             'tp': 1 if row['is_teenage'] else 0,
             'bh': 1 if row['is_boh'] else 0,
-            'uhrp': 1 if row['is_uhrp_severe'] else 0,
+            'uhrp': 1 if (row['is_uhrp_severe'] or is_gdm_final == 1) else 0,
             'del': is_del_final,
             'is_abortion': 1 if is_hrp_abortion else 0,
             'id': mpid_key,
@@ -1383,6 +1448,8 @@ def main():
         if str(row.get('On Metformin', '')).strip().lower() == 'yes': p_dict['gdm_met'] = 'Yes'
         if str(row.get('On Insulin', '')).strip().lower() == 'yes': p_dict['gdm_ins'] = 'Yes'
         if str(row.get('GDM Mangement', '')).strip().lower() == 'yes': p_dict['gdm_mgmt_at'] = 'Yes'
+        if og_info.get('og1') is not None: p_dict['og1'] = og_info['og1']
+        if og_info.get('og2') is not None: p_dict['og2'] = og_info['og2']
 
         patients_list.append(p_dict)
 
@@ -1423,7 +1490,19 @@ def main():
             r['sa'] = hp.get('sa', 0)
             r['ma'] = hp.get('ma', 0)
             r['pi'] = hp.get('pi', 0)
-            r['gd'] = hp.get('gd', 0)
+            if hp.get('gd', 0) == 1 or r.get('gd', 0) == 1:
+                r['gd'] = 1
+                r['uhrp'] = 1
+                hp['gd'] = 1
+                hp['uhrp'] = 1
+                if 'GDM' not in hp.get('f', ''):
+                    hp['f'] = (hp['f'] + ', GDM') if hp.get('f') and hp['f'] not in ('N/A', 'High Risk Pregnancy') else 'GDM'
+            else:
+                r['gd'] = 0
+            if hp.get('og1') is not None and r.get('og1') is None: r['og1'] = hp['og1']
+            if hp.get('og2') is not None and r.get('og2') is None: r['og2'] = hp['og2']
+            if r.get('og1') is not None and hp.get('og1') is None: hp['og1'] = r['og1']
+            if r.get('og2') is not None and hp.get('og2') is None: hp['og2'] = r['og2']
             r['ls'] = hp.get('ls', 0)
             r['sc'] = hp.get('sc', 0)
             r['tp'] = hp.get('tp', 0)
@@ -1588,6 +1667,52 @@ def main():
                         'cho_p': cho_p_d
                     })
                     patients_mpids_set.add(mpid)
+
+    # Ensure any GDM positive mother identified in ANC screening is tracked in patients_list
+    for r in anc_records:
+        if r.get('gd') == 1 and r['id'] not in patients_mpids_set:
+            gdm_dict = {
+                'y': r.get('y', '2026-27'),
+                'b': r.get('b', 'Unknown'),
+                'phc': r.get('phc', 'Unknown'),
+                'sub': r.get('sub', 'Unknown'),
+                'v': r.get('v', 'Unknown'),
+                'm': 'Unknown',
+                'reg': r.get('reg', '-'),
+                'd': r.get('d', 'Pregnant'),
+                'del_cat': r.get('del_cat', 'Not Delivered'),
+                'del_date': r.get('del_date', '-'),
+                'sa': 0, 'ma': 0, 'pi': 0, 'gd': 1, 'ls': 0, 'sc': 0, 'tp': 0, 'bh': 0,
+                'uhrp': 1,
+                'del': r.get('del', 0),
+                'is_abortion': r.get('is_abortion', 0),
+                'id': r['id'],
+                'n': r.get('n', 'N/A'),
+                'h': r.get('h', 'N/A'),
+                'p': r.get('p', 'N/A'),
+                'a': r.get('a', '-'),
+                'lmp': r.get('lmp', '-'),
+                'edd': r.get('edd', '-'),
+                'f': 'GDM',
+                'mat': r.get('mat', 'No'),
+                'hb_v': r.get('hb_v', []),
+                'bp_v': r.get('bp_v', []),
+                'v_dates': r.get('v_dates', []),
+                'alb_v': r.get('alb_v', []),
+                'mo_v': r.get('mo_v', []),
+                'mo_done': r.get('mo_done', 0),
+                'pe': 0,
+                'lr_hb': r.get('lr_hb'),
+                'bp_adm': r.get('bp_adm', ''),
+                'anm_n': r.get('anm_n', 'N/A'),
+                'anm_p': r.get('anm_p', ''),
+                'cho_n': r.get('cho_n', 'N/A'),
+                'cho_p': r.get('cho_p', '')
+            }
+            if r.get('og1') is not None: gdm_dict['og1'] = r['og1']
+            if r.get('og2') is not None: gdm_dict['og2'] = r['og2']
+            patients_list.append(gdm_dict)
+            patients_mpids_set.add(r['id'])
 
     nmr_list = []
     nmr_by_factor = {'Severe Anemia': 0, 'PIH': 0, 'GDM': 0, 'Previous LSCS': 0, 'Sickle Cell': 0, 'Teenage': 0}
