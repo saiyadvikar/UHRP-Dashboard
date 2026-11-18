@@ -141,19 +141,25 @@ def is_mo_str(s):
     """Detect if designation string corresponds to a Medical Officer / Doctor."""
     if not s or s is None: return False
     sl = str(s).lower().strip()
-    return any(k in sl for k in ['medical officer', 'gynecologist', 'doctor', 'mo (', 'lmo', 'pgmo', 'specialist', 'mbbs'])
+    if sl in ('mo', 'lmo', 'pgmo', 'doctor', 'gynecologist'):
+        return True
+    return any(k in sl for k in ['medical officer', 'gynecologist', 'doctor', 'lmo', 'pgmo', 'specialist', 'mbbs']) or sl.startswith('mo')
 
 def clean_mo_str(s):
     """Normalize designation to compact abbreviation to optimize JSON payload size."""
     if not s or s is None: return None
     sl = str(s).strip().lower()
     if sl in ('', 'nan', 'none', 'select', '-'): return None
-    if any(k in sl for k in ['medical officer', 'gynecologist', 'doctor', 'mo (', 'lmo', 'pgmo', 'specialist', 'mbbs']):
+    if sl in ('mo', 'lmo', 'pgmo', 'doctor', 'gynecologist') or sl.startswith('mo') or any(k in sl for k in ['medical officer', 'gynecologist', 'doctor', 'lmo', 'pgmo', 'specialist', 'mbbs']):
         return 'MO'
     if 'community' in sl or 'cho' in sl:
         return 'CHO'
     if 'nurse' in sl or 'anm' in sl:
         return 'ANM'
+    if 'lhv' in sl:
+        return 'LHV'
+    if 'no (' in sl or 'nursing officer' in sl:
+        return 'NO'
     if 'unknown' in sl:
         return 'Unk'
     return str(s).strip()[:15]
@@ -970,7 +976,7 @@ def main():
                         val = row[idx] if idx < len(row) else None
                         mo_list.append(clean_mo_str(val))
 
-                    mo_done = 1 if any(is_mo_str(x) for x in mo_list) else 0
+                    mo_done = 1 if (any(is_mo_str(x) for x in mo_list) or any(is_mo_str(row[idx]) for idx in mo_indices if idx < len(row))) else 0
                     anm_n_anc, anm_p_anc, cho_n_anc, cho_p_anc = get_hr_contacts(b_str, sub_str, str(row[vil_idx] or '').strip() if vil_idx < len(row) else '', anm_map, cho_map, village_to_loc_map)
 
                     # 4 ANC Checkup: Official Anmol indicator flags (Cols 153-156) combined with visit dates

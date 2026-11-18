@@ -835,14 +835,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function isMoDesignation(val) {
         if (!val) return false;
         const s = String(val).trim().toLowerCase();
-        return (s.includes('medical officer') || s.includes('gynecologist') || s.includes('doctor') || s.includes('mo (') || s.includes('lmo') || s.includes('pgmo'));
+        if (s === 'mo' || s === 'lmo' || s === 'pgmo' || s === 'doctor' || s === 'gynecologist') return true;
+        return (s.includes('medical officer') || s.includes('gynecologist') || s.includes('doctor') || s.startsWith('mo') || s.includes('lmo') || s.includes('pgmo') || s.includes('specialist') || s.includes('mbbs'));
     }
 
-    // Check if at least 1 ANC visit was conducted by a Medical Officer
+    // Check if at least 1 ANC visit was conducted by a Medical Officer / Gynecologist / LMO
     function hasMoVisit(p) {
-        if (p.mo_done !== undefined && p.mo_done !== null) {
-            return p.mo_done === 1;
-        }
+        if (!p) return false;
+        if (p.mo_done === 1) return true;
         const moArr = p.mo_v || [];
         return moArr.some(v => isMoDesignation(v));
     }
