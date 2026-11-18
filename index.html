@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Ultra High Risk Pregnancy (UHRP) Care Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20261118-v6-loader-state">
+    <link rel="stylesheet" href="style.css?v=20261118-v7-sankalp-splash">
     <style>
         /* Instant 0ms Critical Startup Loader Styling */
         .uhrp-app-loader {
@@ -48,9 +48,8 @@
             background-size: 300% 100%; border-radius: 9999px; animation: uhrpShimmerBar 1.8s linear infinite;
         }
         @keyframes uhrpShimmerBar { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
-        .uhrp-loader-status-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; padding: 0 0.2rem; }
-        .uhrp-loader-status-text { font-weight: 700; color: #0284c7; }
-        .uhrp-loader-badge { background: rgba(121, 40, 202, 0.08); color: #7928ca; padding: 0.15rem 0.55rem; border-radius: 9999px; font-size: 0.68rem; font-weight: 800; border: 1px solid rgba(121, 40, 202, 0.2); }
+        .uhrp-loader-status-row { display: flex; justify-content: center; align-items: center; font-size: 0.8rem; padding: 0 0.2rem; }
+        .uhrp-loader-status-text { font-weight: 700; color: #0284c7; letter-spacing: 0.01em; }
         .uhrp-loader-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-top: 0.2rem; }
         .uhrp-loader-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; color: #334155; }
         .uhrp-loader-chip .chip-dot { width: 6px; height: 6px; border-radius: 50%; }
@@ -67,7 +66,7 @@
                     <div class="uhrp-loader-pulse-ring"></div>
                 </div>
                 <div class="uhrp-loader-title-wrap">
-                    <h2 class="uhrp-loader-title">UHRP Care Command Center</h2>
+                    <h2 class="uhrp-loader-title">Sankalp Program</h2>
                     <span class="uhrp-loader-subtitle">District Khargone (West Nimar) • NHM Madhya Pradesh</span>
                 </div>
             </div>
@@ -77,8 +76,7 @@
                     <div class="uhrp-loader-bar-fill"></div>
                 </div>
                 <div class="uhrp-loader-status-row">
-                    <span class="uhrp-loader-status-text" id="uhrp-loader-status">Initializing 1,00,000+ Maternal Health Records...</span>
-                    <span class="uhrp-loader-badge">Sample 2 • iOS 26</span>
+                    <span class="uhrp-loader-status-text" id="uhrp-loader-status">Loading ANMOL Data...</span>
                 </div>
             </div>
             
@@ -1026,6 +1024,6 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="data.js?v=20261117-v5-anmol-groundtruth"></script>
-    <script src="app.js?v=20261118-v6-loader-state"></script>
+    <script src="app.js?v=20261118-v7-sankalp-splash"></script>
 </body>
 </html>

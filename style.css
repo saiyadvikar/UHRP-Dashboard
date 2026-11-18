@@ -5521,9 +5521,9 @@ th.col-spotlight {
 
 .uhrp-loader-status-row {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    font-size: 0.76rem;
+    font-size: 0.8rem;
     padding: 0 0.2rem;
 }
 
