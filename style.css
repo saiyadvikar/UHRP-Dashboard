@@ -2649,119 +2649,69 @@ tr.expandable-row.expanded-row-active {
 
 
 /* Anemia Management Bar in Drawer */
-
 .drawer-management-bar {
-
-    background: rgba(255, 42, 109, 0.1);
-
-    border: 1px solid rgba(255, 42, 109, 0.25);
-
+    background: #ffffff;
+    border: 1px solid #fecdd3;
+    border-left: 4px solid #e11d48;
     border-radius: 8px;
-
-    padding: 0.4rem 0.75rem;
-
+    padding: 0.5rem 0.85rem;
     display: flex;
-
     flex-wrap: wrap;
-
     align-items: center;
-
     gap: 0.5rem 1.25rem;
-
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
-
-
 
 .d-mgt-heading {
-
-    font-size: 0.75rem;
-
-    font-weight: 800;
-
-    color: #ff5e97;
-
+    font-size: 0.78rem;
+    font-weight: 850;
+    color: #9f1239;
     text-transform: uppercase;
-
-    letter-spacing: 0.3px;
-
+    letter-spacing: 0.35px;
 }
-
-
 
 .d-mgt-grid {
-
     display: flex;
-
     flex-wrap: wrap;
-
     align-items: center;
-
-    gap: 0.4rem 0.9rem;
-
+    gap: 0.45rem 1rem;
 }
-
-
 
 .d-mgt-item {
-
     display: flex;
-
     align-items: center;
-
-    gap: 0.35rem;
-
-    font-size: 0.76rem;
-
+    gap: 0.4rem;
+    font-size: 0.78rem;
 }
-
-
 
 .d-mgt-label {
-
-    font-weight: 700;
-
-    color: #475569;
-
+    font-weight: 800;
+    color: #0f172a;
 }
-
-
 
 .d-mgt-badge {
-
-    font-size: 0.72rem;
-
-    font-weight: 700;
-
-    padding: 0.15rem 0.5rem;
-
-    border-radius: 12px;
-
+    font-size: 0.74rem;
+    font-weight: 800;
+    padding: 0.2rem 0.65rem;
+    border-radius: 6px;
     white-space: nowrap;
-
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    letter-spacing: 0.2px;
 }
-
-
 
 .d-mgt-badge.mgt-yes {
-
-    background: rgba(16, 185, 129, 0.2);
-
-    color: #34d399;
-
-    border: 1px solid rgba(16, 185, 129, 0.4);
-
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #059669;
+    box-shadow: 0 1px 2px rgba(5, 150, 105, 0.12);
 }
 
-
-
 .d-mgt-badge.mgt-no {
-
-    background: rgba(148, 163, 184, 0.2);
-
-    color: #cbd5e1;
-
-    border: 1px solid rgba(148, 163, 184, 0.3);
-
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
 }
 
 
@@ -5308,8 +5258,10 @@ tr.expandable-row.expanded-row-active {
 
 .anmol-table td {
     padding: 0.65rem 0.85rem;
-    font-size: 0.825rem;
+    font-size: 0.84rem;
     color: #0f172a;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
     background: #ffffff;
     border-bottom: 1px solid #e2e8f0;
@@ -5329,7 +5281,7 @@ tr.expandable-row.expanded-row-active {
 
 .anmol-table td.col-block {
     text-align: left;
-    font-weight: 700;
+    font-weight: 800;
     color: #0f172a;
     padding-left: 12px;
 }
@@ -5337,47 +5289,47 @@ tr.expandable-row.expanded-row-active {
 .anmol-total-row td {
     background: #f1f5f9 !important;
     backdrop-filter: blur(8px);
-    font-weight: 800 !important;
+    font-weight: 900 !important;
     color: #0f172a !important;
     border-top: 2px solid #0f172a;
 }
 
 /* ==========================================================================
-   Liquid Glass Conditional Formatting Pills
+   High-Contrast Conditional Formatting Cells (Deep Ink on Soft Luminous Tints)
    ========================================================================== */
 .cond-green {
-    background: rgba(16, 185, 129, 0.25) !important;
-    color: #34d399 !important;
-    font-weight: 800 !important;
-    box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.5) !important;
+    background: #d1fae5 !important;
+    color: #065f46 !important;
+    font-weight: 850 !important;
+    box-shadow: inset 0 0 0 1px #10b981 !important;
 }
 
 .cond-lime {
-    background: rgba(132, 204, 22, 0.25) !important;
-    color: #a3e635 !important;
-    font-weight: 800 !important;
-    box-shadow: inset 0 0 0 1px rgba(132, 204, 22, 0.5) !important;
+    background: #ecfccb !important;
+    color: #3f6212 !important;
+    font-weight: 850 !important;
+    box-shadow: inset 0 0 0 1px #84cc16 !important;
 }
 
 .cond-yellow {
-    background: rgba(245, 158, 11, 0.25) !important;
-    color: #fbbf24 !important;
-    font-weight: 800 !important;
-    box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.5) !important;
+    background: #fef3c7 !important;
+    color: #78350f !important;
+    font-weight: 850 !important;
+    box-shadow: inset 0 0 0 1px #f59e0b !important;
 }
 
 .cond-peach {
-    background: rgba(249, 115, 22, 0.25) !important;
-    color: #fb923c !important;
-    font-weight: 800 !important;
-    box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.5) !important;
+    background: #ffedd5 !important;
+    color: #9a3412 !important;
+    font-weight: 850 !important;
+    box-shadow: inset 0 0 0 1px #f97316 !important;
 }
 
 .cond-red {
-    background: rgba(239, 68, 68, 0.28) !important;
-    color: #f87171 !important;
-    font-weight: 800 !important;
-    box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.55) !important;
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+    font-weight: 850 !important;
+    box-shadow: inset 0 0 0 1px #ef4444 !important;
 }
 
 /* Sortable Headers & Column Spotlight */

@@ -3531,7 +3531,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                                 ${showAnemiaMgmt ? `
                                 <div class="drawer-management-bar" style="margin-bottom: 0.6rem;">
-                                    <span class="d-mgt-heading">💊 Anemia Clinical Management:</span>
+                                    <span class="d-mgt-heading" style="color:#9f1239;">💊 Anemia Clinical Management:</span>
                                     <div class="d-mgt-grid">
                                         <div class="d-mgt-item">
                                             <span class="d-mgt-label">Inj. FCM:</span>
@@ -3555,12 +3555,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                                 ` : ''}
                                 ${showPihMgmt ? `
-                                <div class="drawer-management-bar drawer-pih-bar" style="background:#fff7ed; border: 1px solid #fed7aa; border-left:4px solid #f77f00; margin-bottom: 0.6rem;">
-                                    <span class="d-mgt-heading" style="color:#c2410c;">💊 PIH Clinical Management (Hypertension Regimen):</span>
+                                <div class="drawer-management-bar drawer-pih-bar" style="background:#ffffff; border: 1px solid #fed7aa; border-left:4px solid #ea580c; margin-bottom: 0.6rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
+                                    <span class="d-mgt-heading" style="color:#9a3412;">💊 PIH Clinical Management (Hypertension Regimen):</span>
                                     <div class="d-mgt-grid">
                                         <div class="d-mgt-item" style="grid-column: 1 / -1;">
                                             <span class="d-mgt-label">Antihypertensive Therapy:</span>
-                                            <span class="d-mgt-badge ${p.pih_mgmt ? 'mgt-yes' : 'mgt-no'}" style="font-size: 0.75rem; font-weight: 700;">
+                                            <span class="d-mgt-badge ${p.pih_mgmt ? 'mgt-yes' : 'mgt-no'}">
                                                 ${p.pih_mgmt ? `✓ ${p.pih_mgmt}` : '✕ Not Recorded / Not Prescribed'}
                                             </span>
                                         </div>
@@ -3568,36 +3568,36 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                                 ` : ''}
                                 ${showGdmMgmt ? `
-                                <div class="drawer-management-bar drawer-gdm-bar" style="background:#f0f9ff; border: 1px solid #bae6fd; border-left:4px solid #00b4d8; margin-bottom: 0.6rem;">
-                                    <span class="d-mgt-heading" style="color:#0369a1;">💊 GDM Clinical Management & OGTT Screen:</span>
+                                <div class="drawer-management-bar drawer-gdm-bar" style="background:#ffffff; border: 1px solid #bae6fd; border-left:4px solid #0284c7; margin-bottom: 0.6rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
+                                    <span class="d-mgt-heading" style="color:#075985;">💊 GDM Clinical Management & OGTT Screen:</span>
                                     <div class="d-mgt-grid">
                                         <div class="d-mgt-item">
                                             <span class="d-mgt-label">OGTT-1 (Col FE):</span>
-                                            <span class="d-mgt-badge ${p.og1 ? (p.og1 > 140 ? 'mgt-yes' : 'mgt-no') : 'mgt-no'}" style="font-size: 0.75rem; font-weight: 700;">
+                                            <span class="d-mgt-badge ${p.og1 ? (p.og1 > 140 ? 'mgt-yes' : 'mgt-no') : 'mgt-no'}">
                                                 ${p.og1 ? `${p.og1} mg/dL ${p.og1 > 140 ? '(>140 Positive)' : '(Normal)'}` : '✕ Not Recorded'}
                                             </span>
                                         </div>
                                         <div class="d-mgt-item">
                                             <span class="d-mgt-label">OGTT-2 (Col FG):</span>
-                                            <span class="d-mgt-badge ${p.og2 ? (p.og2 > 140 ? 'mgt-yes' : 'mgt-no') : 'mgt-no'}" style="font-size: 0.75rem; font-weight: 700;">
+                                            <span class="d-mgt-badge ${p.og2 ? (p.og2 > 140 ? 'mgt-yes' : 'mgt-no') : 'mgt-no'}">
                                                 ${p.og2 ? `${p.og2} mg/dL ${p.og2 > 140 ? '(>140 Positive)' : '(Normal)'}` : '✕ Not Recorded'}
                                             </span>
                                         </div>
                                         <div class="d-mgt-item">
                                             <span class="d-mgt-label">Medical Nutrition Therapy (MNT):</span>
-                                            <span class="d-mgt-badge ${p.gdm_mnt === 'Yes' ? 'mgt-yes' : 'mgt-no'}" style="font-size: 0.75rem; font-weight: 700;">
+                                            <span class="d-mgt-badge ${p.gdm_mnt === 'Yes' ? 'mgt-yes' : 'mgt-no'}">
                                                 ${p.gdm_mnt === 'Yes' ? '✓ On MNT' : '✕ No'}
                                             </span>
                                         </div>
                                         <div class="d-mgt-item">
                                             <span class="d-mgt-label">Tab. Metformin:</span>
-                                            <span class="d-mgt-badge ${p.gdm_met === 'Yes' ? 'mgt-yes' : 'mgt-no'}" style="font-size: 0.75rem; font-weight: 700;">
+                                            <span class="d-mgt-badge ${p.gdm_met === 'Yes' ? 'mgt-yes' : 'mgt-no'}">
                                                 ${p.gdm_met === 'Yes' ? '✓ Prescribed' : '✕ None'}
                                             </span>
                                         </div>
                                         <div class="d-mgt-item">
                                             <span class="d-mgt-label">Inj. Insulin:</span>
-                                            <span class="d-mgt-badge ${p.gdm_ins === 'Yes' ? 'mgt-yes' : 'mgt-no'}" style="font-size: 0.75rem; font-weight: 700;">
+                                            <span class="d-mgt-badge ${p.gdm_ins === 'Yes' ? 'mgt-yes' : 'mgt-no'}">
                                                 ${p.gdm_ins === 'Yes' ? '✓ Prescribed' : '✕ None'}
                                             </span>
                                         </div>
