@@ -1766,13 +1766,17 @@ def main():
     git_push_updates()
 
 def git_push_updates():
-    """Automatically stages, commits, and pushes updated dashboard files to GitHub."""
-    import subprocess
+    """Automatically stages, commits, and pushes updated dashboard files to GitHub (Currently PAUSED)."""
+    # GITHUB PUSH PAUSED: UI upgrades in progress per user request
     print(f"\n{'='*60}")
-    print("  AUTOMATIC GITHUB REPOSITORY SYNC")
+    print("  GITHUB PUSH PAUSED (UI Upgrades in Progress)")
     print(f"{'='*60}")
+    print("  INFO: GitHub auto-push is temporarily paused per user instruction.")
+    return
+
+    # To resume GitHub auto-push, remove the return above.
+    import subprocess
     try:
-        # Check if git is installed and directory is inside a git repository
         git_check = subprocess.run(
             ["git", "rev-parse", "--is-inside-work-tree"],
             cwd=WORKSPACE,
@@ -1788,7 +1792,6 @@ def git_push_updates():
         print("  Staging updated dashboard project files (git add .)...")
         subprocess.run(["git", "add", "."], cwd=WORKSPACE, check=True, capture_output=True, text=True)
 
-        # Check if there are changes to commit
         status_proc = subprocess.run(
             ["git", "status", "--porcelain"],
             cwd=WORKSPACE,
@@ -1814,7 +1817,6 @@ def git_push_updates():
         else:
             print("  No new local file changes to commit. Checking remote sync status...")
 
-        # Push to remote repository
         print("  Pushing to GitHub (origin)...")
         push_proc = subprocess.run(
             ["git", "push", "origin", "HEAD"],

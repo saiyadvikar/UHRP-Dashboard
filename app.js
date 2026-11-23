@@ -4763,7 +4763,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const clearBtn = document.getElementById(elementIds.clearFiltersBtn);
         if (clearBtn) {
-            clearBtn.addEventListener('click', clearFilters);
+            clearBtn.addEventListener('click', function(e) {
+                // Add animated spin to broom icon or button
+                this.classList.add('is-clearing');
+                setTimeout(() => {
+                    this.classList.remove('is-clearing');
+                }, 450);
+                clearFilters();
+            });
         }
 
         // Delivery Place Gestational Age Toggles
@@ -4852,6 +4859,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (exportTabBtn) {
             exportTabBtn.addEventListener('click', () => exportToExcel(currentTab));
         }
+
+        // Neo-Tactile Dynamic Frosted Elevation & Compact Docking Listener
+        const mainFilterBar = document.getElementById('main-filter-bar') || document.querySelector('.filter-bar');
+        const riskTabsSection = document.querySelector('.risk-tabs-section');
+        let scrollTicking = false;
+        window.addEventListener('scroll', () => {
+            if (!scrollTicking) {
+                window.requestAnimationFrame(() => {
+                    const isDocked = window.scrollY > 30;
+                    if (mainFilterBar) mainFilterBar.classList.toggle('is-scrolled-docked', isDocked);
+                    if (riskTabsSection) riskTabsSection.classList.toggle('is-scrolled-docked', isDocked);
+                    scrollTicking = false;
+                });
+                scrollTicking = true;
+            }
+        }, { passive: true });
     }
 
     // =========================================================================

@@ -5623,3 +5623,353 @@ th.col-spotlight {
 .dot-purple { background: #7928ca; }
 .dot-green { background: #10b981; }
 
+
+
+/* ==========================================================================
+   NEO-TACTILE HIGH-ENERGY INTERACTIVE MOTION GRAPHICS & DOCKING SUITE (DEC-075)
+   ========================================================================== */
+
+/* 1. Motion Physics Keyframes */
+@keyframes neo-pulse-ring {
+    0% {
+        box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.55), 0 10px 24px rgba(2, 132, 199, 0.22);
+    }
+    70% {
+        box-shadow: 0 0 0 7px rgba(2, 132, 199, 0), 0 10px 24px rgba(2, 132, 199, 0.22);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(2, 132, 199, 0), 0 10px 24px rgba(2, 132, 199, 0.22);
+    }
+}
+
+@keyframes pulse-glow {
+    0%, 100% {
+        filter: drop-shadow(0 0 3px rgba(2, 132, 199, 0.6));
+    }
+    50% {
+        filter: drop-shadow(0 0 8px rgba(2, 132, 199, 0.9));
+    }
+}
+
+@keyframes broom-spin {
+    0% {
+        transform: rotate(0deg) scale(0.96);
+    }
+    50% {
+        transform: rotate(180deg) scale(1.1);
+    }
+    100% {
+        transform: rotate(360deg) scale(1);
+    }
+}
+
+@keyframes drawer-slide-down {
+    0% {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 2. Dynamic Frosted Elevation & Compact Docking Architecture */
+#main-filter-bar,
+.filter-bar {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.risk-tabs-section {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#main-filter-bar.is-scrolled-docked,
+.filter-bar.is-scrolled-docked {
+    background: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(28px) saturate(210%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(210%) !important;
+    padding: 0.2rem 1rem !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    border-color: rgba(226, 232, 240, 0.95) !important;
+    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+}
+
+.risk-tabs-section.is-scrolled-docked {
+    top: 40px !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+    backdrop-filter: blur(28px) saturate(210%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(210%) !important;
+    padding: 0.2rem 0.5rem !important;
+    border-bottom-color: rgba(226, 232, 240, 0.95) !important;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.1) !important;
+}
+
+/* 3. Neo-Tactile Interactive KPI Cards Motion Suite */
+.risk-tab-card,
+.kpi-card,
+.trimester-kpi-card,
+.anc-visit-kpi-card {
+    will-change: transform, box-shadow;
+    position: relative;
+}
+
+/* Upward elevation lift & Specular Sheen on Hover */
+.risk-tab-card:hover,
+.kpi-card:hover,
+.trimester-kpi-card:hover,
+.anc-visit-kpi-card:hover {
+    transform: translateY(-4px) scale(1.015) !important;
+    border-color: rgba(255, 255, 255, 1) !important;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.11), 0 4px 8px rgba(15, 23, 42, 0.04), var(--glass-specular) !important;
+}
+
+/* Tactile 3D Depressed Inset Shadow Down-Press */
+.risk-tab-card:active,
+.kpi-card:active,
+.trimester-kpi-card:active,
+.anc-visit-kpi-card:active {
+    transform: translateY(2px) scale(0.98) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(15, 23, 42, 0.06) !important;
+    transition: transform 0.08s ease, box-shadow 0.08s ease !important;
+}
+
+/* Condition-Specific Luminous Glows on Hover */
+.risk-tab-card[data-tab="sa"]:hover,
+.kpi-card.persistent:hover,
+.kpi-card.preeclampsia:hover {
+    box-shadow: 0 16px 36px rgba(255, 42, 109, 0.28), 0 0 0 1.5px rgba(255, 42, 109, 0.35) !important;
+}
+
+.risk-tab-card[data-tab="sc"]:hover,
+.kpi-card.mo-pending:hover {
+    box-shadow: 0 16px 36px rgba(121, 40, 202, 0.28), 0 0 0 1.5px rgba(121, 40, 202, 0.35) !important;
+}
+
+.risk-tab-card[data-tab="pi"]:hover,
+.risk-tab-card[data-tab="ma"]:hover,
+.kpi-card.improving:hover,
+.kpi-card.uncontrolled:hover,
+.kpi-card.missed-anc:hover,
+.trimester-kpi-card.card-t2:hover {
+    box-shadow: 0 16px 36px rgba(247, 127, 0, 0.28), 0 0 0 1.5px rgba(247, 127, 0, 0.35) !important;
+}
+
+.risk-tab-card[data-tab="gd"]:hover,
+.risk-tab-card[data-tab="anc"]:hover,
+.risk-tab-card[data-tab="all"]:hover,
+.kpi-card.mild:hover,
+.trimester-kpi-card.card-t1:hover {
+    box-shadow: 0 16px 36px rgba(0, 180, 216, 0.28), 0 0 0 1.5px rgba(0, 180, 216, 0.35) !important;
+}
+
+.risk-tab-card[data-tab="ls"]:hover,
+.kpi-card.resolved:hover,
+.kpi-card.controlled:hover {
+    box-shadow: 0 16px 36px rgba(16, 185, 129, 0.28), 0 0 0 1.5px rgba(16, 185, 129, 0.35) !important;
+}
+
+.trimester-kpi-card.card-t3:hover,
+.kpi-card.overdue:hover,
+.kpi-card.overdue-kpi:hover {
+    box-shadow: 0 16px 36px rgba(225, 29, 72, 0.28), 0 0 0 1.5px rgba(225, 29, 72, 0.35) !important;
+}
+
+/* Selected Active Card Breathing Pulse Ring */
+.risk-tab-card.active,
+.kpi-card.active,
+.kpi-card.active-kpi-filter,
+.trimester-kpi-card.active,
+.trimester-kpi-card.active-trimester-filter,
+.anc-visit-kpi-card.active,
+.anc-visit-kpi-card.active-visit-filter {
+    border-color: #0284c7 !important;
+    animation: neo-pulse-ring 2.4s cubic-bezier(0.25, 0.8, 0.25, 1) infinite !important;
+}
+
+.risk-tab-card.active .risk-indicator {
+    animation: pulse-glow 2s ease-in-out infinite !important;
+}
+
+/* 4. Filter Chips & Buttons Neo-Tactile 3D Styling */
+.filter-chip {
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.filter-chip:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: 0 8px 20px rgba(2, 132, 199, 0.18), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+}
+
+.filter-chip:active {
+    transform: translateY(2px) scale(0.97) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18) !important;
+}
+
+.filter-chip:focus-within {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.32), 0 8px 20px rgba(2, 132, 199, 0.18) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Animated chevron hover bounce */
+.filter-chip:hover select,
+.mgmt-filter-wrapper:hover select {
+    background-position: right 2px center !important;
+    transition: background-position 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Clear Filters Button Neo-Tactile */
+.btn-clear-chip {
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 6px rgba(225, 29, 72, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.btn-clear-chip:hover {
+    transform: translateY(-2px) scale(1.03) !important;
+    box-shadow: 0 8px 22px rgba(225, 29, 72, 0.32) !important;
+}
+
+.btn-clear-chip:active {
+    transform: translateY(2px) scale(0.96) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25) !important;
+}
+
+.btn-clear-chip.is-clearing {
+    animation: broom-spin 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 5. Buttons Neo-Tactile 3D Press Down-Sink */
+.main-view-btn,
+.btn-card-action,
+.btn-download-svg,
+.btn-call-chip,
+.btn-primary-sm,
+.uhrp-modal-close-btn,
+.anmol-btn-action,
+.delivery-ga-btn,
+.anmol-cohort-btn {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.main-view-btn:active,
+.btn-card-action:active,
+.btn-download-svg:active,
+.btn-call-chip:active,
+.btn-primary-sm:active,
+.anmol-btn-action:active {
+    transform: translateY(2px) scale(0.97) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18) !important;
+}
+
+.main-view-btn:hover {
+    transform: translateY(-1.5px) !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+}
+
+.main-view-btn.active {
+    box-shadow: 0 4px 16px rgba(255, 42, 109, 0.42), inset 0 1px 1px 0 rgba(255, 255, 255, 0.45) !important;
+}
+
+.main-view-btn.active:active {
+    transform: translateY(2px) scale(0.97) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(255, 42, 109, 0.2) !important;
+}
+
+/* Gestational Age & Cohort Segmented Toggle Buttons Neo-Tactile */
+.delivery-ga-btn:hover,
+.anmol-cohort-btn:hover {
+    transform: translateY(-1px);
+    color: #0f172a;
+}
+
+.delivery-ga-btn:active,
+.anmol-cohort-btn:active {
+    transform: translateY(1.5px) scale(0.96) !important;
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.18) !important;
+}
+
+.delivery-ga-btn.active {
+    box-shadow: 0 2px 10px rgba(2, 132, 199, 0.24), 0 0 0 1.5px rgba(2, 132, 199, 0.45) !important;
+}
+
+.anmol-cohort-btn.active {
+    box-shadow: 0 2px 10px rgba(255, 42, 109, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Modal Close Button Tactile */
+.uhrp-modal-close-btn:active {
+    transform: rotate(90deg) translateY(1.5px) scale(0.92) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* 6. Linelist Table Rows & Expandable Drawers Neo-Tactile */
+#linelist-table tr.patient-row,
+#linelist-table tr.expandable-row {
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s ease;
+}
+
+#linelist-table tr.patient-row:hover,
+#linelist-table tr.expandable-row:hover {
+    background-color: #ffffff !important;
+    position: relative;
+    z-index: 5;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1), inset 3.5px 0 0 0 #0284c7 !important;
+    transform: translateY(-1.5px) !important;
+}
+
+#linelist-table tr.expandable-row:active {
+    transform: translateY(1px) scale(0.998) !important;
+}
+
+/* Drawer Container GPU Slide-Down Animation */
+.drawer-container {
+    animation: drawer-slide-down 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+}
+
+/* 7. Accessibility: Prefers-Reduced-Motion Strict Fallback */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    .risk-tab-card:hover,
+    .kpi-card:hover,
+    .trimester-kpi-card:hover,
+    .anc-visit-kpi-card:hover,
+    .filter-chip:hover,
+    .btn-clear-chip:hover,
+    .main-view-btn:hover,
+    #linelist-table tr.patient-row:hover,
+    #linelist-table tr.expandable-row:hover {
+        transform: none !important;
+    }
+    .risk-tab-card:active,
+    .kpi-card:active,
+    .trimester-kpi-card:active,
+    .anc-visit-kpi-card:active,
+    .filter-chip:active,
+    .btn-clear-chip:active,
+    .main-view-btn:active {
+        transform: none !important;
+    }
+    .risk-tab-card.active,
+    .kpi-card.active,
+    .kpi-card.active-kpi-filter,
+    .trimester-kpi-card.active,
+    .trimester-kpi-card.active-trimester-filter,
+    .anc-visit-kpi-card.active,
+    .anc-visit-kpi-card.active-visit-filter {
+        animation: none !important;
+    }
+    .drawer-container {
+        animation: none !important;
+    }
+}
