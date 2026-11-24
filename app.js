@@ -1768,24 +1768,24 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (currentDeliveryGaFilter === 'lateterm') gaLabel = 'Late Term (>42 Weeks)';
 
         if (badgeEl) {
-            badgeEl.textContent = `${gaLabel}: ${(cases26.length + cases25.length).toLocaleString()} Total (26-27: ${cases26.length.toLocaleString()} | 25-26: ${cases25.length.toLocaleString()})`;
+            badgeEl.textContent = `${gaLabel}: ${(cases25.length + cases26.length).toLocaleString()} Total (25-26: ${cases25.length.toLocaleString()} | 26-27: ${cases26.length.toLocaleString()})`;
             badgeEl.style.background = '#e0f2fe';
             badgeEl.style.color = '#0369a1';
         }
 
-        const badge26El = document.getElementById('badge-delivery-2026-27');
-        if (badge26El) {
-            badge26El.textContent = `${cases26.length.toLocaleString()} Deliveries`;
-        }
         const badge25El = document.getElementById('badge-delivery-2025-26');
         if (badge25El) {
             badge25El.textContent = `${cases25.length.toLocaleString()} Deliveries`;
         }
+        const badge26El = document.getElementById('badge-delivery-2026-27');
+        if (badge26El) {
+            badge26El.textContent = `${cases26.length.toLocaleString()} Deliveries`;
+        }
 
         const effectiveToolbar = toolbarConfig || { show: true, tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false } };
 
-        renderSingleDeliveryDonut('2026-27', cases26, effectiveToolbar);
         renderSingleDeliveryDonut('2025-26', cases25, effectiveToolbar);
+        renderSingleDeliveryDonut('2026-27', cases26, effectiveToolbar);
     }
 
     // Download any chart directly as SVG file

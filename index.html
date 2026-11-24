@@ -432,22 +432,13 @@
                             </div>
 
                             <div style="display: flex; gap: 0.45rem; align-items: center;">
-                                <button type="button" class="btn-download-svg" data-target="chart-delivery-2026-27" data-filename="Delivery_Place_2026-27" title="Download 2026-27 chart as SVG">📥 2026-27 SVG</button>
                                 <button type="button" class="btn-download-svg" data-target="chart-delivery-2025-26" data-filename="Delivery_Place_2025-26" title="Download 2025-26 chart as SVG">📥 2025-26 SVG</button>
+                                <button type="button" class="btn-download-svg" data-target="chart-delivery-2026-27" data-filename="Delivery_Place_2026-27" title="Download 2026-27 chart as SVG">📥 2026-27 SVG</button>
                             </div>
                         </div>
 
-                        <!-- Side by Side Financial Year Donut Charts -->
+                        <!-- Side by Side Financial Year Donut Charts (Previous FY first, then Current FY) -->
                         <div class="delivery-charts-grid">
-                            <!-- 2026-27 (Current FY) Donut Pane -->
-                            <div class="delivery-chart-pane">
-                                <div class="delivery-pane-header">
-                                    <h4 class="delivery-pane-title">2026-27 (Current FY)</h4>
-                                    <span class="delivery-pane-badge" id="badge-delivery-2026-27">0 Deliveries</span>
-                                </div>
-                                <div id="chart-delivery-2026-27" class="chart-container" style="min-height: 290px;"></div>
-                            </div>
-
                             <!-- 2025-26 (Previous FY) Donut Pane -->
                             <div class="delivery-chart-pane">
                                 <div class="delivery-pane-header">
@@ -455,6 +446,15 @@
                                     <span class="delivery-pane-badge" id="badge-delivery-2025-26">0 Deliveries</span>
                                 </div>
                                 <div id="chart-delivery-2025-26" class="chart-container" style="min-height: 290px;"></div>
+                            </div>
+
+                            <!-- 2026-27 (Current FY) Donut Pane -->
+                            <div class="delivery-chart-pane">
+                                <div class="delivery-pane-header">
+                                    <h4 class="delivery-pane-title">2026-27 (Current FY)</h4>
+                                    <span class="delivery-pane-badge" id="badge-delivery-2026-27">0 Deliveries</span>
+                                </div>
+                                <div id="chart-delivery-2026-27" class="chart-container" style="min-height: 290px;"></div>
                             </div>
                         </div>
                     </div>
