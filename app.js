@@ -2896,6 +2896,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let series = [];
         let yaxisTitle = isAncTab ? 'Registrations' : '% Identified';
+        const hrpMonthly = { '2026-27': {}, '2025-26': {} };
 
         if (isAncTab) {
             // Count of ANC registrations YoY
@@ -2910,8 +2911,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { name: '2025-26 (Previous FY)', data: prevCounts }
             ];
         } else {
-            // Percentage of monthly ANC registrations YoY
-            const hrpMonthly = { '2026-27': {}, '2025-26': {} };
+            // Percentage of monthly ANC registrations YoY based on registration month
             hrpPool.forEach(p => {
                 const y = p.y;
                 if (!hrpMonthly[y]) return;
@@ -2926,7 +2926,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (matches) {
-                    const m = getPatientDiagnosisMonth(p, activeKey);
+                    const m = getPatientRegMonth(p) || getPatientDiagnosisMonth(p, activeKey);
                     if (m && monthsOrder.includes(m)) {
                         hrpMonthly[y][m] = (hrpMonthly[y][m] || 0) + 1;
                     }
@@ -2955,28 +2955,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const options = {
             series: series,
             chart: {
-                type: 'line',
-                height: 330,
+                type: 'bar',
+                height: 340,
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
                 toolbar: toolbarConfig || { show: true },
                 animations: { enabled: true, easing: 'easeinout', speed: 450 },
                 background: 'transparent'
             },
+            plotOptions: {
+                bar: {
+                    horizontal: false,
+                    columnWidth: '55%',
+                    borderRadius: 5,
+                    borderRadiusApplication: 'end'
+                }
+            },
+            dataLabels: {
+                enabled: false
+            },
             theme: {
                 mode: 'light'
             },
-            stroke: {
-                curve: 'smooth',
-                width: [3.5, 2.5],
-                dashArray: [0, 4]
-            },
-            colors: ['#ff2a6d', '#0284c7'],
-            markers: {
-                size: [5, 4],
-                strokeColors: '#ffffff',
-                strokeWidth: 2,
-                hover: { size: 7 }
-            },
+            colors: ['#0284c7', '#94a3b8'],
             xaxis: {
                 categories: monthsLabels,
                 labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#64748b' } },
@@ -3014,9 +3014,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 shared: true,
                 intersect: false,
                 y: {
-                    formatter: function (val) {
+                    formatter: function (val, { seriesIndex, dataPointIndex }) {
                         if (val === null || val === undefined) return 'N/A';
-                        return isAncTab ? `${val.toLocaleString()} PW registered` : `${val.toFixed(2)}% of monthly ANC`;
+                        if (isAncTab) {
+                            return `${val.toLocaleString()} PW registered`;
+                        } else {
+                            const ymKey = seriesIndex === 0 ? '2026-27' : '2025-26';
+                            const mCode = monthsOrder[dataPointIndex];
+                            const cnt = hrpMonthly[ymKey][mCode] || 0;
+                            const tot = ancMonthly[ymKey][mCode] || 0;
+                            return `${val.toFixed(2)}% (${cnt.toLocaleString()} cases / ${tot.toLocaleString()} ANC)`;
+                        }
                     }
                 }
             }
@@ -3112,29 +3120,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 { name: '2025-26 (Previous FY)', data: seriesPrev }
             ],
             chart: {
-                type: 'line',
-                height: 330,
+                type: 'bar',
+                height: 340,
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
                 toolbar: toolbarConfig || { show: true },
                 animations: { enabled: true, easing: 'easeinout', speed: 450 },
-                background: 'transparent',
-                dropShadow: { enabled: true, top: 4, left: 0, blur: 6, opacity: 0.12 }
+                background: 'transparent'
+            },
+            plotOptions: {
+                bar: {
+                    horizontal: false,
+                    columnWidth: '55%',
+                    borderRadius: 5,
+                    borderRadiusApplication: 'end'
+                }
+            },
+            dataLabels: {
+                enabled: false
             },
             theme: {
                 mode: 'light'
             },
-            stroke: {
-                curve: 'smooth',
-                width: [3.5, 2.5],
-                dashArray: [0, 4]
-            },
-            colors: ['#ff2a6d', '#7928ca'],
-            markers: {
-                size: [5, 4],
-                strokeColors: '#ffffff',
-                strokeWidth: 2,
-                hover: { size: 7 }
-            },
+            colors: ['#ff2a6d', '#94a3b8'],
             xaxis: {
                 categories: monthsLabels,
                 labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#64748b' } },
@@ -3371,11 +3378,24 @@ document.addEventListener('DOMContentLoaded', () => {
         let finalPatients = trimesterFilteredPatients;
 
         if (visitFilter !== null) {
-            const vIdx = visitFilter - 1;
-            finalPatients = finalPatients.filter(p => {
-                const vd = (p.v_dates || [])[vIdx];
-                return vd && vd !== '-' && vd !== null && vd !== 'None' && vd !== 'nan';
-            });
+            if (visitFilter === 0) {
+                finalPatients = finalPatients.filter(p => {
+                    const vDates = p.v_dates || [];
+                    for (let i = 0; i < 12; i++) {
+                        const vd = vDates[i];
+                        if (vd && vd !== '-' && vd !== null && vd !== 'None' && vd !== 'nan' && String(vd).trim() !== '') {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+            } else {
+                const vIdx = visitFilter - 1;
+                finalPatients = finalPatients.filter(p => {
+                    const vd = (p.v_dates || [])[vIdx];
+                    return vd && vd !== '-' && vd !== null && vd !== 'None' && vd !== 'nan' && String(vd).trim() !== '';
+                });
+            }
         }
 
         const countBadge = document.getElementById(elementIds.patientCountBadge);
@@ -4094,15 +4114,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!container) return;
 
         const visitCounts = Array(12).fill(0);
+        let zeroVisitCount = 0;
 
         tabPatients.forEach(p => {
             const vDates = p.v_dates || [];
+            let attendedCount = 0;
             for (let i = 0; i < 12; i++) {
                 // A visit is attended if v_dates[i] is a non-null, non-'-' date string
                 const vd = vDates[i];
-                if (vd && vd !== '-' && vd !== null) {
+                if (vd && vd !== '-' && vd !== null && vd !== 'None' && vd !== 'nan' && String(vd).trim() !== '') {
                     visitCounts[i]++;
+                    attendedCount++;
                 }
+            }
+            if (attendedCount === 0) {
+                zeroVisitCount++;
             }
         });
 
@@ -4131,6 +4157,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${visitFilter !== null ? `<span style="color:#0284c7; font-weight:800; cursor:pointer;" id="clear-visit-filter-btn">Clear Visit Filter (V${visitFilter}) ✖</span>` : ''}
             </div>
             <div class="anc-visit-kpi-grid">
+                <div class="anc-visit-kpi-card ${visitFilter === 0 ? 'active-visit-filter' : ''}" data-vnum="0" title="Click to filter line list for patients with 0 ANC visits updated">
+                    <span class="anc-vkpi-title">Visit 0</span>
+                    <span class="anc-vkpi-value">${zeroVisitCount}</span>
+                </div>
                 ${visitCounts.map((cnt, i) => {
                     const vNum = i + 1;
                     const isActive = visitFilter === vNum;
@@ -4395,11 +4425,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (visitFilter !== null) {
-            const vIdx = visitFilter - 1;
-            exportData = exportData.filter(p => {
-                const vd = (p.v_dates || [])[vIdx];
-                return vd && vd !== '-' && vd !== null && vd !== 'None' && vd !== 'nan';
-            });
+            if (visitFilter === 0) {
+                exportData = exportData.filter(p => {
+                    const vDates = p.v_dates || [];
+                    for (let i = 0; i < 12; i++) {
+                        const vd = vDates[i];
+                        if (vd && vd !== '-' && vd !== null && vd !== 'None' && vd !== 'nan' && String(vd).trim() !== '') {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+            } else {
+                const vIdx = visitFilter - 1;
+                exportData = exportData.filter(p => {
+                    const vd = (p.v_dates || [])[vIdx];
+                    return vd && vd !== '-' && vd !== null && vd !== 'None' && vd !== 'nan' && String(vd).trim() !== '';
+                });
+            }
         }
 
         const mgmtSelect = document.getElementById(elementIds.mgmtStatus);
