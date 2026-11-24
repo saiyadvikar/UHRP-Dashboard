@@ -40,6 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let monthlyTrendChartInstance = null;
     let deliveryChart2026Instance = null;
     let deliveryChart2025Instance = null;
+    let deliveryTypeChart2025Instance = null;
+    let deliveryTypeChart2026Instance = null;
     let currentDeliveryGaFilter = 'all'; // 'all', 'preterm', 'lateterm'
 
     // Hierarchy Mappings for Cascading Filters
@@ -3302,6 +3304,150 @@ document.addEventListener('DOMContentLoaded', () => {
         lateDeliveryChartInstance.render();
     }
 
+    // 4. Type of Delivery Pie Charts (Column AB from Delivery Line List)
+    function renderDeliveryTypeCharts(toolbarConfig) {
+        if (deliveryTypeChart2025Instance) {
+            deliveryTypeChart2025Instance.destroy();
+            deliveryTypeChart2025Instance = null;
+        }
+        if (deliveryTypeChart2026Instance) {
+            deliveryTypeChart2026Instance.destroy();
+            deliveryTypeChart2026Instance = null;
+        }
+
+        const el25 = document.getElementById('chart-delivery-type-2025-26');
+        const el26 = document.getElementById('chart-delivery-type-2026-27');
+        if (!el25 || !el26) return;
+        el25.innerHTML = '';
+        el26.innerHTML = '';
+
+        const blockVal = document.getElementById(elementIds.block)?.value || 'All';
+        const blockFilter = blockVal === 'All' ? null : blockVal.toLowerCase();
+        const blockSuffix = blockVal === 'All' ? '' : ` (${blockVal} Block)`;
+
+        const titleEl = document.getElementById('chart-delivery-type-title');
+        if (titleEl) {
+            titleEl.textContent = `🩺 Type of Delivery (YoY Comparison)${blockSuffix}`;
+        }
+
+        const dData = (typeof DASHBOARD_DATA !== 'undefined' ? DASHBOARD_DATA : (window.DASHBOARD_DATA || {})) || {};
+        const typeStats = dData.delivery_type_stats || {};
+
+        let statsBlockKey = 'All';
+        if (typeStats && blockFilter) {
+            const availBlocks = Object.keys(typeStats['2025-26'] || typeStats['2026-27'] || {});
+            const matched = availBlocks.find(b => b.toLowerCase() === blockFilter);
+            if (matched) statsBlockKey = matched;
+        }
+
+        const stats25 = (typeStats['2025-26'] && typeStats['2025-26'][statsBlockKey]) || {};
+        const stats26 = (typeStats['2026-27'] && typeStats['2026-27'][statsBlockKey]) || {};
+
+        const effectiveToolbar = toolbarConfig || {
+            show: true,
+            tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false }
+        };
+
+        renderSingleDeliveryTypePie('2025-26', el25, stats25, 'badge-delivery-type-2025-26', effectiveToolbar);
+        renderSingleDeliveryTypePie('2026-27', el26, stats26, 'badge-delivery-type-2026-27', effectiveToolbar);
+    }
+
+    function renderSingleDeliveryTypePie(fy, containerEl, statsObj, badgeId, toolbarConfig) {
+        const standardOrder = ['Vaginal Delivery', 'Caesarean (LSCS)', 'Assisted Delivery'];
+        const labels = [];
+        const series = [];
+
+        standardOrder.forEach(k => {
+            const cnt = statsObj[k] || 0;
+            if (cnt > 0) {
+                labels.push(k);
+                series.push(cnt);
+            }
+        });
+
+        Object.keys(statsObj).forEach(k => {
+            if (!standardOrder.includes(k) && statsObj[k] > 0) {
+                labels.push(k);
+                series.push(statsObj[k]);
+            }
+        });
+
+        const total = series.reduce((a, b) => a + b, 0);
+        const badgeEl = document.getElementById(badgeId);
+        if (badgeEl) {
+            badgeEl.textContent = `${total.toLocaleString()} Deliveries`;
+        }
+
+        if (total === 0) {
+            containerEl.innerHTML = `<div style="display:flex; height:240px; align-items:center; justify-content:center; color:#94a3b8; font-size:12px; font-weight:600;">No delivery records found for ${fy}</div>`;
+            return;
+        }
+
+        const colorMap = {
+            'Vaginal Delivery': '#10b981',       // Emerald
+            'Caesarean (LSCS)': '#0284c7',       // Blue
+            'Assisted Delivery': '#f59e0b',      // Amber
+            'Unknown': '#94a3b8'                 // Slate
+        };
+        const colors = labels.map(l => colorMap[l] || '#8b5cf6');
+
+        const options = {
+            series: series,
+            labels: labels,
+            chart: {
+                type: 'pie',
+                height: 310,
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+                toolbar: toolbarConfig || { show: true },
+                animations: { enabled: true, easing: 'easeinout', speed: 450 }
+            },
+            colors: colors,
+            dataLabels: {
+                enabled: true,
+                formatter: function (val, opts) {
+                    return `${val.toFixed(1)}%`;
+                },
+                style: {
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif'
+                },
+                dropShadow: { enabled: false }
+            },
+            legend: {
+                position: 'bottom',
+                fontSize: '11.5px',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+                labels: { colors: '#334155' },
+                markers: { radius: 12, width: 9, height: 9 },
+                formatter: function (seriesName, opts) {
+                    const val = opts.w.globals.series[opts.seriesIndex];
+                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+                    return `${seriesName}: ${val.toLocaleString()} (${pct}%)`;
+                }
+            },
+            tooltip: {
+                theme: 'light',
+                y: {
+                    formatter: function (val, opts) {
+                        const pct = total > 0 ? ((val / total) * 100).toFixed(2) : '0.00';
+                        return `${val.toLocaleString()} deliveries (${pct}%)`;
+                    }
+                }
+            },
+            stroke: {
+                width: 2,
+                colors: ['#ffffff']
+            }
+        };
+
+        const chartInstance = new ApexCharts(containerEl, options);
+        chartInstance.render();
+
+        if (fy === '2025-26') deliveryTypeChart2025Instance = chartInstance;
+        else deliveryTypeChart2026Instance = chartInstance;
+    }
+
     function renderAnalyticsCharts(filteredTabPatients) {
         currentAnalyticsPatients = filteredTabPatients;
         const toolbarConfig = {
@@ -3325,6 +3471,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 3. Delivery Place Distribution Donut Chart
         renderDeliveryPlaceChart(filteredTabPatients, toolbarConfig);
+
+        // 4. Type of Delivery Pie Charts (YoY Comparison from Delivery Line List Column AB)
+        renderDeliveryTypeCharts(toolbarConfig);
 
         setupSvgDownloadButtons();
     }

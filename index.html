@@ -458,6 +458,42 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- 4. Type of Delivery Pie Charts (Side-by-Side YoY Comparison from Delivery Line List Column AB) -->
+                    <div class="chart-card-modern chart-card-fullwidth" style="margin-top: 1.25rem;">
+                        <div class="chart-header" style="flex-wrap: wrap; gap: 0.75rem;">
+                            <div>
+                                <h3 id="chart-delivery-type-title">🩺 Type of Delivery (YoY Comparison)</h3>
+                                <span class="chart-badge" id="chart-delivery-type-badge">Vaginal vs Caesarean (LSCS) vs Assisted Deliveries</span>
+                            </div>
+
+                            <div style="display: flex; gap: 0.45rem; align-items: center;">
+                                <button type="button" class="btn-download-svg" data-target="chart-delivery-type-2025-26" data-filename="Delivery_Type_2025-26" title="Download 2025-26 chart as SVG">📥 2025-26 SVG</button>
+                                <button type="button" class="btn-download-svg" data-target="chart-delivery-type-2026-27" data-filename="Delivery_Type_2026-27" title="Download 2026-27 chart as SVG">📥 2026-27 SVG</button>
+                            </div>
+                        </div>
+
+                        <!-- Side by Side Financial Year Pie Charts (Previous FY first, then Current FY) -->
+                        <div class="delivery-charts-grid">
+                            <!-- 2025-26 (Previous FY) Pie Pane -->
+                            <div class="delivery-chart-pane">
+                                <div class="delivery-pane-header">
+                                    <h4 class="delivery-pane-title">2025-26 (Previous FY)</h4>
+                                    <span class="delivery-pane-badge" id="badge-delivery-type-2025-26">0 Deliveries</span>
+                                </div>
+                                <div id="chart-delivery-type-2025-26" class="chart-container" style="min-height: 290px;"></div>
+                            </div>
+
+                            <!-- 2026-27 (Current FY) Pie Pane -->
+                            <div class="delivery-chart-pane">
+                                <div class="delivery-pane-header">
+                                    <h4 class="delivery-pane-title">2026-27 (Current FY)</h4>
+                                    <span class="delivery-pane-badge" id="badge-delivery-type-2026-27">0 Deliveries</span>
+                                </div>
+                                <div id="chart-delivery-type-2026-27" class="chart-container" style="min-height: 290px;"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </div>

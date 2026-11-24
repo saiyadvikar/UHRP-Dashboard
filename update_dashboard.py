@@ -457,10 +457,14 @@ def load_delivery_linelist(del_dir=None):
     del_files = discover_excel_files(["Delivery_Line_List_Report*.xlsx", "Delivery_Line_List*.xlsx"], fallback_dirs=fallback)
     if not del_files:
         print("  ⚠️ No Delivery Line List files found.")
-        return {}, {'2025-26': {}, '2026-27': {}}
+        return {}, {'2025-26': {}, '2026-27': {}}, {'2025-26': {}, '2026-27': {}}
 
     delivery_map = {}
     monthly_stats = {
+        '2025-26': {},
+        '2026-27': {}
+    }
+    delivery_type_stats = {
         '2025-26': {},
         '2026-27': {}
     }
@@ -481,6 +485,7 @@ def load_delivery_linelist(del_dir=None):
             fac_name_idx = headers.index('Facility Name') if 'Facility Name' in headers else 19
             bp_adm_idx = headers.index('BP At Admission') if 'BP At Admission' in headers else 20
             hb_adm_idx = headers.index('HB on LR admission') if 'HB on LR admission' in headers else 28
+            del_type_idx = headers.index('Type of Delivery') if 'Type of Delivery' in headers else 27
             del_date_idx = headers.index('Date of Delivery') if 'Date of Delivery' in headers else 35
             lmp_indices = [i for i, h in enumerate(headers) if 'lmp' in str(h).lower()]
             lmp_idx = lmp_indices[0] if lmp_indices else 12
@@ -511,6 +516,23 @@ def load_delivery_linelist(del_dir=None):
                                 monthly_stats[del_fy][scope][m_str]['tot'] += 1
                                 if ga_days > 294: # >42 weeks (Post Term)
                                     monthly_stats[del_fy][scope][m_str]['late'] += 1
+
+                        # Track Type of Delivery (Column AB)
+                        raw_dtype = str(r[del_type_idx] or '').strip() if del_type_idx < len(r) else ''
+                        if not raw_dtype or raw_dtype.lower() in ('none', 'nan', '-', ''):
+                            dtype_clean = 'Unknown'
+                        elif 'caesarean' in raw_dtype.lower() or 'cesarean' in raw_dtype.lower() or 'lscs' in raw_dtype.lower():
+                            dtype_clean = 'Caesarean (LSCS)'
+                        elif 'vaginal' in raw_dtype.lower() or 'normal' in raw_dtype.lower():
+                            dtype_clean = 'Vaginal Delivery'
+                        elif 'assisted' in raw_dtype.lower() or 'forceps' in raw_dtype.lower() or 'vacuum' in raw_dtype.lower():
+                            dtype_clean = 'Assisted Delivery'
+                        else:
+                            dtype_clean = raw_dtype.title()
+
+                        for scope in ['All', b_str]:
+                            delivery_type_stats[del_fy].setdefault(scope, {})
+                            delivery_type_stats[del_fy][scope][dtype_clean] = delivery_type_stats[del_fy][scope].get(dtype_clean, 0) + 1
 
                 # 2. Map patient delivery information
                 if mpid_idx < len(r) and r[mpid_idx] is not None:
@@ -547,6 +569,7 @@ def load_delivery_linelist(del_dir=None):
                             'dt_del': dt_del,
                             'dt_lmp': dt_lmp,
                             'del_cat': cat,
+                            'del_type': str(r[del_type_idx] or '').strip() if del_type_idx < len(r) else '',
                             'mat_death': mat_death in ('yes', 'true', '1'),
                             'hb_lr': lr_hb_val,
                             'bp_adm': bp_adm_val,
@@ -556,7 +579,7 @@ def load_delivery_linelist(del_dir=None):
                         })
         except Exception as e:
             print(f"  ❌ Error loading {os.path.basename(del_path)}: {e}")
-    return delivery_map, monthly_stats
+    return delivery_map, monthly_stats, delivery_type_stats
 
 def find_matching_delivery(delivery_entries, lmp_date_val, reg_date_val=None, fy_val=None):
     """
@@ -792,7 +815,7 @@ def main():
     # STEP 4: LOAD DELIVERY LINE LIST & ANC DENOMINATOR
     # ===================================================================
     print("\n[4/5] Loading Delivery Line List & ANC files...")
-    delivery_lookup, monthly_delivery_stats = load_delivery_linelist(DELIVERY_DIR)
+    delivery_lookup, monthly_delivery_stats, delivery_type_stats = load_delivery_linelist(DELIVERY_DIR)
     sub_to_phc_map, village_to_loc_map, anm_map, cho_map = load_location_hierarchy(LOCATION_DIR)
 
     anc_files = discover_excel_files(["ANC_Line_list_Report*.xlsx", "ANC_Line_List*.xlsx", "*ANC_Line_list*"], fallback_dirs=[ANC_DIR])
@@ -1723,6 +1746,7 @@ def main():
         'hrp_raw_counts': hrp_raw_counts,
         'anc_counts': anc_counts,
         'monthly_delivery_stats': monthly_delivery_stats,
+        'delivery_type_stats': delivery_type_stats,
         'nmr_by_factor': nmr_by_factor,
         'nmr_total_matched': 0,
         'nmr_total_nnd': 0,
