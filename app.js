@@ -2967,16 +2967,56 @@ document.addEventListener('DOMContentLoaded', () => {
                     horizontal: false,
                     columnWidth: '55%',
                     borderRadius: 5,
-                    borderRadiusApplication: 'end'
+                    borderRadiusApplication: 'end',
+                    dataLabels: {
+                        position: 'top'
+                    }
                 }
             },
             dataLabels: {
-                enabled: false
+                enabled: true,
+                offsetY: -18,
+                style: {
+                    fontSize: '10.5px',
+                    fontWeight: 700,
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+                    colors: [
+                        function ({ seriesIndex, dataPointIndex, w }) {
+                            if (seriesIndex !== 0) return 'transparent';
+                            const s0 = w.config.series[0]?.data;
+                            const s1 = w.config.series[1]?.data;
+                            if (!s0 || !s1) return 'transparent';
+                            const vCurr = s0[dataPointIndex];
+                            const vPrev = s1[dataPointIndex];
+                            if (vCurr === null || vCurr === undefined || vPrev === null || vPrev === undefined) return 'transparent';
+                            const diff = vCurr - vPrev;
+                            if (diff > 0) return '#16a34a'; // Green for positive % change
+                            if (diff < 0) return '#ef4444'; // Red for negative % change
+                            return '#64748b'; // Neutral slate
+                        }
+                    ]
+                },
+                background: {
+                    enabled: false
+                },
+                formatter: function (val, { seriesIndex, dataPointIndex, w }) {
+                    if (seriesIndex !== 0) return '';
+                    if (val === null || val === undefined) return '';
+                    const s1 = w.config.series[1]?.data;
+                    if (!s1) return '';
+                    const vPrev = s1[dataPointIndex];
+                    if (vPrev === null || vPrev === undefined) return '';
+                    if (vPrev === 0) {
+                        return val > 0 ? '+100%' : '0%';
+                    }
+                    const pct = ((val - vPrev) / vPrev) * 100;
+                    return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+                }
             },
             theme: {
                 mode: 'light'
             },
-            colors: ['#0284c7', '#94a3b8'],
+            colors: ['#0284c7', '#ef4444'],
             xaxis: {
                 categories: monthsLabels,
                 labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#64748b' } },
@@ -3007,23 +3047,33 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             grid: {
                 borderColor: 'rgba(226, 232, 240, 0.9)',
-                strokeDashArray: 4
+                strokeDashArray: 4,
+                padding: {
+                    top: 20
+                }
             },
             tooltip: {
                 theme: 'light',
                 shared: true,
                 intersect: false,
                 y: {
-                    formatter: function (val, { seriesIndex, dataPointIndex }) {
+                    formatter: function (val, { seriesIndex, dataPointIndex, w }) {
                         if (val === null || val === undefined) return 'N/A';
+                        const s1 = w.config.series[1]?.data;
+                        const prevVal = s1 ? s1[dataPointIndex] : null;
+                        let yoyTag = '';
+                        if (seriesIndex === 0 && prevVal !== null && prevVal !== undefined && prevVal > 0) {
+                            const chg = ((val - prevVal) / prevVal) * 100;
+                            yoyTag = ` [${chg >= 0 ? '+' : ''}${chg.toFixed(1)}% YoY]`;
+                        }
                         if (isAncTab) {
-                            return `${val.toLocaleString()} PW registered`;
+                            return `${val.toLocaleString()} PW registered${yoyTag}`;
                         } else {
                             const ymKey = seriesIndex === 0 ? '2026-27' : '2025-26';
                             const mCode = monthsOrder[dataPointIndex];
                             const cnt = hrpMonthly[ymKey][mCode] || 0;
                             const tot = ancMonthly[ymKey][mCode] || 0;
-                            return `${val.toFixed(2)}% (${cnt.toLocaleString()} cases / ${tot.toLocaleString()} ANC)`;
+                            return `${val.toFixed(2)}% (${cnt.toLocaleString()} cases / ${tot.toLocaleString()} ANC)${yoyTag}`;
                         }
                     }
                 }
@@ -3132,16 +3182,56 @@ document.addEventListener('DOMContentLoaded', () => {
                     horizontal: false,
                     columnWidth: '55%',
                     borderRadius: 5,
-                    borderRadiusApplication: 'end'
+                    borderRadiusApplication: 'end',
+                    dataLabels: {
+                        position: 'top'
+                    }
                 }
             },
             dataLabels: {
-                enabled: false
+                enabled: true,
+                offsetY: -18,
+                style: {
+                    fontSize: '10.5px',
+                    fontWeight: 700,
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+                    colors: [
+                        function ({ seriesIndex, dataPointIndex, w }) {
+                            if (seriesIndex !== 0) return 'transparent';
+                            const s0 = w.config.series[0]?.data;
+                            const s1 = w.config.series[1]?.data;
+                            if (!s0 || !s1) return 'transparent';
+                            const vCurr = s0[dataPointIndex];
+                            const vPrev = s1[dataPointIndex];
+                            if (vCurr === null || vCurr === undefined || vPrev === null || vPrev === undefined) return 'transparent';
+                            const diff = vCurr - vPrev;
+                            if (diff > 0) return '#16a34a'; // Green for positive % change
+                            if (diff < 0) return '#ef4444'; // Red for negative % change
+                            return '#64748b'; // Neutral slate
+                        }
+                    ]
+                },
+                background: {
+                    enabled: false
+                },
+                formatter: function (val, { seriesIndex, dataPointIndex, w }) {
+                    if (seriesIndex !== 0) return '';
+                    if (val === null || val === undefined) return '';
+                    const s1 = w.config.series[1]?.data;
+                    if (!s1) return '';
+                    const vPrev = s1[dataPointIndex];
+                    if (vPrev === null || vPrev === undefined) return '';
+                    if (vPrev === 0) {
+                        return val > 0 ? '+100%' : '0%';
+                    }
+                    const pct = ((val - vPrev) / vPrev) * 100;
+                    return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+                }
             },
             theme: {
                 mode: 'light'
             },
-            colors: ['#ff2a6d', '#94a3b8'],
+            colors: ['#0284c7', '#ef4444'],
             xaxis: {
                 categories: monthsLabels,
                 labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#64748b' } },
@@ -3179,20 +3269,30 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             grid: {
                 borderColor: 'rgba(226, 232, 240, 0.9)',
-                strokeDashArray: 4
+                strokeDashArray: 4,
+                padding: {
+                    top: 20
+                }
             },
             tooltip: {
                 theme: 'light',
                 shared: true,
                 intersect: false,
                 y: {
-                    formatter: function (val, { seriesIndex, dataPointIndex }) {
+                    formatter: function (val, { seriesIndex, dataPointIndex, w }) {
                         if (val === null || val === undefined) return 'No data (Future Month)';
                         const m = monthsOrder[dataPointIndex];
                         const fy = seriesIndex === 0 ? '2026-27' : '2025-26';
                         const tot = (monthlyTot[fy] && monthlyTot[fy][m]) || 0;
                         const lateC = (monthlyLate[fy] && monthlyLate[fy][m]) || 0;
-                        return `${val.toFixed(2)}% (${lateC.toLocaleString()} / ${tot.toLocaleString()} deliveries)`;
+                        let yoyTag = '';
+                        const s1 = w.config.series[1]?.data;
+                        const prevVal = s1 ? s1[dataPointIndex] : null;
+                        if (seriesIndex === 0 && prevVal !== null && prevVal !== undefined && prevVal > 0) {
+                            const chg = ((val - prevVal) / prevVal) * 100;
+                            yoyTag = ` [${chg >= 0 ? '+' : ''}${chg.toFixed(1)}% YoY]`;
+                        }
+                        return `${val.toFixed(2)}% (${lateC.toLocaleString()} / ${tot.toLocaleString()} deliveries)${yoyTag}`;
                     }
                 }
             }
