@@ -7,7 +7,6 @@ import os, glob, json, time, sys, re, datetime
 import pandas as pd
 import numpy as np
 import openpyxl
-from difflib import SequenceMatcher
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -274,10 +273,6 @@ def clean_mobile(v):
     if len(s) == 12 and s.startswith('91'): s = s[2:]
     if len(s) == 10 and s not in ('9999999999', '0000000000'): return s
     return ''
-
-def fuzzy_match(s1, s2, threshold=0.75):
-    if not s1 or not s2: return False
-    return SequenceMatcher(None, s1, s2).ratio() >= threshold
 
 def clean_v_key(s):
     if not s or pd.isna(s): return ''

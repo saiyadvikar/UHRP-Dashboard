@@ -226,6 +226,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return name.replace(/\s*-\s*\d+$/g, '').replace(/\s*\(\d+\)$/g, '').trim();
     }
 
+    // Helper: Debounce function execution
+    function debounce(fn, delay = 250) {
+        let timer = null;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn(...args), delay);
+        };
+    }
+
     // Main View Navigation Handler
     function switchMainView(viewName, skipSave) {
         const btns = document.querySelectorAll('.main-view-btn');
@@ -4277,224 +4286,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    // Render Hb 12-visit chart with Gaps (connectNulls: false)
-    function renderHbSparkline(mpid, patient) {
-        const hbArr = patient.hb_v || [];
-        
-        // Build 12 category series with visit numbers (dates removed from X-axis as requested)
-        const categories = Array.from({ length: 12 }, (_, i) => `Visit ${i + 1}`);
-        const seriesData = categories.map((cat, i) => {
-            const val = hbArr[i];
-            return (val !== undefined && val !== null && !isNaN(val)) ? val : null;
-        });
-
-        const validHb = seriesData.filter(v => v !== null);
-        const statusEl = document.getElementById(`drawer-status-${mpid}`);
-        const chartEl = document.getElementById(`chart-${mpid}`);
-
-        if (validHb.length === 0) {
-            if (statusEl) statusEl.innerHTML = `<span class="status-badge" style="background:#f1f5f9; color:#475569;">No ANC Hb Data Recorded</span>`;
-            if (chartEl) chartEl.innerHTML = `<div style="text-align:center; padding:1.25rem; color:#94a3b8; font-size:12px;">No 12-visit Hemoglobin records found in ANC database for this patient.</div>`;
-            return;
-        }
-
-        const latestHb = validHb[validHb.length - 1];
-
-        let badgeHtml = '';
-        if (latestHb >= 11.0) {
-            badgeHtml = `<span class="status-badge badge-resolved">✓ Severe Anemia Resolved (Latest Hb: ${latestHb} g/dL)</span>`;
-        } else if (latestHb >= 7.0) {
-            badgeHtml = `<span class="status-badge badge-improving">Moderate Anemia (Latest Hb: ${latestHb} g/dL)</span>`;
-        } else {
-            badgeHtml = `<span class="status-badge badge-persistent">⚠️ Severe Anemia (Latest Hb: ${latestHb} g/dL)</span>`;
-        }
-        if (statusEl) statusEl.innerHTML = badgeHtml;
-        if (!chartEl) return;
-
-        let isSubtitle = '💉 Inj. Iron Sucrose: Not Recorded / Not Given';
-        const pointAnnotations = [];
-        if (patient.is_doses && patient.is_doses.length > 0) {
-            isSubtitle = `💉 Inj. Iron Sucrose: ${patient.is_doses.length} / 5 Dose(s) Administered [marked with ✕ crosses]`;
-
-            const vDates = patient.v_dates || [];
-            const validVisits = [];
-            for (let i = 0; i < 12; i++) {
-                const vdStr = vDates[i];
-                if (vdStr && vdStr !== '-' && vdStr !== 'None' && vdStr !== 'nan') {
-                    const parsed = parseDate(vdStr);
-                    if (parsed && !isNaN(parsed.getTime())) {
-                        validVisits.push({ index: i, time: parsed.getTime() });
-                    }
-                }
-            }
-
-            const dosesPerVisit = {};
-            const doseMappings = patient.is_doses.map(doseStr => {
-                const parsedDose = parseDate(doseStr);
-                const doseTime = parsedDose ? parsedDose.getTime() : 0;
-                let bestIdx = 0;
-                let minDiff = Infinity;
-                if (validVisits.length > 0) {
-                    validVisits.forEach(v => {
-                        const diff = Math.abs(doseTime - v.time);
-                        if (diff < minDiff) {
-                            minDiff = diff;
-                            bestIdx = v.index;
-                        }
-                    });
-                }
-                dosesPerVisit[bestIdx] = (dosesPerVisit[bestIdx] || 0) + 1;
-                return { doseStr, bestIdx };
-            });
-
-            const visitDoseCounter = {};
-            doseMappings.forEach(mapping => {
-                const idx = mapping.bestIdx;
-                const occurrence = visitDoseCounter[idx] || 0;
-                visitDoseCounter[idx] = occurrence + 1;
-                const totalAtThisVisit = dosesPerVisit[idx];
-
-                const baseHb = seriesData[idx] !== null ? seriesData[idx] : 7.0;
-                const yOffset = totalAtThisVisit > 1 ? (occurrence - (totalAtThisVisit + 1) / 2) * 0.45 : 0;
-                const ptY = Math.round((baseHb + yOffset) * 100) / 100;
-
-                pointAnnotations.push({
-                    x: `Visit ${idx + 1}`,
-                    y: ptY,
-                    marker: {
-                        size: 7,
-                        shape: 'cross',
-                        fillColor: '#7928ca',
-                        strokeColor: '#7928ca',
-                        strokeWidth: 3,
-                        radius: 2
-                    },
-                    label: {
-                        text: '',
-                        borderWidth: 0,
-                        style: {
-                            color: 'transparent',
-                            background: 'transparent'
-                        }
-                    }
-                });
-            });
-        }
-
-        const chartHeight = window.innerWidth <= 768 ? 150 : 170;
-        const options = {
-            series: [{ name: 'Hemoglobin (g/dL)', data: seriesData }],
-            chart: { type: 'line', height: chartHeight, toolbar: { show: false } },
-            subtitle: {
-                text: isSubtitle,
-                align: 'left',
-                style: {
-                    fontSize: '11px',
-                    color: (patient.is_doses && patient.is_doses.length > 0) ? '#ff2a6d' : '#64748b',
-                    fontWeight: 600
-                }
-            },
-            colors: ['#ff2a6d'],
-            stroke: { curve: 'smooth', width: 3, connectNulls: false },
-            markers: { size: 5, colors: ['#ff2a6d'] },
-            xaxis: { categories, labels: { style: { fontSize: '10px' } } },
-            yaxis: { min: 4, max: 16, title: { text: 'Hb (g/dL)' } },
-            annotations: {
-                yaxis: [{
-                    y: 11.0,
-                    borderColor: '#10b981',
-                    label: { borderColor: '#10b981', style: { color: '#fff', background: '#10b981' }, text: 'Normal Cutoff (11.0 g/dL)' }
-                }, {
-                    y: 7.0,
-                    borderColor: '#ff2a6d',
-                    label: { borderColor: '#ff2a6d', style: { color: '#fff', background: '#ff2a6d' }, text: 'Severe Cutoff (7.0 g/dL)' }
-                }],
-                points: pointAnnotations
-            }
-        };
-
-        chartEl.innerHTML = '';
-        const chart = new ApexCharts(chartEl, options);
-        chart.render();
-    }
-
-    // Render BP 12-visit chart with Gaps (connectNulls: false)
-    function renderBpSparkline(mpid, patient) {
-        const bpArr = patient.bp_v || [];
-
-        // Build 12 category series with visit numbers (dates removed from X-axis as requested)
-        const categories = Array.from({ length: 12 }, (_, i) => `Visit ${i + 1}`);
-        const sysData = [];
-        const diaData = [];
-
-        for (let i = 0; i < 12; i++) {
-            const val = bpArr[i];
-            if (val && typeof val === 'string' && val.includes('/')) {
-                const parts = val.split('/');
-                const sys = parseFloat(parts[0]);
-                const dia = parseFloat(parts[1]);
-                sysData.push(isNaN(sys) ? null : sys);
-                diaData.push(isNaN(dia) ? null : dia);
-            } else {
-                sysData.push(null);
-                diaData.push(null);
-            }
-        }
-
-        const statusEl = document.getElementById(`drawer-status-${mpid}`);
-        const chartEl = document.getElementById(`chart-${mpid}`);
-
-        const validSys = sysData.filter(d => d !== null);
-        const validDia = diaData.filter(d => d !== null);
-
-        if (validSys.length === 0) {
-            if (statusEl) statusEl.innerHTML = `<span class="status-badge" style="background:#f1f5f9; color:#475569;">No ANC BP Data Recorded</span>`;
-            if (chartEl) chartEl.innerHTML = `<div style="text-align:center; padding:1.25rem; color:#94a3b8; font-size:12px;">No 12-visit Blood Pressure records found in ANC database for this patient.</div>`;
-            return;
-        }
-
-        const latestSys = validSys[validSys.length - 1];
-        const latestDia = validDia[validDia.length - 1];
-
-        let badgeHtml = '';
-        if (latestSys < 140 && latestDia < 90) {
-            badgeHtml = `<span class="status-badge badge-controlled">✓ BP Under Control (${latestSys}/${latestDia} mmHg)</span>`;
-        } else {
-            badgeHtml = `<span class="status-badge badge-uncontrolled">⚠️ BP Uncontrolled (${latestSys}/${latestDia} mmHg)</span>`;
-        }
-        if (statusEl) statusEl.innerHTML = badgeHtml;
-        if (!chartEl) return;
-
-        const chartHeight = window.innerWidth <= 768 ? 150 : 170;
-        const options = {
-            series: [
-                { name: 'Systolic BP (mmHg)', data: sysData },
-                { name: 'Diastolic BP (mmHg)', data: diaData }
-            ],
-            chart: { type: 'line', height: chartHeight, toolbar: { show: false } },
-            colors: ['#ea580c', '#d97706'],
-            stroke: { curve: 'smooth', width: 3, connectNulls: false },
-            markers: { size: 5 },
-            xaxis: { categories },
-            yaxis: { min: 50, max: 200, title: { text: 'BP (mmHg)' } },
-            annotations: {
-                yaxis: [{
-                    y: 140,
-                    borderColor: '#ea580c',
-                    label: { borderColor: '#ea580c', style: { color: '#fff', background: '#ea580c' }, text: 'Systolic Cutoff (140 mmHg)' }
-                }, {
-                    y: 90,
-                    borderColor: '#d97706',
-                    label: { borderColor: '#d97706', style: { color: '#fff', background: '#d97706' }, text: 'Diastolic Cutoff (90 mmHg)' }
-                }]
-            }
-        };
-
-        chartEl.innerHTML = '';
-        const chart = new ApexCharts(chartEl, options);
-        chart.render();
-    }
-
     // Tab Switching Handling
     function setupTabs() {
         const tabCards = document.querySelectorAll('.risk-tab-card');
@@ -4787,11 +4578,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const searchInput = document.getElementById(elementIds.searchInput);
         if (searchInput) {
-            searchInput.addEventListener('input', () => {
+            searchInput.addEventListener('input', debounce(() => {
                 initializedCharts = {};
                 currentPage = 1;
                 renderLineList();
-            });
+            }, 250));
         }
 
         // Pagination Controls
