@@ -2907,8 +2907,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const prevCounts = monthsOrder.map(m => ancMonthly['2025-26'][m] || 0);
 
             series = [
-                { name: '2026-27 (Current FY)', data: currCounts },
-                { name: '2025-26 (Previous FY)', data: prevCounts }
+                { name: '2025-26 (Previous FY)', data: prevCounts },
+                { name: '2026-27 (Current FY)', data: currCounts }
             ];
         } else {
             // Percentage of monthly ANC registrations YoY based on registration month
@@ -2947,8 +2947,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             series = [
-                { name: '2026-27 (Current FY)', data: currPcts },
-                { name: '2025-26 (Previous FY)', data: prevPcts }
+                { name: '2025-26 (Previous FY)', data: prevPcts },
+                { name: '2026-27 (Current FY)', data: currPcts }
             ];
         }
 
@@ -2982,12 +2982,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
                     colors: [
                         function ({ seriesIndex, dataPointIndex, w }) {
-                            if (seriesIndex !== 0) return 'transparent';
+                            if (seriesIndex !== 1) return 'transparent';
                             const s0 = w.config.series[0]?.data;
                             const s1 = w.config.series[1]?.data;
                             if (!s0 || !s1) return 'transparent';
-                            const vCurr = s0[dataPointIndex];
-                            const vPrev = s1[dataPointIndex];
+                            const vPrev = s0[dataPointIndex];
+                            const vCurr = s1[dataPointIndex];
                             if (vCurr === null || vCurr === undefined || vPrev === null || vPrev === undefined) return 'transparent';
                             const diff = vCurr - vPrev;
                             if (diff > 0) return '#16a34a'; // Green for positive % change
@@ -3000,11 +3000,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     enabled: false
                 },
                 formatter: function (val, { seriesIndex, dataPointIndex, w }) {
-                    if (seriesIndex !== 0) return '';
+                    if (seriesIndex !== 1) return '';
                     if (val === null || val === undefined) return '';
-                    const s1 = w.config.series[1]?.data;
-                    if (!s1) return '';
-                    const vPrev = s1[dataPointIndex];
+                    const s0 = w.config.series[0]?.data;
+                    if (!s0) return '';
+                    const vPrev = s0[dataPointIndex];
                     if (vPrev === null || vPrev === undefined) return '';
                     if (vPrev === 0) {
                         return val > 0 ? '+100%' : '0%';
@@ -3016,7 +3016,7 @@ document.addEventListener('DOMContentLoaded', () => {
             theme: {
                 mode: 'light'
             },
-            colors: ['#0284c7', '#ef4444'],
+            colors: ['#ef4444', '#0284c7'],
             xaxis: {
                 categories: monthsLabels,
                 labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#64748b' } },
@@ -3059,17 +3059,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 y: {
                     formatter: function (val, { seriesIndex, dataPointIndex, w }) {
                         if (val === null || val === undefined) return 'N/A';
-                        const s1 = w.config.series[1]?.data;
-                        const prevVal = s1 ? s1[dataPointIndex] : null;
+                        const s0 = w.config.series[0]?.data;
+                        const prevVal = s0 ? s0[dataPointIndex] : null;
                         let yoyTag = '';
-                        if (seriesIndex === 0 && prevVal !== null && prevVal !== undefined && prevVal > 0) {
+                        if (seriesIndex === 1 && prevVal !== null && prevVal !== undefined && prevVal > 0) {
                             const chg = ((val - prevVal) / prevVal) * 100;
                             yoyTag = ` [${chg >= 0 ? '+' : ''}${chg.toFixed(1)}% YoY]`;
                         }
                         if (isAncTab) {
                             return `${val.toLocaleString()} PW registered${yoyTag}`;
                         } else {
-                            const ymKey = seriesIndex === 0 ? '2026-27' : '2025-26';
+                            const ymKey = seriesIndex === 1 ? '2026-27' : '2025-26';
                             const mCode = monthsOrder[dataPointIndex];
                             const cnt = hrpMonthly[ymKey][mCode] || 0;
                             const tot = ancMonthly[ymKey][mCode] || 0;
@@ -3166,8 +3166,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const options = {
             series: [
-                { name: '2026-27 (Current FY)', data: seriesCurr },
-                { name: '2025-26 (Previous FY)', data: seriesPrev }
+                { name: '2025-26 (Previous FY)', data: seriesPrev },
+                { name: '2026-27 (Current FY)', data: seriesCurr }
             ],
             chart: {
                 type: 'bar',
@@ -3197,12 +3197,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
                     colors: [
                         function ({ seriesIndex, dataPointIndex, w }) {
-                            if (seriesIndex !== 0) return 'transparent';
+                            if (seriesIndex !== 1) return 'transparent';
                             const s0 = w.config.series[0]?.data;
                             const s1 = w.config.series[1]?.data;
                             if (!s0 || !s1) return 'transparent';
-                            const vCurr = s0[dataPointIndex];
-                            const vPrev = s1[dataPointIndex];
+                            const vPrev = s0[dataPointIndex];
+                            const vCurr = s1[dataPointIndex];
                             if (vCurr === null || vCurr === undefined || vPrev === null || vPrev === undefined) return 'transparent';
                             const diff = vCurr - vPrev;
                             if (diff > 0) return '#16a34a'; // Green for positive % change
@@ -3215,11 +3215,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     enabled: false
                 },
                 formatter: function (val, { seriesIndex, dataPointIndex, w }) {
-                    if (seriesIndex !== 0) return '';
+                    if (seriesIndex !== 1) return '';
                     if (val === null || val === undefined) return '';
-                    const s1 = w.config.series[1]?.data;
-                    if (!s1) return '';
-                    const vPrev = s1[dataPointIndex];
+                    const s0 = w.config.series[0]?.data;
+                    if (!s0) return '';
+                    const vPrev = s0[dataPointIndex];
                     if (vPrev === null || vPrev === undefined) return '';
                     if (vPrev === 0) {
                         return val > 0 ? '+100%' : '0%';
@@ -3231,7 +3231,7 @@ document.addEventListener('DOMContentLoaded', () => {
             theme: {
                 mode: 'light'
             },
-            colors: ['#0284c7', '#ef4444'],
+            colors: ['#ef4444', '#0284c7'],
             xaxis: {
                 categories: monthsLabels,
                 labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#64748b' } },
@@ -3282,13 +3282,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     formatter: function (val, { seriesIndex, dataPointIndex, w }) {
                         if (val === null || val === undefined) return 'No data (Future Month)';
                         const m = monthsOrder[dataPointIndex];
-                        const fy = seriesIndex === 0 ? '2026-27' : '2025-26';
+                        const fy = seriesIndex === 1 ? '2026-27' : '2025-26';
                         const tot = (monthlyTot[fy] && monthlyTot[fy][m]) || 0;
                         const lateC = (monthlyLate[fy] && monthlyLate[fy][m]) || 0;
                         let yoyTag = '';
-                        const s1 = w.config.series[1]?.data;
-                        const prevVal = s1 ? s1[dataPointIndex] : null;
-                        if (seriesIndex === 0 && prevVal !== null && prevVal !== undefined && prevVal > 0) {
+                        const s0 = w.config.series[0]?.data;
+                        const prevVal = s0 ? s0[dataPointIndex] : null;
+                        if (seriesIndex === 1 && prevVal !== null && prevVal !== undefined && prevVal > 0) {
                             const chg = ((val - prevVal) / prevVal) * 100;
                             yoyTag = ` [${chg >= 0 ? '+' : ''}${chg.toFixed(1)}% YoY]`;
                         }
