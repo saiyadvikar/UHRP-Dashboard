@@ -492,7 +492,7 @@ def load_delivery_linelist(del_dir=None):
             vil_idx = headers.index('Village') if 'Village' in headers else 5
 
             for r in rows_iter:
-                # 1. Monthly delivery & late term (>41 weeks) statistics directly from delivery line list
+                # 1. Monthly delivery & post term (>42 weeks) statistics directly from delivery line list
                 raw_d = r[del_date_idx] if del_date_idx < len(r) else None
                 raw_lmp = r[lmp_idx] if lmp_idx < len(r) else None
                 b_str = str(r[b_idx] or '').strip().title() if b_idx < len(r) else 'Unknown'
@@ -509,7 +509,7 @@ def load_delivery_linelist(del_dir=None):
                                 monthly_stats[del_fy].setdefault(scope, {})
                                 monthly_stats[del_fy][scope].setdefault(m_str, {'tot': 0, 'late': 0})
                                 monthly_stats[del_fy][scope][m_str]['tot'] += 1
-                                if ga_days > 287: # >41 weeks
+                                if ga_days > 294: # >42 weeks (Post Term)
                                     monthly_stats[del_fy][scope][m_str]['late'] += 1
 
                 # 2. Map patient delivery information

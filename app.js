@@ -2874,15 +2874,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const isAncTab = (activeKey === 'anc');
         const isAllUhrp = (activeKey === 'all');
         const tabName = TAB_NAMES[activeKey] || activeKey.toUpperCase();
-        const blockText = blockVal === 'All' ? 'District Khargone' : `${blockVal} Block`;
+        const blockSuffix = blockVal === 'All' ? '' : ` (${blockVal} Block)`;
 
         if (titleEl) {
             if (isAncTab) {
-                titleEl.textContent = `📈 Monthly ANC Registrations Trend (${blockText})`;
+                titleEl.textContent = `📈 Monthly ANC Registrations Trend${blockSuffix}`;
             } else if (isAllUhrp) {
-                titleEl.textContent = `📈 All High Risk (UHRP) Monthly Identification Rate (${blockText})`;
+                titleEl.textContent = `📈 All High Risk (UHRP) Monthly Identification Rate${blockSuffix}`;
             } else {
-                titleEl.textContent = `📈 ${tabName} Monthly Identification Rate (${blockText})`;
+                titleEl.textContent = `📈 ${tabName} Monthly Identification Rate${blockSuffix}`;
             }
         }
 
@@ -3104,13 +3104,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const blockVal = document.getElementById(elementIds.block)?.value || 'All';
         const blockFilter = blockVal === 'All' ? null : blockVal.toLowerCase();
-        const blockText = blockVal === 'All' ? 'District Khargone' : `Block: ${blockVal}`;
+        const blockSuffix = blockVal === 'All' ? '' : ` (${blockVal} Block)`;
 
         if (titleEl) {
-            titleEl.textContent = `📅 Monthly Late Term Deliveries (>41 Weeks) Rate (${blockText})`;
+            titleEl.textContent = `📅 Monthly Post Term Deliveries (>42 Weeks) Rate${blockSuffix}`;
         }
         if (badgeEl) {
-            badgeEl.textContent = `% of Monthly Deliveries with Gestational Age > 41 Weeks (2026-27 vs 2025-26)`;
+            badgeEl.textContent = `% of Monthly Deliveries with Gestational Age > 42 Weeks (2026-27 vs 2025-26)`;
         }
 
         const dData = (typeof DASHBOARD_DATA !== 'undefined' ? DASHBOARD_DATA : (window.DASHBOARD_DATA || {})) || {};
@@ -3240,7 +3240,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             yaxis: {
                 title: {
-                    text: 'Late Term Deliveries (% of Deliveries)',
+                    text: 'Post Term Deliveries (% of Deliveries)',
                     style: { fontSize: '11.5px', fontWeight: 700, color: '#0f172a' }
                 },
                 labels: {
@@ -3320,7 +3320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Monthly Identification Trend Chart (YoY Comparison)
         renderMonthlyTrendChart(currentTab, toolbarConfig);
 
-        // 2. Monthly Late Term Deliveries (>41 Weeks) Trend Chart (YoY Comparison)
+        // 2. Monthly Post Term Deliveries (>42 Weeks) Trend Chart (YoY Comparison)
         renderLateDeliveryTrendChart(toolbarConfig);
 
         // 3. Delivery Place Distribution Donut Chart
