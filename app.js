@@ -482,8 +482,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         initializedCharts = {};
         try {
+            sessionStorage.removeItem(DASHBOARD_STATE_KEY);
+            localStorage.removeItem('uhrp_dashboard_state');
             localStorage.removeItem(DASHBOARD_STATE_KEY);
-            if (window.location.hash) {
+            if (window.location.hash && window.location.hash.includes('=')) {
                 history.replaceState(null, '', window.location.pathname);
             }
         } catch (e) {}
@@ -3668,6 +3670,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (pagePatients.length === 0) {
             tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:2rem; color:#64748b;">No high-risk patient records found for the selected filters.</td></tr>`;
+            const cardsContainer = document.getElementById(elementIds.cardsContainer);
+            if (cardsContainer) {
+                cardsContainer.innerHTML = `<div style="text-align:center; padding:2rem; color:#64748b; background:#fff; border-radius:12px; border:1px solid #e2e8f0;">No high-risk patient records found for the selected filters.</div>`;
+            }
             return;
         }
 
@@ -4961,10 +4967,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
-    // Dual-Layer State Persistence & Loader Management
+    // Session-Isolated State Persistence & Loader Management
     // =========================================================================
     const DASHBOARD_STATE_KEY = 'uhrp_dashboard_state_v1';
     let isRestoringState = false;
+
+    // Clear legacy localStorage state immediately so old persisted filters from previous sessions are wiped
+    try {
+        localStorage.removeItem('uhrp_dashboard_state');
+        localStorage.removeItem(DASHBOARD_STATE_KEY);
+    } catch (e) {}
 
     // Hide Application Loading Screen
     function hideAppLoader() {
@@ -4976,7 +4988,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 460);
     }
 
-    // Save active state to LocalStorage and sync URL Hash
+    // Save active state to sessionStorage (session-only isolation; URL hash param sync disabled)
     function saveDashboardState() {
         if (isRestoringState) return;
         try {
@@ -4999,61 +5011,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 dpmuExcludeAbortions: !!dpmuExcludeAbortions,
                 dpmuExcludePreterm: !!dpmuExcludePreterm
             };
-            localStorage.setItem(DASHBOARD_STATE_KEY, JSON.stringify(state));
-
-            // Sync URL Hash for deep-linking & refresh preservation without adding history clutter
-            const params = new URLSearchParams();
-            if (state.view && state.view !== 'linelist') params.set('view', state.view);
-            if (state.tab && state.tab !== 'anc') params.set('tab', state.tab);
-            if (state.year && state.year !== 'All') params.set('year', state.year);
-            if (state.block && state.block !== 'All') params.set('block', state.block);
-            if (state.phc && state.phc !== 'All') params.set('phc', state.phc);
-            if (state.subcenter && state.subcenter !== 'All') params.set('sub', state.subcenter);
-            if (state.delivery && state.delivery !== '0') params.set('del', state.delivery);
-            if (state.deliveryGa && state.deliveryGa !== 'all') params.set('ga', state.deliveryGa);
-            if (state.view === 'dpmu') {
-                if (state.dpmuCohort && state.dpmuCohort !== 'matured') params.set('cohort', state.dpmuCohort);
-                if (state.dpmuExcludeAbortions) params.set('ex_ab', '1');
-                if (state.dpmuExcludePreterm) params.set('ex_pt', '1');
-            }
-            const qs = params.toString();
-            const targetHash = qs ? '#' + qs : '';
-            if (window.location.hash !== targetHash) {
-                history.replaceState(null, '', targetHash || window.location.pathname);
-            }
+            sessionStorage.setItem(DASHBOARD_STATE_KEY, JSON.stringify(state));
         } catch (e) {
             console.warn('Unable to persist dashboard state:', e);
         }
     }
 
-    // Restore saved state from URL Hash or LocalStorage
+    // Restore saved state from sessionStorage
     function restoreDashboardState() {
         isRestoringState = true;
         try {
+            // Clean legacy localStorage keys on initialization to prevent cross-session leakage
+            try {
+                localStorage.removeItem('uhrp_dashboard_state');
+                localStorage.removeItem(DASHBOARD_STATE_KEY);
+            } catch (e) {}
+
+            // Clean legacy URL hash parameters if any were present from older sessions
+            if (window.location.hash && window.location.hash.includes('=')) {
+                try {
+                    history.replaceState(null, '', window.location.pathname);
+                } catch (e) {}
+            }
+
             let saved = null;
-            // 1. Check URL Hash params first
-            const hash = window.location.hash;
-            if (hash && hash.length > 1 && hash.includes('=')) {
-                const params = new URLSearchParams(hash.substring(1));
-                saved = {
-                    view: params.get('view') || 'linelist',
-                    tab: params.get('tab') || 'anc',
-                    year: params.get('year') || 'All',
-                    block: params.get('block') || 'All',
-                    phc: params.get('phc') || 'All',
-                    subcenter: params.get('sub') || 'All',
-                    delivery: params.get('del') || '0',
-                    deliveryGa: params.get('ga') || 'all',
-                    dpmuCohort: params.get('cohort') || 'matured',
-                    dpmuExcludeAbortions: params.get('ex_ab') === '1',
-                    dpmuExcludePreterm: params.get('ex_pt') === '1'
-                };
-            }
-            // 2. If not in URL Hash, check localStorage
-            if (!saved) {
-                const raw = localStorage.getItem(DASHBOARD_STATE_KEY);
-                if (raw) saved = JSON.parse(raw);
-            }
+            const raw = sessionStorage.getItem(DASHBOARD_STATE_KEY);
+            if (raw) saved = JSON.parse(raw);
 
             if (!saved) {
                 isRestoringState = false;
