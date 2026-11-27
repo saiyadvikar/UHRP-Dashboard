@@ -874,7 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return true;
         }
         if (condition === 'sa' || condition === 'sc' || condition === 'ma') {
-            const hasDoses = Array.isArray(p.is_doses) && p.is_doses.length > 0;
+            const hasDoses = Array.isArray(p.is_doses) && p.is_doses.length >= 3;
             const hasFcm = p.fcm === 'Yes';
             const hasBt = p.bt && p.bt !== 'No' && p.bt !== '-';
             return hasDoses || hasFcm || hasBt;
@@ -3943,7 +3943,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const hasAnemiaRisk = (p.sa === 1 || p.ma === 1 || p.sc === 1);
                             const hasPihRisk = (p.pi === 1 || !!(p.pih_mgmt && p.pih_mgmt.trim() !== '' && p.pih_mgmt !== 'None' && p.pih_mgmt !== '-'));
                             const hasGdmRisk = (p.gd === 1 || p.gdm_mnt === 'Yes' || p.gdm_met === 'Yes' || p.gdm_ins === 'Yes');
-                            const isAnemiaDone = (p.fcm === 'Yes' || (p.bt && p.bt !== 'No' && p.bt !== '-') || (Array.isArray(p.is_doses) && p.is_doses.length > 0));
+                            const isAnemiaDone = (p.fcm === 'Yes' || (p.bt && p.bt !== 'No' && p.bt !== '-') || (Array.isArray(p.is_doses) && p.is_doses.length >= 3));
                             const isPihDone = !!(p.pih_mgmt && p.pih_mgmt.trim() !== '' && p.pih_mgmt !== 'None' && p.pih_mgmt !== '-');
                             const isGdmDone = (p.gdm_mnt === 'Yes' || p.gdm_met === 'Yes' || p.gdm_ins === 'Yes' || p.gdm_mgmt_at === 'Yes');
 
@@ -5278,7 +5278,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const hasGdmRisk = (p.gd === 1 || p.gdm_mnt === 'Yes' || p.gdm_met === 'Yes' || p.gdm_ins === 'Yes');
         const hasAnemiaMgmtGiven = (p.is_doses && p.is_doses.length > 0) || (p.fcm === 'Yes') || (p.bt && p.bt !== 'No');
 
-        const isAnemiaDone = (p.fcm === 'Yes' || (p.bt && p.bt !== 'No' && p.bt !== '-') || (Array.isArray(p.is_doses) && p.is_doses.length > 0));
+        const isAnemiaDone = (p.fcm === 'Yes' || (p.bt && p.bt !== 'No' && p.bt !== '-') || (Array.isArray(p.is_doses) && p.is_doses.length >= 3));
         const isPihDone = !!(p.pih_mgmt && p.pih_mgmt.trim() !== '' && p.pih_mgmt !== 'None' && p.pih_mgmt !== '-');
         const isGdmDone = (p.gdm_mnt === 'Yes' || p.gdm_met === 'Yes' || p.gdm_ins === 'Yes' || p.gdm_mgmt_at === 'Yes');
 
@@ -5319,7 +5319,7 @@ document.addEventListener('DOMContentLoaded', () => {
             statusDone = isAnemiaDone;
             statusPending = !isAnemiaDone;
             statusTitle = isAnemiaDone ? 'Anemia Clinical Management: Done' : 'Anemia Clinical Management: Action Pending';
-            statusSubtext = isAnemiaDone ? 'Inj. FCM, Blood Transfusion, or Iron Sucrose recorded' : 'Pending IV Iron/FCM or Blood Transfusion';
+            statusSubtext = isAnemiaDone ? 'Inj. FCM, Blood Transfusion, or ≥3 Iron Sucrose doses recorded' : 'Pending IV Iron/FCM, Blood Transfusion, or ≥3 Iron Sucrose doses';
             statusBadge = isAnemiaDone ? '✓ DONE' : '⚠️ PENDING';
             titleEl.textContent = `💉 Anemia Clinical Management — ${p.n}`;
         } else if (targetRisk === 'pih') {

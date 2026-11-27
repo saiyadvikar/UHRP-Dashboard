@@ -749,8 +749,14 @@ def main():
     # Teenage Pregnancy — Col Q: Age <= 17
     df_hrp['age_numeric'] = pd.to_numeric(df_hrp['Age'], errors='coerce')
     df_hrp['is_teenage'] = (df_hrp['age_numeric'] > 0) & (df_hrp['age_numeric'] <= 17)
-    # Complications in Last Pregnancy (Bad Obstetric History) — Col AB
-    df_hrp['is_boh'] = df_hrp['Complication in Last Pregnancy (Yes/No)'].astype(str).str.strip().str.lower() == 'yes'
+    # Complications in Last Pregnancy (Bad Obstetric History) — Col AC
+    # Marked Yes only if previous neonatal death or stillbirth complication from Col AC
+    if 'Last Pregnancy Complications' in df_hrp.columns:
+        df_hrp['is_boh'] = df_hrp['Last Pregnancy Complications'].fillna('').astype(str).str.lower().apply(
+            lambda x: ('neonate death' in x or 'neonatal death' in x or 'stillbirth' in x or 'still birth' in x)
+        )
+    else:
+        df_hrp['is_boh'] = False
 
     # GDM — Col AS:
     # Keep only those GDM which are associated with other 6 risk factors OR documented on treatment in Col AT, Col AX (On MNT), Col AY (On Metformin), or Col AZ (On Insulin)
@@ -1026,7 +1032,7 @@ def main():
                                         c4_done = 1
                     all4_done = 1 if (c1_done and c2_done and c3_done and c4_done) else 0
 
-                    # OGTT 1 (Col FE / 160) & OGTT 2 (Col FG / 162) - GDM positive if either > 140 mg/dL
+                    # OGTT 1 (Col FE / 160) & OGTT 2 (Col FG / 162) - GDM positive if either >= 140 mg/dL
                     raw_ogtt1 = row[ogtt1_col_idx] if ogtt1_col_idx < len(row) else None
                     raw_ogtt2 = row[ogtt2_col_idx] if ogtt2_col_idx < len(row) else None
                     val_ogtt1 = None
@@ -1041,7 +1047,7 @@ def main():
                             val_ogtt2 = float(raw_ogtt2)
                     except:
                         pass
-                    is_gdm_ogtt = ((val_ogtt1 is not None and val_ogtt1 > 140) or (val_ogtt2 is not None and val_ogtt2 > 140))
+                    is_gdm_ogtt = ((val_ogtt1 is not None and val_ogtt1 >= 140) or (val_ogtt2 is not None and val_ogtt2 >= 140))
                     if is_gdm_ogtt or mpid in anc_ogtt_lookup:
                         prev_og = anc_ogtt_lookup.get(mpid, {})
                         anc_ogtt_lookup[mpid] = {

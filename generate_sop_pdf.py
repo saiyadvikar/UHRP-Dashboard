@@ -222,7 +222,7 @@ def build_sop_pdf(output_path=None):
         [
             Paragraph("<b>TOTAL ANC:</b> Active District Registry", table_cell_style),
             Paragraph("<b>INTERVENTION:</b> Ultra High Risk Pregnancy (UHRP)", table_cell_style),
-            Paragraph("<b>EDITION:</b> Version 4.0 (Enhanced SOP)", table_cell_style)
+            Paragraph("<b>EDITION:</b> Version 5.0 (Section-Wise Logic)", table_cell_style)
         ]
     ]
     t_meta = Table(meta_box, colWidths=[175, 175, 165])
@@ -275,65 +275,95 @@ def build_sop_pdf(output_path=None):
     story.append(Spacer(1, 8))
 
     # -------------------------------------------------------------------------
-    # SECTION 2: CLINICAL PROTOCOLS & ALGORITHMIC RULES
+    # SECTION 2: SECTION-WISE DASHBOARD LOGIC & CLINICAL PROTOCOLS
     # -------------------------------------------------------------------------
-    story.append(Paragraph("2. Clinical Protocols & Triage Classification Algorithms", h1_style))
+    story.append(Paragraph("2. Section-Wise Dashboard Logic & Clinical Protocols", h1_style))
     story.append(Paragraph(
-        "The system evaluates patient risk through standardized clinical rules aligned with National Health Mission (NHM) and Anemia Mukt Bharat guidelines:",
+        "The dashboard organizes maternal care into distinct operational sections, each governed by strict NHM clinical algorithms and exact Excel source column mappings:",
         body_style
     ))
 
-    story.append(Paragraph("A. Anemia Staging & Parenteral Iron Rules (Severe & Moderate)", h2_style))
-    story.append(Paragraph("• <b>Resolved Anemia (≥ 11.0 g/dL):</b> Initial presentation of severe/moderate anemia resolved to normal range on latest visit.", bullet_style))
-    story.append(Paragraph("• <b>Mild Anemia (10.0 – 10.9 g/dL):</b> Transitional stage; maintain therapeutic oral iron (2 IFA tablets daily).", bullet_style))
-    story.append(Paragraph("• <b>Moderate Anemia (7.0 – 9.9 g/dL):</b> High clinical risk of entering labor with depleted iron stores. Requires prompt initiation of IV Iron Sucrose (100mg elemental iron per dose, alternate days) or Inj. Ferric Carboxymaltose (FCM 1000mg single infusion).", bullet_style))
-    story.append(Paragraph("• <b>Severe Anemia (&lt; 7.0 g/dL):</b> Critical obstetric emergency. Requires immediate referral to First Referral Unit (FRU) or District Hospital Khargone for parenteral iron therapy or packed red blood cell (PRBC) transfusion.", bullet_style))
+    story.append(Paragraph("A. Patient Line List — Risk Factor Identification (Source Reports & Columns)", h2_style))
+    risk_mapping_data = [
+        [Paragraph("Risk Factor", table_header_style), Paragraph("Source Report", table_header_style), Paragraph("Excel Column(s)", table_header_style), Paragraph("Exact Identification Logic", table_header_style)],
+        [Paragraph("<b>Severe Anemia (SA)</b>", table_cell_bold), Paragraph("HRP Line List", table_cell_style), Paragraph("<b>Col AH</b> (Col 34)", table_cell_style), Paragraph("<code>If severe anemia (Yes/No) == 'Yes'</code> (and/or ANC visit Hb &lt; 7.0 g/dL)", table_cell_style)],
+        [Paragraph("<b>Moderate Anemia (MA)</b>", table_cell_bold), Paragraph("HRP Line List", table_cell_style), Paragraph("<b>Col AG</b> (Col 33)", table_cell_style), Paragraph("<code>If moderate anemia (Yes/No) == 'Yes'</code> (and/or ANC visit Hb 7.0–9.9 g/dL)", table_cell_style)],
+        [Paragraph("<b>PIH (Hypertension)</b>", table_cell_bold), Paragraph("HRP Line List", table_cell_style), Paragraph("<b>Col AQ</b> (Col 43)", table_cell_style), Paragraph("<code>Identified with PIH (Yes/No) == 'Yes'</code> (and/or ANC BP ≥ 140/90)", table_cell_style)],
+        [Paragraph("<b>GDM (Diabetes)</b>", table_cell_bold), Paragraph("ANC + HRP Reports", table_cell_style), Paragraph("<b>Col FE &amp; FG</b> (ANC)<br/><b>Col AS</b> (HRP)", table_cell_style), Paragraph("ANC Linelist <code>OGTT 1</code> (Col FE) or <code>OGTT 2</code> (Col FG) <b>≥ 140 mg/dL</b>, OR HRP <code>GDM Positive</code> on treatment / with other 6 risks", table_cell_style)],
+        [Paragraph("<b>Previous LSCS</b>", table_cell_bold), Paragraph("HRP Line List", table_cell_style), Paragraph("<b>Col AD</b> (Col 30)", table_cell_style), Paragraph("<code>Previous LSCS == 'Yes'</code>", table_cell_style)],
+        [Paragraph("<b>Sickle Cell Disease</b>", table_cell_bold), Paragraph("HRP Line List", table_cell_style), Paragraph("<b>Col W</b> (Col 23)", table_cell_style), Paragraph("<code>Result of sickle cell test</code> contains 'Disease' or 'Sickle Beta' (excludes Trait)", table_cell_style)],
+        [Paragraph("<b>Teenage Pregnancy</b>", table_cell_bold), Paragraph("HRP Line List", table_cell_style), Paragraph("<b>Col Q</b> (Col 17)", table_cell_style), Paragraph("Numeric <code>Age ≤ 17</code> years", table_cell_style)],
+        [Paragraph("<b>BOH (Complications)</b>", table_cell_bold), Paragraph("HRP Line List", table_cell_style), Paragraph("<b>Col AC</b> (Col 29)", table_cell_style), Paragraph("<code>Last Pregnancy Complications</code> contains <b>Neonate Death</b> or <b>Stillbirth</b> ONLY", table_cell_style)]
+    ]
+    t_risk_map = Table(risk_mapping_data, colWidths=[95, 80, 85, 255])
+    t_risk_map.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), SLATE_HEADER),
+        ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, LIGHT_GRAY]),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    story.append(t_risk_map)
+    story.append(Spacer(1, 5))
+
+    story.append(Paragraph("B. Clinical Management Done Logic (Anemia, PIH, GDM)", h2_style))
+    story.append(Paragraph("• <b>Anemia Management Done (SA, MA, Sickle Cell):</b> Marked <i>Done</i> if ANY ONE of the following is recorded in the HRP Line List: (1) <b>At least 3 Iron Sucrose doses</b> documented with valid dates across <b>Cols AI–AM</b> (Doses 1–5), OR (2) <b>Inj. FCM given == 'Yes'</b> in <b>Col AO</b>, OR (3) <b>Blood Transfusion units &gt; 0</b> in <b>Col AN</b>. Patients with 0, 1, or 2 Iron Sucrose doses (and no FCM/BT) remain <i>Management Pending</i>.", bullet_style))
+    story.append(Paragraph("• <b>PIH Management Done:</b> Marked <i>Done</i> if <b>Col AR</b> (<code>PIH Management Done</code>) contains a valid medication/regimen (e.g., Labetalol, Methyldopa, MgSO4, Nifedipine).", bullet_style))
+    story.append(Paragraph("• <b>GDM Management Done:</b> Marked <i>Done</i> if any of <b>Col AT</b> (<code>GDM Mangement</code>), <b>Col AX</b> (<code>On MNT</code>), <b>Col AY</b> (<code>On Metformin</code>), or <b>Col AZ</b> (<code>On Insulin</code>) is marked <code>'Yes'</code>.", bullet_style))
+    story.append(Paragraph("• <b>Anemia Staging (4-Tier):</b> Resolved (≥ 11.0 g/dL), Mild (10.0–10.9 g/dL), Moderate (7.0–9.9 g/dL), Severe (&lt; 7.0 g/dL) evaluated from the latest recorded ANC visit Hb.", bullet_style))
 
     story.append(Spacer(1, 3))
-    story.append(Paragraph("B. Delivery Overdue Triage & Gestational Age Calculation", h2_style))
-    story.append(Paragraph("• <b>Delivery Overdue (Past EDD):</b> Identified when <code>p.del === 0</code> and the calculated Expected Date of Delivery (EDD) is earlier than the dashboard generation date (or today). <i>Maternal death and abortion cases are strictly excluded from the overdue list.</i> Displayed with a prominent pulsing rose badge (<code>⏳ Delivery Overdue</code>) and dedicated KPI filtering card. Overdue mothers require urgent tracking to rule out post-maturity complications and stillbirth.", bullet_style))
-    story.append(Paragraph("• <b>Maternal Death Gestational Age:</b> For maternal death cases (extracted from <code>p.mat</code>), gestational age is calculated precisely using Last Menstrual Period (LMP) and the documented Date of Death (rather than today's date), preserving accurate epidemiological records.", bullet_style))
-    story.append(Paragraph("• <b>Abortion Cases Gestational Age:</b> Since exact dates of abortion are not available, gestational age is frozen at the completed weeks of pregnancy corresponding to the mother's last recorded ANC visit (or registration date), preventing false advancement or overdue flags.", bullet_style))
+    story.append(Paragraph("C. 12 ANC Visit Summary, Visit 0 & Triage Alerts", h2_style))
+    story.append(Paragraph("• <b>Visit 0 KPI Card:</b> Placed before Visit 1 in the 12 ANC Visit Summary strip; counts and filters pregnant women who have <b>0 ANC visits</b> recorded across all 12 visit date slots.", bullet_style))
+    story.append(Paragraph("• <b>Delivery Overdue (Past EDD):</b> Identified when <code>p.del === 0</code> and EDD &lt; today. <i>Maternal death and abortion cases are strictly excluded.</i> Maternal death GA is frozen at Date of Death; abortion GA is frozen at last recorded ANC visit.", bullet_style))
+    story.append(Paragraph("• <b>Missed 2+ Consecutive ANC Visits:</b> Triggered when elapsed time since last visit &gt; 70 days OR ≥ 2 consecutive scheduled visit gaps occur.", bullet_style))
+    story.append(Paragraph("• <b>Not Seen by Medical Officer (MO):</b> Triggered when all attended visits were conducted exclusively by ANM/CHO without MO/Gynecologist examination.", bullet_style))
 
     story.append(Spacer(1, 3))
-    story.append(Paragraph("C. Attendance & Doctor Exam Alerts", h2_style))
-    story.append(Paragraph("• <b>Missed 2+ Consecutive ANC Visits:</b> Triggered when either (a) the elapsed time since the last visit exceeds 70 days, OR (b) two or more consecutive scheduled visits have no attendance date.", bullet_style))
-    story.append(Paragraph("• <b>Not Seen by Medical Officer (MO):</b> High-risk pregnancy has attended visits exclusively conducted by ANM / CHO without clinical examination by a Medical Officer or Gynecologist.", bullet_style))
-
-    story.append(Spacer(1, 3))
-    story.append(Paragraph("D. Pregnancy-Induced Hypertension (PIH) & Pre-Eclampsia", h2_style))
-    story.append(Paragraph("• <b>Controlled BP (&lt; 140/90 mmHg):</b> Patient on antihypertensive therapy with normalized blood pressure.", bullet_style))
-    story.append(Paragraph("• <b>Uncontrolled BP (≥ 140/90 mmHg):</b> Blood pressure remains hypertensive; medication dosage adjustment required.", bullet_style))
-    story.append(Paragraph("• <b>Pre-Eclampsia Alert:</b> Systolic BP ≥ 140 mmHg or Diastolic BP ≥ 90 mmHg concurrent with Urine Albumin ≥ +2. Requires emergency hospitalization and Pritchard regimen (Inj. MgSO4).", bullet_style))
-
-    story.append(Spacer(1, 3))
-    story.append(Paragraph("E. Protocols & Frontline Worker Counselling (गृह भेंट परामर्श बिंदु)", h2_style))
-    story.append(Paragraph("Dedicated protocols and standardized Hindi counselling points are embedded across all 9 risk factor sections in the dashboard for direct field guidance during home visits:", bullet_style))
-    story.append(Paragraph("• <b>Severe & Moderate Anemia:</b> High iron diet (Moringa/सहजन, spinach, jaggery, roasted chickpeas, sprouted pulses), avoidance of tea/coffee with meals, Vitamin C fruit intake (guava, amla), 108 emergency transport awareness.", bullet_style))
-    story.append(Paragraph("• <b>PIH & Pre-Eclampsia:</b> Warning signs (severe headache, blurred vision, epigastric pain, sudden facial edema), low-sodium diet, left lateral rest position, mandatory BP check every 7 days.", bullet_style))
-    story.append(Paragraph("• <b>Sickle Cell & GDM:</b> Regular hydration, avoidance of cold stress, Folic Acid 5mg daily, nutritional management (MNT), and scheduled glucose monitoring.", bullet_style))
+    story.append(Paragraph("D. Protocol & Counselling Section (गृह भेंट परामर्श बिंदु)", h2_style))
+    story.append(Paragraph("Dedicated clinical protocols and standardized Hindi counselling points are embedded across all 9 risk factor categories for ANM/CHO home-visit guidance (high-iron diet, Vitamin C pairing, PIH warning signs, left-lateral rest, hydration, and 108 emergency referral).", bullet_style))
 
     story.append(Spacer(1, 8))
 
     # -------------------------------------------------------------------------
-    # SECTION 3: MOBILE-FIRST FIELD POPUPS & COMMUNICATION
+    # SECTION 3: DPMU & CHARTS SECTION LOGIC
     # -------------------------------------------------------------------------
-    story.append(Paragraph("3. Mobile-First Field Popups & Direct Communication Architecture", h1_style))
-    story.append(Paragraph(
-        "For frontline ANMs, CHOs, and Block Medical Officers reviewing cases on mobile smartphones, the dashboard provides streamlined, minimal modal popups with zero information redundancy:",
-        body_style
-    ))
+    story.append(Paragraph("3. DPMU Section & YoY Charts Section Logic", h1_style))
 
-    story.append(Paragraph("• <b>12 ANC Visit Record Popup:</b> Displays the 12 ANC Visit Record Timeline Tracker prominently on top, followed by a unified Subcenter header above ANM & CHO contact chips with direct one-touch calling (<code>tel:</code> protocol), and clear Medical Officer / attendance status alerts.", bullet_style))
-    story.append(Paragraph("• <b>Clinical Management & Vitals Popup:</b> Details of management done are displayed on top, featuring active treatment badges (Inj. FCM, Iron Sucrose doses, Antihypertensive therapy, or GDM regimen), admission vitals (for delivered cases), identified risk factors, delivery status, and frontline worker phone numbers.", bullet_style))
-    story.append(Paragraph("• <b>Color-Coded Status Cards:</b> The management button and popup container dynamically adopt green theme (Done / Prescribed) or orange theme (Action Pending), enabling instant triage during field monitoring visits.", bullet_style))
+    story.append(Paragraph("A. DPMU Section (Official ANMOL Verification Tables)", h2_style))
+    story.append(Paragraph("• Located as a dedicated section immediately after Protocol &amp; Counselling. Computes block-wise ANMOL official verification tables (Tables 1–4) with dynamic trimester exclusion toggles (e.g., excluding 1st trimester Moderate Anemia cases from parenteral iron denominators where clinically not indicated).", bullet_style))
+
+    story.append(Spacer(1, 3))
+    story.append(Paragraph("B. Charts Section (YoY Comparison & SVG Export)", h2_style))
+    story.append(Paragraph("All charts render in Financial Year order (Apr–Mar) with <b>2025-26 (Previous FY)</b> displayed first (left/red) and <b>2026-27 (Current FY)</b> displayed second (right/blue), complete with YoY % change labels (green positive, red negative) and direct <b>SVG download</b> buttons:", bullet_style))
+    story.append(Paragraph("• <b>Chart 1 — Monthly ANC Registrations Trend &amp; Risk Identification Rate (%):</b> Uses <code>ANC_Line_List_Report</code> <b>Col N</b> (<code>PW Registration Date</code>, falling back to earliest ANC Visit Date / LMP) as the monthly denominator. When a specific risk factor tab is active, plots <code>(Monthly Risk Cases / Monthly ANC Registrations) × 100</code>.", bullet_style))
+    story.append(Paragraph("• <b>Chart 2 — Monthly Post Term Deliveries (&gt;42 Weeks) Rate:</b> Bar chart tracking deliveries where Gestational Age at delivery exceeds <b>294 days (&gt;42 weeks)</b> as a percentage of total monthly deliveries YoY.", bullet_style))
+    story.append(Paragraph("• <b>Chart 3 — Delivery Place Distribution (YoY Comparison):</b> Side-by-side donut charts (2025-26 left, 2026-27 right) categorizing institutional vs home deliveries (DH, CHC, PHC, Private, Home, In Transit) with interactive Gestational Age filters (ALL, Pre-term &lt;34 Wks, Late Term &gt;42 Wks).", bullet_style))
+    story.append(Paragraph("• <b>Chart 4 — Type of Delivery (YoY Comparison):</b> Side-by-side pie charts (2025-26 left, 2026-27 right) sourced from <code>Delivery_Line_List</code> <b>Col AB</b> showing % split of Vaginal Delivery, Caesarean (LSCS), and Assisted Delivery.", bullet_style))
 
     story.append(Spacer(1, 8))
 
     # -------------------------------------------------------------------------
-    # SECTION 4: DATA PIPELINE & ETL ARCHITECTURE
+    # SECTION 4: MOBILE-FIRST ARCHITECTURE & SESSION-ISOLATED STATE
     # -------------------------------------------------------------------------
-    story.append(Paragraph("4. Data Ingestion Pipeline & Field Extraction Mappings", h1_style))
+    story.append(Paragraph("4. Mobile-First Popups & User-Isolated Session State", h1_style))
+    story.append(Paragraph(
+        "For frontline ANMs, CHOs, and Block Medical Officers reviewing cases on smartphones, the dashboard provides native mobile cards and minimal modal popups with zero cross-user filter leakage:",
+        body_style
+    ))
+
+    story.append(Paragraph("• <b>Session-Only Filter Isolation (sessionStorage):</b> Active filter selections (Block, Year, Category, Trimester, Visit) are persisted strictly in <code>sessionStorage</code> rather than global <code>localStorage</code> or URL hash parameters. Every user and browser tab starts clean and operates independently without affecting other users or shared links.", bullet_style))
+    story.append(Paragraph("• <b>Mobile 0-Cases Empty State Handling:</b> When applied filters yield 0 matching patients, both the desktop table and mobile native card container (<code>#patient-cards-container</code>) are immediately cleared to display the empty-state notice.", bullet_style))
+    story.append(Paragraph("• <b>12 ANC Visit &amp; Management Popups:</b> Mobile popups display the 12-visit timeline, unified Subcenter + ANM/CHO one-touch calling (<code>tel:</code>), and color-coded Clinical Management status cards (green Done / orange Pending).", bullet_style))
+
+    story.append(Spacer(1, 8))
+
+    # -------------------------------------------------------------------------
+    # SECTION 5: DATA PIPELINE & ETL ARCHITECTURE
+    # -------------------------------------------------------------------------
+    story.append(Paragraph("5. Data Ingestion Pipeline & Field Extraction Mappings", h1_style))
     story.append(Paragraph(
         "Data synchronization is executed by <code>update_dashboard.py</code>. The script ingests raw Excel reports exported from the state pregnancy tracking software and builds the global data structure in <code>data.js</code>:",
         body_style
@@ -365,9 +395,9 @@ def build_sop_pdf(output_path=None):
     story.append(Spacer(1, 8))
 
     # -------------------------------------------------------------------------
-    # SECTION 5: UI ARCHITECTURE & NAVIGATION
+    # SECTION 6: UI ARCHITECTURE & NAVIGATION
     # -------------------------------------------------------------------------
-    story.append(Paragraph("5. UI Architecture & Responsive Navigation System", h1_style))
+    story.append(Paragraph("6. UI Architecture & Responsive Navigation System", h1_style))
     story.append(Paragraph(
         "The interface incorporates Apple iOS Liquid Glass design aesthetics, featuring frosted glass panels (<code>backdrop-filter: blur(20px)</code>), subtle borders, high-contrast typography, and a 4-view navigation dock:",
         body_style
@@ -399,9 +429,9 @@ def build_sop_pdf(output_path=None):
     story.append(Spacer(1, 8))
 
     # -------------------------------------------------------------------------
-    # SECTION 6: MAINTENANCE & REFRESH WORKFLOW
+    # SECTION 7: MAINTENANCE & REFRESH WORKFLOW
     # -------------------------------------------------------------------------
-    story.append(Paragraph("6. Maintenance & Operational Guide for Health Administrators", h1_style))
+    story.append(Paragraph("7. Maintenance & Operational Guide for Health Administrators", h1_style))
     story.append(Paragraph(
         "To update data on a recurring monthly or weekly basis, health informatics officers follow this standardized workflow:",
         body_style

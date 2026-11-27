@@ -401,6 +401,45 @@ class TestClinicalLogic(unittest.TestCase):
         self.assertTrue(is_preterm_delivery(lmp, del_preterm, threshold_weeks=35.0))
         self.assertFalse(is_preterm_delivery(lmp, del_term, threshold_weeks=35.0))
 
+    # ---------------------------------------------------------
+    # 5. Updated Clinical Logic (Management >= 3 IS doses, GDM >= 140, BOH Col AC)
+    # ---------------------------------------------------------
+    def test_anemia_management_done_requires_3_is_doses_or_fcm_or_bt(self):
+        def is_anemia_mgmt_done(p):
+            has_doses = isinstance(p.get('is_doses'), list) and len(p['is_doses']) >= 3
+            has_fcm = p.get('fcm') == 'Yes'
+            has_bt = bool(p.get('bt') and p['bt'] not in ('No', '-'))
+            return has_doses or has_fcm or has_bt
+
+        self.assertFalse(is_anemia_mgmt_done({'is_doses': ['2026-05-01'], 'fcm': 'No', 'bt': 'No'}))
+        self.assertFalse(is_anemia_mgmt_done({'is_doses': ['2026-05-01', '2026-05-03'], 'fcm': 'No', 'bt': 'No'}))
+        self.assertTrue(is_anemia_mgmt_done({'is_doses': ['2026-05-01', '2026-05-03', '2026-05-05'], 'fcm': 'No', 'bt': 'No'}))
+        self.assertTrue(is_anemia_mgmt_done({'is_doses': [], 'fcm': 'Yes', 'bt': 'No'}))
+        self.assertTrue(is_anemia_mgmt_done({'is_doses': [], 'fcm': 'No', 'bt': '1 Unit'}))
+
+    def test_gdm_ogtt_threshold_140_inclusive(self):
+        def is_gdm_ogtt(val1, val2):
+            return (val1 is not None and val1 >= 140) or (val2 is not None and val2 >= 140)
+
+        self.assertFalse(is_gdm_ogtt(139.9, 130.0))
+        self.assertTrue(is_gdm_ogtt(140.0, None))
+        self.assertTrue(is_gdm_ogtt(None, 140.0))
+        self.assertTrue(is_gdm_ogtt(120.0, 155.0))
+
+    def test_boh_only_neonate_death_or_stillbirth(self):
+        def is_boh(val):
+            s = str(val or '').lower()
+            return 'neonate death' in s or 'neonatal death' in s or 'stillbirth' in s or 'still birth' in s
+
+        self.assertTrue(is_boh('Neonate Death'))
+        self.assertTrue(is_boh('Stillbirth'))
+        self.assertTrue(is_boh('Caesarean Section, Neonate Death'))
+        self.assertTrue(is_boh('PIH (Pregnancy Induced Hypertension) , Stillbirth'))
+        self.assertFalse(is_boh('Caesarean Section'))
+        self.assertFalse(is_boh('Repeated Abortion'))
+        self.assertFalse(is_boh('Pre-Term'))
+        self.assertFalse(is_boh('No'))
+
 
 if __name__ == '__main__':
     unittest.main()
