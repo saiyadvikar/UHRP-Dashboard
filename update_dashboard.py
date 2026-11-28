@@ -300,12 +300,12 @@ def norm_sub_key(s):
     return s.strip()
 
 def load_location_hierarchy(loc_dir):
-    """Load Location Hierarchy workbook to map (block, subcentre) -> facility_name, village -> (facility, subcentre), and ANM/CHO contacts."""
+    """Load Location Hierarchy workbook to map (block, subcentre) -> facility_name, village -> (facility, subcentre), ANM/CHO contacts, and shc_master."""
     if not os.path.exists(loc_dir):
-        return {}, {}, {}, {}
+        return {}, {}, {}, {}, []
     loc_files = [f for f in os.listdir(loc_dir) if f.endswith('.xlsx') and not f.startswith('~$')]
     if not loc_files:
-        return {}, {}, {}, {}
+        return {}, {}, {}, {}, []
     loc_path = os.path.join(loc_dir, loc_files[0])
     try:
         wb = openpyxl.load_workbook(loc_path, data_only=True)
@@ -313,15 +313,30 @@ def load_location_hierarchy(loc_dir):
         village_map = {}
         anm_map = {}
         cho_map = {}
+        shc_master_dict = {}
 
         # 1. Village list
         if 'Village list' in wb.sheetnames:
             s = wb['Village list']
             for r in s.iter_rows(min_row=3, values_only=True):
-                b = str(r[3] or '').strip().lower()
-                fac = str(r[6] or '').strip().title()
-                sub = str(r[10] or '').strip().title()
+                b_raw = str(r[3] or '').strip()
+                fac_raw = str(r[6] or '').strip()
+                sub_raw = str(r[10] or '').strip()
+                b = b_raw.lower()
+                fac = fac_raw.title()
+                sub = sub_raw.title()
                 sub_lower = sub.lower()
+                if (
+                    b not in ('blank', 'none', 'nan', '')
+                    and fac_raw.lower() not in ('blank', 'none', 'nan', '')
+                    and sub_lower not in ('blank', 'none', 'nan', '')
+                ):
+                    b_title = b_raw.title()
+                    shc_master_dict[(b_title.lower(), fac.lower(), sub_lower)] = {
+                        'b': b_title,
+                        'phc': fac,
+                        'sub': sub,
+                    }
                 if sub_lower and sub_lower not in ('blank', 'none', 'nan', ''):
                     sub_map[(b, sub_lower)] = fac
                     sub_map[sub_lower] = fac
@@ -420,11 +435,12 @@ def load_location_hierarchy(loc_dir):
                         cho_map[nsub] = {'name': name, 'phone': phone}
 
         wb.close()
-        print(f"  Loaded {len(sub_map)} subcenters, {len(village_map)} villages, {len(anm_map)} ANM contacts, {len(cho_map)} CHO contacts.")
-        return sub_map, village_map, anm_map, cho_map
+        shc_master = sorted(shc_master_dict.values(), key=lambda x: (x['b'], x['phc'], x['sub']))
+        print(f"  Loaded {len(sub_map)} subcenters, {len(village_map)} villages, {len(anm_map)} ANM contacts, {len(cho_map)} CHO contacts, {len(shc_master)} master SHCs.")
+        return sub_map, village_map, anm_map, cho_map, shc_master
     except Exception as e:
         print(f"  Warning loading location hierarchy: {e}")
-        return {}, {}, {}, {}
+        return {}, {}, {}, {}, []
 
 def get_hr_contacts(b_str, sub_str, vil_str, anm_map, cho_map, village_to_loc_map):
     """Retrieve ANM and CHO contact details based on block, subcenter, and fallback village."""
@@ -822,7 +838,7 @@ def main():
     # ===================================================================
     print("\n[4/5] Loading Delivery Line List & ANC files...")
     delivery_lookup, monthly_delivery_stats, delivery_type_stats = load_delivery_linelist(DELIVERY_DIR)
-    sub_to_phc_map, village_to_loc_map, anm_map, cho_map = load_location_hierarchy(LOCATION_DIR)
+    sub_to_phc_map, village_to_loc_map, anm_map, cho_map, shc_master = load_location_hierarchy(LOCATION_DIR)
 
     anc_files = discover_excel_files(["ANC_Line_list_Report*.xlsx", "ANC_Line_List*.xlsx", "*ANC_Line_list*"], fallback_dirs=[ANC_DIR])
     print(f"  Found {len(anc_files)} ANC file(s)")
@@ -1759,6 +1775,7 @@ def main():
         'patients': patients_list,
         'anc_patients': anc_records,
         'nmr_matches': nmr_list,
+        'shc_master': shc_master,
     }
 
     output_path = os.path.join(WORKSPACE, "data.js")

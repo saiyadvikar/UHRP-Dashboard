@@ -2613,7 +2613,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const blockVal = document.getElementById(elementIds.block)?.value || 'All';
         const phcVal = document.getElementById(elementIds.phc)?.value || 'All';
         const subVal = document.getElementById(elementIds.subcenter)?.value || 'All';
-        const searchTerm = (document.getElementById('sankalp-search')?.value || '').trim().toLowerCase();
 
         // Update breadcrumb
         const bcEl = document.getElementById('sankalp-breadcrumb-text');
@@ -2638,36 +2637,53 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const shcMap = new Map();
+        const createEmptyShcRec = (block, sector, shc) => ({
+            block,
+            sector,
+            shc,
+            totalReg: 0,
+            activePreg: 0,
+            earlyCount: 0,
+            anc1Due: 0,
+            anc2Due: 0,
+            anc3Due: 0,
+            anc4Due: 0,
+            eligible4Anc: 0,
+            fourAncDone: 0,
+            deliveryOverdue: 0,
+            abortion: 0,
+            delivered: 0,
+            death: 0,
+            modAnemiaDue: 0,
+            sevAnemiaDue: 0,
+            pihDue: 0
+        });
+
+        // Seed shcMap with all Location Hierarchy SHCs passing active top filters
+        const shcMaster = (typeof DASHBOARD_DATA !== 'undefined' && Array.isArray(DASHBOARD_DATA.shc_master)) ? DASHBOARD_DATA.shc_master : [];
+        shcMaster.forEach(m => {
+            const bName = (m.b || 'Unknown').trim();
+            const sectorRaw = (m.phc || 'Unknown').trim();
+            const sectorName = cleanPhcName(sectorRaw);
+            const shcName = (m.sub || 'Unknown').trim();
+            if (blockVal !== 'All' && bName.toLowerCase() !== blockVal.toLowerCase()) return;
+            if (phcVal !== 'All' && sectorRaw.toLowerCase() !== phcVal.toLowerCase() && sectorName.toLowerCase() !== cleanPhcName(phcVal).toLowerCase()) return;
+            if (subVal !== 'All' && shcName.toLowerCase() !== subVal.toLowerCase()) return;
+            const key = `${bName.toLowerCase()}||${sectorName.toLowerCase()}||${shcName.toLowerCase()}`;
+            if (!shcMap.has(key)) {
+                shcMap.set(key, createEmptyShcRec(bName, sectorName, shcName));
+            }
+        });
 
         pool.forEach(p => {
             const bName = (p.b || 'Unknown').trim();
             const sectorRaw = (p.phc || 'Unknown').trim();
             const sectorName = cleanPhcName(sectorRaw);
             const shcName = (p.sub || 'Unknown').trim();
-            const key = `${bName.toLowerCase()}||${sectorRaw.toLowerCase()}||${shcName.toLowerCase()}`;
+            const key = `${bName.toLowerCase()}||${sectorName.toLowerCase()}||${shcName.toLowerCase()}`;
 
             if (!shcMap.has(key)) {
-                shcMap.set(key, {
-                    block: bName,
-                    sector: sectorName,
-                    shc: shcName,
-                    totalReg: 0,
-                    activePreg: 0,
-                    earlyCount: 0,
-                    anc1Due: 0,
-                    anc2Due: 0,
-                    anc3Due: 0,
-                    anc4Due: 0,
-                    eligible4Anc: 0,
-                    fourAncDone: 0,
-                    deliveryOverdue: 0,
-                    abortion: 0,
-                    delivered: 0,
-                    death: 0,
-                    modAnemiaDue: 0,
-                    sevAnemiaDue: 0,
-                    pihDue: 0
-                });
+                shcMap.set(key, createEmptyShcRec(bName, sectorName, shcName));
             }
 
             const rec = shcMap.get(key);
@@ -2743,14 +2759,6 @@ document.addEventListener('DOMContentLoaded', () => {
             r.fourAncPct = r.eligible4Anc > 0 ? (r.fourAncDone / r.eligible4Anc * 100) : 0;
             return r;
         });
-
-        if (searchTerm) {
-            rows = rows.filter(r =>
-                r.block.toLowerCase().includes(searchTerm) ||
-                r.sector.toLowerCase().includes(searchTerm) ||
-                r.shc.toLowerCase().includes(searchTerm)
-            );
-        }
 
         const countBadge = document.getElementById('sankalp-shc-count');
         if (countBadge) countBadge.textContent = rows.length.toLocaleString();
@@ -2871,11 +2879,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderSankalpTable();
             });
         });
-
-        const searchInput = document.getElementById('sankalp-search');
-        if (searchInput) {
-            searchInput.addEventListener('input', () => renderSankalpTable());
-        }
 
         const btnExp = document.getElementById('btn-export-sankalp-csv');
         if (btnExp) {
