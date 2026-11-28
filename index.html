@@ -288,6 +288,7 @@
             <button class="main-view-btn" data-view="analytics">📊 Charts</button>
             <button class="main-view-btn" data-view="protocols">📜 Protocols & Counselling</button>
             <button class="main-view-btn" data-view="dpmu">📈 DPMU</button>
+            <button class="main-view-btn" data-view="sankalp">🌟 Sankalp</button>
         </div>
 
         <!-- Main View Mode 1: Patient Line Lists Section (Protocols moved to dedicated section 3) -->
@@ -1051,6 +1052,72 @@
                         <div class="anmol-footnote" id="footnote-anmol-facility">
                             Facility Review Line List Data • Sorted dynamically by active KPI card selection • Synchronized with location hierarchy filters
                         </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Main View Mode 5: Sankalp Section (SHC-Level Comprehensive Tracker) -->
+        <div id="view-sankalp" class="main-view-section" style="display: none;">
+            <section class="dpmu-section">
+                <div id="sankalp-location-breadcrumb-banner" class="anmol-breadcrumb-banner">
+                    <span class="anmol-bc-icon">🌟</span>
+                    <span id="sankalp-breadcrumb-text">Sankalp District Scope: All 9 Blocks (Khargone)</span>
+                    <span style="margin-left:auto; font-size:0.75rem; color:#64748b; font-weight:600;">(Top Block/Sector/SHC/Year filters apply dynamically • Click any column header to sort)</span>
+                </div>
+
+                <div class="anmol-report-card">
+                    <div class="anmol-table-header-banner banner-uhrp" style="flex-wrap:wrap; gap:0.5rem;">
+                        <div class="anmol-title-group">
+                            <span style="font-size:1.25rem;">🌟</span>
+                            <h3>Sankalp — Subcenter (SHC) Comprehensive Maternal Care Tracker</h3>
+                        </div>
+                        <div class="anmol-table-actions" style="display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap;">
+                            <input type="text" id="sankalp-search" placeholder="🔍 Filter Block / Sector / SHC..." class="search-input" style="max-width:210px; padding:0.3rem 0.6rem; font-size:0.75rem; background:#fff; border-radius:6px; border:1px solid #cbd5e1;" />
+                            <span class="anmol-chip-pill" style="background:#f8fafc; border-color:#cbd5e1; color:#0f172a; font-weight:700;">SHCs: <strong id="sankalp-shc-count">0</strong></span>
+                            <button type="button" class="anmol-btn-action" id="btn-export-sankalp-csv" title="Export Sankalp SHC Table to CSV for Excel">📥 CSV</button>
+                            <button type="button" class="anmol-btn-action" id="btn-copy-sankalp-table" title="Copy Sankalp table to clipboard">📋 Copy</button>
+                        </div>
+                    </div>
+
+                    <div class="anmol-table-responsive sankalp-table-wrap">
+                        <table class="anmol-table sankalp-compact-table" id="table-sankalp-shc">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="block" title="Health Block Name">Block</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="sector" title="PHC / Sector Name">Sector</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="shc" title="Sub Health Centre (SHC) Name">SHC</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="totalReg" title="Total ANC Registrations">Tot Reg</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="activePreg" title="Active Pregnant Women (Not Delivered / Aborted / Dead)">Active</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="earlyPct" title="% Early ANC Registration (<= 12 Weeks / 84 Days from LMP)">Early %</th>
+                                    <th colspan="4" class="th-group-anc" style="background:#0f766e; color:#ffffff;">4 ANC Due (Active PW by GA Window)</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="fourAncPct" title="Complete 4 ANC % Coverage (Eligible Matured PW)">4ANC %</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="deliveryOverdue" title="Delivery Overdue (EDD < Today & Still Pregnant)">Overdue</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="abortion" title="Abortion Cases">Abort</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="delivered" title="Delivered Cases">Deliv</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="death" title="Maternal Deaths">Death</th>
+                                    <th colspan="3" class="th-group-mgmt" style="background:#9f1239; color:#ffffff;">Management Due</th>
+                                </tr>
+                                <tr>
+                                    <th class="th-sub-header sortable" data-col="anc1Due" style="background:#115e59; color:#ffffff;" title="1st ANC Due (0–12 Weeks GA)">1st (0-12w)</th>
+                                    <th class="th-sub-header sortable" data-col="anc2Due" style="background:#115e59; color:#ffffff;" title="2nd ANC Due (13–26 Weeks GA)">2nd (13-26w)</th>
+                                    <th class="th-sub-header sortable" data-col="anc3Due" style="background:#115e59; color:#ffffff;" title="3rd ANC Due (27–34 Weeks GA)">3rd (27-34w)</th>
+                                    <th class="th-sub-header sortable" data-col="anc4Due" style="background:#115e59; color:#ffffff;" title="4th ANC Due (35–Delivery GA)">4th (35+w)</th>
+                                    <th class="th-sub-header sortable" data-col="modAnemiaDue" style="background:#be123c; color:#ffffff;" title="Moderate Anemia Management Due (<3 IS doses, no FCM/BT)">Mod</th>
+                                    <th class="th-sub-header sortable" data-col="sevAnemiaDue" style="background:#be123c; color:#ffffff;" title="Severe Anemia Management Due (<3 IS doses, no FCM/BT)">Sev</th>
+                                    <th class="th-sub-header sortable" data-col="pihDue" style="background:#be123c; color:#ffffff;" title="PIH Management Due (No antihypertensive documented)">PIH</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-sankalp-shc">
+                                <!-- Dynamically generated SHC rows -->
+                            </tbody>
+                            <tfoot id="tfoot-sankalp-shc">
+                                <!-- Dynamically generated grand total row -->
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="anmol-footnote" id="footnote-sankalp-shc">
+                        Sankalp SHC Tracker • 4 ANC Due evaluates active pregnancies in each GA window without that checkup • Complete 4 ANC % evaluates eligible matured PW (excluding abortions &amp; &lt;35w preterm) • Mgmt Due counts active/delivered HRP cases pending ≥3 IS doses / FCM / BT (Anemia) or antihypertensive regimen (PIH).
                     </div>
                 </div>
             </section>

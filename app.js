@@ -244,6 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const viewAnalytics = document.getElementById('view-analytics');
         const viewProtocols = document.getElementById('view-protocols');
         const viewDpmu = document.getElementById('view-dpmu');
+        const viewSankalp = document.getElementById('view-sankalp');
 
         btns.forEach(b => {
             b.classList.toggle('active', b.getAttribute('data-view') === viewName);
@@ -255,11 +256,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (viewAnalytics) viewAnalytics.style.display = 'none';
             if (viewProtocols) viewProtocols.style.display = 'none';
             if (viewDpmu) viewDpmu.style.display = 'none';
+            if (viewSankalp) viewSankalp.style.display = 'none';
         } else if (currentMainView === 'analytics') {
             if (viewLinelist) viewLinelist.style.display = 'none';
             if (viewAnalytics) viewAnalytics.style.display = 'block';
             if (viewProtocols) viewProtocols.style.display = 'none';
             if (viewDpmu) viewDpmu.style.display = 'none';
+            if (viewSankalp) viewSankalp.style.display = 'none';
             const filtered = getFilteredPatients();
             let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
             setTimeout(() => renderAnalyticsCharts(tabPatients), 30);
@@ -268,13 +271,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (viewAnalytics) viewAnalytics.style.display = 'none';
             if (viewProtocols) viewProtocols.style.display = 'block';
             if (viewDpmu) viewDpmu.style.display = 'none';
+            if (viewSankalp) viewSankalp.style.display = 'none';
             filterProtocolCards(currentTab);
         } else if (currentMainView === 'dpmu') {
             if (viewLinelist) viewLinelist.style.display = 'none';
             if (viewAnalytics) viewAnalytics.style.display = 'none';
             if (viewProtocols) viewProtocols.style.display = 'none';
             if (viewDpmu) viewDpmu.style.display = 'block';
+            if (viewSankalp) viewSankalp.style.display = 'none';
             setTimeout(() => renderDpmuOfficialTables(), 30);
+        } else if (currentMainView === 'sankalp') {
+            if (viewLinelist) viewLinelist.style.display = 'none';
+            if (viewAnalytics) viewAnalytics.style.display = 'none';
+            if (viewProtocols) viewProtocols.style.display = 'none';
+            if (viewDpmu) viewDpmu.style.display = 'none';
+            if (viewSankalp) viewSankalp.style.display = 'block';
+            setTimeout(() => renderSankalpTable(), 30);
         }
         if (!skipSave) saveDashboardState();
     }
@@ -492,6 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveDashboardState();
         renderLineList();
         renderDpmuOfficialTables();
+        if (typeof renderSankalpTable === 'function') renderSankalpTable();
         scrollToLinelistOnMobile();
     }
 
@@ -2582,6 +2595,300 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         bindDpmuEventsOnce();
+    }
+
+    // ==========================================================================
+    // SECTION 5: SANKALP — SHC-LEVEL COMPREHENSIVE MATERNAL CARE TRACKER
+    // ==========================================================================
+    let sankalpSortCol = 'totalReg';
+    let sankalpSortAsc = false;
+    let sankalpEventsBound = false;
+
+    function renderSankalpTable() {
+        const tbody = document.getElementById('tbody-sankalp-shc');
+        const tfoot = document.getElementById('tfoot-sankalp-shc');
+        if (!tbody || !tfoot) return;
+
+        const yearVal = document.getElementById(elementIds.year)?.value || 'All';
+        const blockVal = document.getElementById(elementIds.block)?.value || 'All';
+        const phcVal = document.getElementById(elementIds.phc)?.value || 'All';
+        const subVal = document.getElementById(elementIds.subcenter)?.value || 'All';
+        const searchTerm = (document.getElementById('sankalp-search')?.value || '').trim().toLowerCase();
+
+        // Update breadcrumb
+        const bcEl = document.getElementById('sankalp-breadcrumb-text');
+        if (bcEl) {
+            const scopeParts = [];
+            scopeParts.push(blockVal === 'All' ? 'All 9 Blocks (Khargone)' : `${blockVal} Block`);
+            if (phcVal !== 'All') scopeParts.push(cleanPhcName(phcVal));
+            if (subVal !== 'All') scopeParts.push(subVal);
+            scopeParts.push(`FY: ${yearVal}`);
+            bcEl.textContent = `Sankalp Scope: ${scopeParts.join(' • ')}`;
+        }
+
+        const refDate = new Date();
+        refDate.setHours(0, 0, 0, 0);
+
+        const pool = ancPatients.filter(p => {
+            if (yearVal !== 'All' && p.y !== yearVal) return false;
+            if (blockVal !== 'All' && (p.b || '').toLowerCase() !== blockVal.toLowerCase()) return false;
+            if (phcVal !== 'All' && (p.phc || '').toLowerCase() !== phcVal.toLowerCase()) return false;
+            if (subVal !== 'All' && (p.sub || '').toLowerCase() !== subVal.toLowerCase()) return false;
+            return true;
+        });
+
+        const shcMap = new Map();
+
+        pool.forEach(p => {
+            const bName = (p.b || 'Unknown').trim();
+            const sectorRaw = (p.phc || 'Unknown').trim();
+            const sectorName = cleanPhcName(sectorRaw);
+            const shcName = (p.sub || 'Unknown').trim();
+            const key = `${bName.toLowerCase()}||${sectorRaw.toLowerCase()}||${shcName.toLowerCase()}`;
+
+            if (!shcMap.has(key)) {
+                shcMap.set(key, {
+                    block: bName,
+                    sector: sectorName,
+                    shc: shcName,
+                    totalReg: 0,
+                    activePreg: 0,
+                    earlyCount: 0,
+                    anc1Due: 0,
+                    anc2Due: 0,
+                    anc3Due: 0,
+                    anc4Due: 0,
+                    eligible4Anc: 0,
+                    fourAncDone: 0,
+                    deliveryOverdue: 0,
+                    abortion: 0,
+                    delivered: 0,
+                    death: 0,
+                    modAnemiaDue: 0,
+                    sevAnemiaDue: 0,
+                    pihDue: 0
+                });
+            }
+
+            const rec = shcMap.get(key);
+            rec.totalReg++;
+
+            if (isEarlyAncRegistration(p)) {
+                rec.earlyCount++;
+            }
+
+            const isDead = isMaternalDeath(p);
+            const isAb = (p.del === 2 || p.del === '2' || p.is_abortion === 1);
+            const isDelivered = (!isDead && !isAb && (p.del === 1 || p.del === '1' || (p.del_date && p.del_date !== '-')));
+
+            if (isDead) {
+                rec.death++;
+            } else if (isAb) {
+                rec.abortion++;
+            } else if (isDelivered) {
+                rec.delivered++;
+            } else {
+                rec.activePreg++;
+
+                // Check 4 ANC Due by current GA window for Active Pregnancies
+                const ga = getPatientCurrentGaWeeks(p);
+                const gaCheck = check4AncByGestationalAge(p);
+                const hasC1 = (p.c1 === 1 || gaCheck.c1 === 1);
+                const hasC2 = (p.c2 === 1 || gaCheck.c2 === 1);
+                const hasC3 = (p.c3 === 1 || gaCheck.c3 === 1);
+                const hasC4 = (p.c4 === 1 || gaCheck.c4 === 1);
+
+                if (ga !== null) {
+                    if (ga <= 12.0) {
+                        if (!hasC1) rec.anc1Due++;
+                    } else if (ga <= 26.0) {
+                        if (!hasC2) rec.anc2Due++;
+                    } else if (ga <= 34.0) {
+                        if (!hasC3) rec.anc3Due++;
+                    } else {
+                        if (!hasC4) rec.anc4Due++;
+                    }
+                }
+            }
+
+            if (isEddOverdue(p)) {
+                rec.deliveryOverdue++;
+            }
+
+            // Complete 4 ANC % coverage (Eligible Matured PW excluding abortions & <35w preterm)
+            let isMatured = (p.del === 1 || p.del === 2 || p.is_abortion === 1);
+            if (!isMatured && p.edd && p.edd !== '-' && p.edd !== 'None') {
+                const dEdd = parseDate(p.edd);
+                if (dEdd && dEdd <= refDate) isMatured = true;
+            }
+            if (isMatured) {
+                const ex = isAbortionOrPreterm(p);
+                if (!ex.isExcluded) {
+                    rec.eligible4Anc++;
+                    const isAll4 = p.all4 === 1 || (p.c1 === 1 && p.c2 === 1 && p.c3 === 1 && p.c4 === 1) || (check4AncByGestationalAge(p).all4 === 1);
+                    if (isAll4) rec.fourAncDone++;
+                }
+            }
+
+            // Management Due (Mod Anemia, Severe Anemia, PIH)
+            if (!isDead && !isAb) {
+                if (p.ma === 1 && !isMaManaged(p)) rec.modAnemiaDue++;
+                if (p.sa === 1 && !isSaManaged(p)) rec.sevAnemiaDue++;
+                if (p.pi === 1 && !isPiManaged(p)) rec.pihDue++;
+            }
+        });
+
+        let rows = Array.from(shcMap.values()).map(r => {
+            r.earlyPct = r.totalReg > 0 ? (r.earlyCount / r.totalReg * 100) : 0;
+            r.fourAncPct = r.eligible4Anc > 0 ? (r.fourAncDone / r.eligible4Anc * 100) : 0;
+            return r;
+        });
+
+        if (searchTerm) {
+            rows = rows.filter(r =>
+                r.block.toLowerCase().includes(searchTerm) ||
+                r.sector.toLowerCase().includes(searchTerm) ||
+                r.shc.toLowerCase().includes(searchTerm)
+            );
+        }
+
+        const countBadge = document.getElementById('sankalp-shc-count');
+        if (countBadge) countBadge.textContent = rows.length.toLocaleString();
+
+        // Sort rows
+        rows.sort((a, b) => {
+            const va = a[sankalpSortCol];
+            const vb = b[sankalpSortCol];
+            if (typeof va === 'string') {
+                return sankalpSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+            }
+            return sankalpSortAsc ? (va - vb) : (vb - va);
+        });
+
+        // Update sort header styling
+        const sortHeaders = document.querySelectorAll('#table-sankalp-shc th.sortable');
+        sortHeaders.forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc', 'col-spotlight');
+            if (th.getAttribute('data-col') === sankalpSortCol) {
+                th.classList.add(sankalpSortAsc ? 'sort-asc' : 'sort-desc', 'col-spotlight');
+            }
+        });
+
+        const tot = {
+            totalReg: 0, activePreg: 0, earlyCount: 0,
+            anc1Due: 0, anc2Due: 0, anc3Due: 0, anc4Due: 0,
+            eligible4Anc: 0, fourAncDone: 0,
+            deliveryOverdue: 0, abortion: 0, delivered: 0, death: 0,
+            modAnemiaDue: 0, sevAnemiaDue: 0, pihDue: 0
+        };
+
+        rows.forEach(r => {
+            tot.totalReg += r.totalReg;
+            tot.activePreg += r.activePreg;
+            tot.earlyCount += r.earlyCount;
+            tot.anc1Due += r.anc1Due;
+            tot.anc2Due += r.anc2Due;
+            tot.anc3Due += r.anc3Due;
+            tot.anc4Due += r.anc4Due;
+            tot.eligible4Anc += r.eligible4Anc;
+            tot.fourAncDone += r.fourAncDone;
+            tot.deliveryOverdue += r.deliveryOverdue;
+            tot.abortion += r.abortion;
+            tot.delivered += r.delivered;
+            tot.death += r.death;
+            tot.modAnemiaDue += r.modAnemiaDue;
+            tot.sevAnemiaDue += r.sevAnemiaDue;
+            tot.pihDue += r.pihDue;
+        });
+
+        const sp = (col) => (sankalpSortCol === col ? 'col-spotlight' : '');
+
+        if (rows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="18" style="text-align:center; padding:1.5rem; color:#64748b; font-weight:600;">No SHC records found for the selected filters.</td></tr>`;
+        } else {
+            tbody.innerHTML = rows.map(r => `<tr>
+                <td class="col-txt-left ${sp('block')}" title="${r.block}">${r.block}</td>
+                <td class="col-txt-left ${sp('sector')}" title="${r.sector}">${r.sector}</td>
+                <td class="col-txt-left ${sp('shc')}" style="font-weight:700;" title="${r.shc}">${r.shc}</td>
+                <td class="${sp('totalReg')}"><strong>${r.totalReg.toLocaleString()}</strong></td>
+                <td class="${sp('activePreg')}">${r.activePreg.toLocaleString()}</td>
+                <td class="${sp('earlyPct')}" style="color:${r.earlyPct >= 80 ? '#059669' : '#d97706'}; font-weight:700;">${r.earlyPct.toFixed(1)}%</td>
+                <td class="${sp('anc1Due')}" style="color:${r.anc1Due > 0 ? '#0369a1' : '#64748b'};">${r.anc1Due.toLocaleString()}</td>
+                <td class="${sp('anc2Due')}" style="color:${r.anc2Due > 0 ? '#0369a1' : '#64748b'};">${r.anc2Due.toLocaleString()}</td>
+                <td class="${sp('anc3Due')}" style="color:${r.anc3Due > 0 ? '#0369a1' : '#64748b'};">${r.anc3Due.toLocaleString()}</td>
+                <td class="${sp('anc4Due')}" style="color:${r.anc4Due > 0 ? '#0369a1' : '#64748b'};">${r.anc4Due.toLocaleString()}</td>
+                <td class="${sp('fourAncPct')}" style="color:${r.fourAncPct >= 75 ? '#059669' : '#dc2626'}; font-weight:700;">${r.fourAncPct.toFixed(1)}%</td>
+                <td class="${sp('deliveryOverdue')}" style="color:${r.deliveryOverdue > 0 ? '#dc2626' : '#64748b'}; font-weight:700;">${r.deliveryOverdue.toLocaleString()}</td>
+                <td class="${sp('abortion')}" style="color:${r.abortion > 0 ? '#d97706' : '#64748b'};">${r.abortion.toLocaleString()}</td>
+                <td class="${sp('delivered')}" style="color:${r.delivered > 0 ? '#059669' : '#64748b'}; font-weight:700;">${r.delivered.toLocaleString()}</td>
+                <td class="${sp('death')}" style="color:${r.death > 0 ? '#991b1b' : '#64748b'}; font-weight:700;">${r.death.toLocaleString()}</td>
+                <td class="${sp('modAnemiaDue')}" style="color:${r.modAnemiaDue > 0 ? '#be123c' : '#64748b'}; font-weight:700;">${r.modAnemiaDue.toLocaleString()}</td>
+                <td class="${sp('sevAnemiaDue')}" style="color:${r.sevAnemiaDue > 0 ? '#dc2626' : '#64748b'}; font-weight:700;">${r.sevAnemiaDue.toLocaleString()}</td>
+                <td class="${sp('pihDue')}" style="color:${r.pihDue > 0 ? '#ea580c' : '#64748b'}; font-weight:700;">${r.pihDue.toLocaleString()}</td>
+            </tr>`).join('');
+        }
+
+        const totEarlyPct = tot.totalReg > 0 ? (tot.earlyCount / tot.totalReg * 100) : 0;
+        const totFourAncPct = tot.eligible4Anc > 0 ? (tot.fourAncDone / tot.eligible4Anc * 100) : 0;
+
+        tfoot.innerHTML = `<tr class="anmol-total-row">
+            <td colspan="3" style="text-align:center; font-weight:800;">Total (${rows.length} SHCs)</td>
+            <td class="${sp('totalReg')}">${tot.totalReg.toLocaleString()}</td>
+            <td class="${sp('activePreg')}">${tot.activePreg.toLocaleString()}</td>
+            <td class="${sp('earlyPct')}">${totEarlyPct.toFixed(1)}%</td>
+            <td class="${sp('anc1Due')}">${tot.anc1Due.toLocaleString()}</td>
+            <td class="${sp('anc2Due')}">${tot.anc2Due.toLocaleString()}</td>
+            <td class="${sp('anc3Due')}">${tot.anc3Due.toLocaleString()}</td>
+            <td class="${sp('anc4Due')}">${tot.anc4Due.toLocaleString()}</td>
+            <td class="${sp('fourAncPct')}">${totFourAncPct.toFixed(1)}%</td>
+            <td class="${sp('deliveryOverdue')}">${tot.deliveryOverdue.toLocaleString()}</td>
+            <td class="${sp('abortion')}">${tot.abortion.toLocaleString()}</td>
+            <td class="${sp('delivered')}">${tot.delivered.toLocaleString()}</td>
+            <td class="${sp('death')}">${tot.death.toLocaleString()}</td>
+            <td class="${sp('modAnemiaDue')}">${tot.modAnemiaDue.toLocaleString()}</td>
+            <td class="${sp('sevAnemiaDue')}">${tot.sevAnemiaDue.toLocaleString()}</td>
+            <td class="${sp('pihDue')}">${tot.pihDue.toLocaleString()}</td>
+        </tr>`;
+
+        bindSankalpEventsOnce();
+    }
+
+    function bindSankalpEventsOnce() {
+        if (sankalpEventsBound) return;
+        sankalpEventsBound = true;
+
+        const sortHeaders = document.querySelectorAll('#table-sankalp-shc th.sortable');
+        sortHeaders.forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.getAttribute('data-col');
+                if (!col) return;
+                if (sankalpSortCol === col) {
+                    sankalpSortAsc = !sankalpSortAsc;
+                } else {
+                    sankalpSortCol = col;
+                    sankalpSortAsc = ['block', 'sector', 'shc'].includes(col);
+                }
+                renderSankalpTable();
+            });
+        });
+
+        const searchInput = document.getElementById('sankalp-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => renderSankalpTable());
+        }
+
+        const btnExp = document.getElementById('btn-export-sankalp-csv');
+        if (btnExp) {
+            btnExp.addEventListener('click', () => {
+                const yearVal = document.getElementById(elementIds.year)?.value || 'All';
+                exportTableToCsv('table-sankalp-shc', `Sankalp_SHC_Tracker_${yearVal}.csv`);
+            });
+        }
+
+        const btnCopy = document.getElementById('btn-copy-sankalp-table');
+        if (btnCopy) {
+            btnCopy.addEventListener('click', () => copyTableToClipboard('table-sankalp-shc', btnCopy));
+        }
     }
 
     function bindDpmuEventsOnce() {
@@ -4778,6 +5085,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentPage = 1;
                 renderLineList();
                 renderDpmuOfficialTables();
+                renderSankalpTable();
                 if (currentMainView === 'analytics') {
                     const filtered = getFilteredPatients();
                     let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
@@ -4799,6 +5107,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentPage = 1;
                 renderLineList();
                 renderDpmuOfficialTables();
+                renderSankalpTable();
                 if (currentMainView === 'analytics') {
                     const filtered = getFilteredPatients();
                     let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
@@ -4840,6 +5149,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentPage = 1;
                 renderLineList();
                 renderDpmuOfficialTables();
+                renderSankalpTable();
                 if (currentMainView === 'analytics') {
                     const filtered = getFilteredPatients();
                     let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));
@@ -5501,6 +5811,7 @@ document.addEventListener('DOMContentLoaded', () => {
     filterProtocolCards(currentTab);
     renderLineList();
     renderDpmuOfficialTables();
+    renderSankalpTable();
     if (currentMainView === 'analytics') {
         const filtered = getFilteredPatients();
         let tabPatients = currentTab === 'all' ? filtered : (currentTab === 'anc' ? getFilteredAncPatients() : (currentTab === 'ma' ? filtered.filter(p => p.ma === 1) : filtered.filter(p => p[currentTab] === 1)));

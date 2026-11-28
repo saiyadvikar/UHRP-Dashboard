@@ -5973,3 +5973,75 @@ th.col-spotlight {
         animation: none !important;
     }
 }
+
+/* =========================================================================
+   Sankalp Compact Single-Page Table Styles
+   ========================================================================= */
+.sankalp-table-wrap {
+    overflow-x: auto;
+    max-height: 72vh;
+    overflow-y: auto;
+}
+
+.sankalp-compact-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.68rem;
+    table-layout: auto;
+}
+
+.sankalp-compact-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: 5px 3px !important;
+    font-size: 0.65rem !important;
+    line-height: 1.15;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.sankalp-compact-table thead tr:nth-child(2) th {
+    top: 24px;
+    z-index: 4;
+}
+
+.sankalp-compact-table tbody td,
+.sankalp-compact-table tfoot td {
+    padding: 4px 3px !important;
+    font-size: 0.68rem !important;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.sankalp-compact-table tbody td.col-txt-left {
+    text-align: left !important;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sankalp-compact-table th.sortable::after {
+    content: ' ⇅';
+    font-size: 0.58rem;
+    opacity: 0.55;
+}
+
+.sankalp-compact-table th.sortable.sort-asc::after {
+    content: ' ▲';
+    opacity: 1;
+    color: #fde047;
+}
+
+.sankalp-compact-table th.sortable.sort-desc::after {
+    content: ' ▼';
+    opacity: 1;
+    color: #fde047;
+}
+
+.sankalp-compact-table th.col-spotlight,
+.sankalp-compact-table td.col-spotlight {
+    background-color: rgba(254, 240, 138, 0.28) !important;
+}
+
