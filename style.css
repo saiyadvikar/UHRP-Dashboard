@@ -6041,7 +6041,32 @@ th.col-spotlight {
 }
 
 .sankalp-compact-table th.col-spotlight,
-.sankalp-compact-table td.col-spotlight {
+.sankalp-compact-table td.col-spotlight,
+.anmol-table th.col-spotlight,
+.anmol-table td.col-spotlight {
     background-color: rgba(254, 240, 138, 0.28) !important;
+}
+
+.anmol-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.anmol-table th.sortable::after {
+    content: ' ⇅';
+    font-size: 0.65rem;
+    opacity: 0.55;
+}
+
+.anmol-table th.sortable.sort-asc::after {
+    content: ' ▲';
+    opacity: 1;
+    color: #fde047;
+}
+
+.anmol-table th.sortable.sort-desc::after {
+    content: ' ▼';
+    opacity: 1;
+    color: #fde047;
 }
 

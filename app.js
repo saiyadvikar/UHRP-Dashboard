@@ -1501,20 +1501,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const targetKpi = card.getAttribute('data-kpi');
                 if (targetKpi === 'all' || kpiFilter === targetKpi) {
                     kpiFilter = null;
-                    facilitySortCol = 'totalReg';
-                    facilitySortAsc = false;
                 } else {
                     kpiFilter = targetKpi;
-                    if (targetKpi === 'missed_anc') {
-                        facilitySortCol = 'missedAnc';
-                    } else if (targetKpi === 'overdue') {
-                        facilitySortCol = 'deliveryOverdue';
-                    } else if (targetKpi === 'pending_mgmt' || targetKpi === 'mo_pending') {
-                        facilitySortCol = 'mgmtPending';
-                    } else {
-                        facilitySortCol = 'totalReg';
-                    }
-                    facilitySortAsc = false;
                 }
                 renderLineList();
                 renderDpmuOfficialTables();
@@ -1877,10 +1865,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return diffDays >= 0 && diffDays <= 84;
     }
 
-    // Facility Performance Table Sorting State
-    let facilitySortCol = 'totalReg';
-    let facilitySortAsc = false;
-    let facilityMgmtScope = 'sync'; // 'sync' (follows currentTab), 'all', 'ma', 'sa', 'pi'
+    // DPMU Table 1 & Table 2 Sorting State
+    let ancYoySortCol = 'sno';
+    let ancYoySortAsc = true;
+    let anc4SortCol = 'sno';
+    let anc4SortAsc = true;
 
     // Canonical Date Parser Reference (Unified with parseDate)
     const parseDateDDMMYYYY = parseDate;
@@ -2137,12 +2126,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const earlyPct = cCount > 0 ? (earlyCount / cCount * 100) : 0;
 
-                return { idx, unitName, cCount, pCount, diff, pctChange, earlyCount, earlyPct };
+                return { sno: idx + 1, idx, unitName, cCount, pCount, diff, pctChange, earlyCount, earlyPct };
             });
 
-            const pctVals = yoyUnitData.map(d => d.pctChange);
-            const minPct = Math.min(...pctVals);
-            const maxPct = Math.max(...pctVals);
+            // Signed Heatmap Helper: Red for negative, Green for positive, shaded by degree of change
+            function getSignedHeatmapStyle(val, maxPos, maxAbsNeg) {
+                if (isNaN(val) || val === 0) {
+                    return 'background-color:#f8fafc; color:#475569; font-weight:700;';
+                }
+                if (val > 0) {
+                    const ratio = maxPos > 0 ? Math.min(1, val / maxPos) : 0.5;
+                    const r = Math.round(220 - ratio * (220 - 74));
+                    const g = Math.round(252 - ratio * (252 - 222));
+                    const b = Math.round(231 - ratio * (231 - 128));
+                    return `background-color:rgb(${r},${g},${b}); color:#065f46; font-weight:700;`;
+                }
+                const ratio = maxAbsNeg > 0 ? Math.min(1, Math.abs(val) / maxAbsNeg) : 0.5;
+                const r = Math.round(254 - ratio * (254 - 248));
+                const g = Math.round(226 - ratio * (226 - 113));
+                const b = Math.round(226 - ratio * (226 - 113));
+                return `background-color:rgb(${r},${g},${b}); color:#7f1d1d; font-weight:700;`;
+            }
+
+            const posPcts = yoyUnitData.map(d => d.pctChange).filter(v => v > 0);
+            const negPcts = yoyUnitData.map(d => d.pctChange).filter(v => v < 0).map(v => Math.abs(v));
+            const maxPosPct = posPcts.length ? Math.max(...posPcts) : 0;
+            const maxAbsNegPct = negPcts.length ? Math.max(...negPcts) : 0;
 
             const earlyVals = yoyUnitData.map(d => d.earlyPct);
             const minEarly = Math.min(...earlyVals);
@@ -2151,22 +2160,44 @@ document.addEventListener('DOMContentLoaded', () => {
             let sumPrev = 0;
             let sumCurr = 0;
             let sumEarly = 0;
-
-            const yoyRowsHtml = yoyUnitData.map(d => {
+            yoyUnitData.forEach(d => {
                 sumCurr += d.cCount;
                 sumPrev += d.pCount;
                 sumEarly += d.earlyCount;
+            });
+
+            // Sort Table 1 data
+            yoyUnitData.sort((a, b) => {
+                const va = a[ancYoySortCol];
+                const vb = b[ancYoySortCol];
+                if (typeof va === 'string') {
+                    return ancYoySortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+                }
+                return ancYoySortAsc ? (va - vb) : (vb - va);
+            });
+
+            // Update Sort Indicators on Table 1 Header
+            document.querySelectorAll('#table-anmol-anc-yoy th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc', 'col-spotlight');
+                if (th.getAttribute('data-col') === ancYoySortCol) {
+                    th.classList.add(ancYoySortAsc ? 'sort-asc' : 'sort-desc', 'col-spotlight');
+                }
+            });
+
+            const spYoy = (col) => (ancYoySortCol === col ? 'col-spotlight' : '');
+
+            const yoyRowsHtml = yoyUnitData.map((d, i) => {
                 const sign = d.diff > 0 ? '+' : '';
 
                 return `<tr>
-                    <td>${d.idx + 1}</td>
-                    <td class="col-block">${cleanPhcName(d.unitName)}</td>
-                    <td><strong>${d.pCount.toLocaleString()}</strong></td>
-                    <td><strong>${d.cCount.toLocaleString()}</strong></td>
-                    <td style="font-weight:700; color:${d.diff >= 0 ? '#059669' : '#dc2626'};">${sign}${d.diff.toLocaleString()}</td>
-                    <td class="${getExcelScaleClass(d.pctChange, minPct, maxPct)}">${sign}${d.pctChange.toFixed(2)}%</td>
-                    <td style="font-weight:700; color:#0284c7;">${d.earlyCount.toLocaleString()}</td>
-                    <td class="${getExcelScaleClass(d.earlyPct, minEarly, maxEarly)}">${d.earlyPct.toFixed(2)}%</td>
+                    <td class="${spYoy('sno')}">${i + 1}</td>
+                    <td class="col-block ${spYoy('unitName')}">${cleanPhcName(d.unitName)}</td>
+                    <td class="${spYoy('pCount')}"><strong>${d.pCount.toLocaleString()}</strong></td>
+                    <td class="${spYoy('cCount')}"><strong>${d.cCount.toLocaleString()}</strong></td>
+                    <td class="${spYoy('diff')}" style="font-weight:700; color:${d.diff >= 0 ? '#059669' : '#dc2626'};">${sign}${d.diff.toLocaleString()}</td>
+                    <td class="${spYoy('pctChange')}" style="${getSignedHeatmapStyle(d.pctChange, maxPosPct, maxAbsNegPct)}">${sign}${d.pctChange.toFixed(2)}%</td>
+                    <td class="${spYoy('earlyCount')}" style="font-weight:700; color:#0284c7;">${d.earlyCount.toLocaleString()}</td>
+                    <td class="${getExcelScaleClass(d.earlyPct, minEarly, maxEarly)} ${spYoy('earlyPct')}">${d.earlyPct.toFixed(2)}%</td>
                 </tr>`;
             }).join('');
 
@@ -2179,12 +2210,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tfootAncYoY.innerHTML = `<tr class="anmol-total-row">
                 <td colspan="2" style="text-align:center; font-weight:800;">Grand Total</td>
-                <td>${sumPrev.toLocaleString()}</td>
-                <td>${sumCurr.toLocaleString()}</td>
-                <td style="font-weight:800; color:${totDiff >= 0 ? '#059669' : '#dc2626'};">${totSign}${totDiff.toLocaleString()}</td>
-                <td class="${getExcelScaleClass(totPctChange, minPct, maxPct)}">${totSign}${totPctChange.toFixed(2)}%</td>
-                <td style="font-weight:800; color:#0284c7;">${sumEarly.toLocaleString()}</td>
-                <td class="${getExcelScaleClass(totEarlyPct, minEarly, maxEarly)}">${totEarlyPct.toFixed(2)}%</td>
+                <td class="${spYoy('pCount')}">${sumPrev.toLocaleString()}</td>
+                <td class="${spYoy('cCount')}">${sumCurr.toLocaleString()}</td>
+                <td class="${spYoy('diff')}" style="font-weight:800; color:${totDiff >= 0 ? '#059669' : '#dc2626'};">${totSign}${totDiff.toLocaleString()}</td>
+                <td class="${spYoy('pctChange')}" style="${getSignedHeatmapStyle(totPctChange, maxPosPct, maxAbsNegPct)}">${totSign}${totPctChange.toFixed(2)}%</td>
+                <td class="${spYoy('earlyCount')}" style="font-weight:800; color:#0284c7;">${sumEarly.toLocaleString()}</td>
+                <td class="${getExcelScaleClass(totEarlyPct, minEarly, maxEarly)} ${spYoy('earlyPct')}">${totEarlyPct.toFixed(2)}%</td>
             </tr>`;
 
             if (currTotEl) currTotEl.textContent = sumCurr.toLocaleString();
@@ -2282,7 +2313,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 grandEligible += eligibleCount;
                 grand4Anc += fourAncCount;
 
-                return { idx, unitName, totalReg, unitAbortions, unitPreterm, eligibleCount, fourAncCount, covPct };
+                return { sno: idx + 1, idx, unitName, totalReg, unitAbortions, unitPreterm, eligibleCount, fourAncCount, covPct };
             });
 
             // Update Summary KPI Chips: Separate Abortions & Pre-term (<35 Wks)
@@ -2298,13 +2329,33 @@ document.addEventListener('DOMContentLoaded', () => {
             const minCov = Math.min(...covVals);
             const maxCov = Math.max(...covVals);
 
-            const ancRowsHtml = ancUnitData.map(d => {
+            // Sort Table 2 data
+            ancUnitData.sort((a, b) => {
+                const va = a[anc4SortCol];
+                const vb = b[anc4SortCol];
+                if (typeof va === 'string') {
+                    return anc4SortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+                }
+                return anc4SortAsc ? (va - vb) : (vb - va);
+            });
+
+            // Update Sort Indicators on Table 2 Header
+            document.querySelectorAll('#table-anmol-4anc th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc', 'col-spotlight');
+                if (th.getAttribute('data-col') === anc4SortCol) {
+                    th.classList.add(anc4SortAsc ? 'sort-asc' : 'sort-desc', 'col-spotlight');
+                }
+            });
+
+            const sp4Anc = (col) => (anc4SortCol === col ? 'col-spotlight' : '');
+
+            const ancRowsHtml = ancUnitData.map((d, i) => {
                 return `<tr>
-                    <td>${d.idx + 1}</td>
-                    <td class="col-block">${cleanPhcName(d.unitName)}</td>
-                    <td><strong>${d.eligibleCount.toLocaleString()}</strong></td>
-                    <td><strong>${d.fourAncCount.toLocaleString()}</strong></td>
-                    <td class="${getExcelScaleClass(d.covPct, minCov, maxCov)}">${d.covPct.toFixed(2)}</td>
+                    <td class="${sp4Anc('sno')}">${i + 1}</td>
+                    <td class="col-block ${sp4Anc('unitName')}">${cleanPhcName(d.unitName)}</td>
+                    <td class="${sp4Anc('eligibleCount')}"><strong>${d.eligibleCount.toLocaleString()}</strong></td>
+                    <td class="${sp4Anc('fourAncCount')}"><strong>${d.fourAncCount.toLocaleString()}</strong></td>
+                    <td class="${getExcelScaleClass(d.covPct, minCov, maxCov)} ${sp4Anc('covPct')}">${d.covPct.toFixed(2)}</td>
                 </tr>`;
             }).join('');
 
@@ -2312,9 +2363,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tfoot4Anc.innerHTML = `<tr class="anmol-total-row">
                 <td colspan="2" style="text-align:center; font-weight:800;">Grand Total</td>
-                <td>${grandEligible.toLocaleString()}</td>
-                <td>${grand4Anc.toLocaleString()}</td>
-                <td class="${getExcelScaleClass(grandCovPct, minCov, maxCov)}">${grandCovPct.toFixed(2)}</td>
+                <td class="${sp4Anc('eligibleCount')}">${grandEligible.toLocaleString()}</td>
+                <td class="${sp4Anc('fourAncCount')}">${grand4Anc.toLocaleString()}</td>
+                <td class="${getExcelScaleClass(grandCovPct, minCov, maxCov)} ${sp4Anc('covPct')}">${grandCovPct.toFixed(2)}</td>
             </tr>`;
 
             if (avgEl) {
@@ -2461,133 +2512,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="${getExcelScaleClass(totPihIdPct, mmPihId.min, mmPihId.max)}">${totPihIdPct.toFixed(2)}</td>
                 <td>${totPihMgmt.toLocaleString()}</td>
                 <td class="${getExcelScaleClass(totPihMgmtPct, mmPihMgmt.min, mmPihMgmt.max)}">${totPihMgmtPct.toFixed(2)}</td>
-            </tr>`;
-        }
-
-        // =========================================================================
-        // 4. POPULATE TABLE 4: PHC Facility Performance Review Table
-        // =========================================================================
-        const tbodyFacility = document.getElementById('tbody-anmol-facility-kpi');
-        const tfootFacility = document.getElementById('tfoot-anmol-facility-kpi');
-        const facilityTitleEl = document.getElementById('facility-table-title');
-        const facilityCountStat = document.getElementById('facility-count-stat');
-        const facilityActiveStat = document.getElementById('facility-active-stat');
-
-        if (tbodyFacility && tfootFacility) {
-            if (facilityTitleEl) {
-                facilityTitleEl.textContent = locInfo.level === 'block' ? 'Block-wise Clinical Performance & Review' : (locInfo.level === 'phc' ? 'PHC Facility Clinical Performance & Review' : 'Subcenter Clinical Performance & Review');
-            }
-
-            let grandTotalReg = 0;
-            let grandActivePreg = 0;
-            let grandMissedAnc = 0;
-            let grandDeliveryOverdue = 0;
-            let grandDelivered = 0;
-            let grandAbortion = 0;
-            let grandDeath = 0;
-
-            const facilityRawData = locInfo.units.map((unitName, idx) => {
-                const uAnc = yrAncPatients.filter(p => locInfo.filterFn(p, unitName));
-
-                const totalReg = uAnc.length;
-                let activePreg = 0;
-                let missedAnc = 0;
-                let deliveryOverdue = 0;
-                let delivered = 0;
-                let abortion = 0;
-                let death = 0;
-
-                uAnc.forEach(p => {
-                    const isDead = isMaternalDeath(p);
-                    const isAb = (p.del === 2 || p.del === '2' || p.is_abortion === 1);
-                    const isDelivered = (p.del === 1 || p.del === '1' || (p.del_date && p.del_date !== '-' && !isDead && !isAb));
-
-                    if (isDead) {
-                        death++;
-                    } else if (isAb) {
-                        abortion++;
-                    } else if (isDelivered) {
-                        delivered++;
-                    } else if (p.del === 0 || p.del === '0' || !p.del) {
-                        activePreg++;
-                    }
-
-                    if (!isDead && !isAb) {
-                        const ancCheck = checkConsecutiveMissedAnc(p);
-                        if (ancCheck.hasMissed) missedAnc++;
-                    }
-                    if (isEddOverdue(p)) deliveryOverdue++;
-                });
-
-                grandTotalReg += totalReg;
-                grandActivePreg += activePreg;
-                grandMissedAnc += missedAnc;
-                grandDeliveryOverdue += deliveryOverdue;
-                grandDelivered += delivered;
-                grandAbortion += abortion;
-                grandDeath += death;
-
-                return {
-                    sno: idx + 1,
-                    name: unitName,
-                    totalReg,
-                    activePreg,
-                    missedAnc,
-                    deliveryOverdue,
-                    delivered,
-                    abortion,
-                    death
-                };
-            });
-
-            if (facilityCountStat) facilityCountStat.textContent = facilityRawData.length.toLocaleString();
-            if (facilityActiveStat) facilityActiveStat.textContent = grandActivePreg.toLocaleString();
-
-            // Sort data according to facilitySortCol and facilitySortAsc
-            facilityRawData.sort((a, b) => {
-                let va = a[facilitySortCol];
-                let vb = b[facilitySortCol];
-                if (typeof va === 'string') {
-                    return facilitySortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-                }
-                return facilitySortAsc ? (va - vb) : (vb - va);
-            });
-
-            // Update Sort Indicators on Table 4 Header
-            const sortHeaders = document.querySelectorAll('#table-anmol-facility-kpi th.sortable');
-            sortHeaders.forEach(th => {
-                th.classList.remove('sort-asc', 'sort-desc', 'col-spotlight');
-                const colKey = th.getAttribute('data-col');
-                if (colKey === facilitySortCol) {
-                    th.classList.add(facilitySortAsc ? 'sort-asc' : 'sort-desc', 'col-spotlight');
-                }
-            });
-
-            const facilityRowsHtml = facilityRawData.map((d, i) => {
-                return `<tr>
-                    <td>${i + 1}</td>
-                    <td class="col-block ${facilitySortCol === 'name' ? 'col-spotlight' : ''}">${cleanPhcName(d.name)}</td>
-                    <td class="${facilitySortCol === 'totalReg' ? 'col-spotlight' : ''}"><strong>${d.totalReg.toLocaleString()}</strong></td>
-                    <td class="${facilitySortCol === 'activePreg' ? 'col-spotlight' : ''}">${d.activePreg.toLocaleString()}</td>
-                    <td class="${facilitySortCol === 'missedAnc' ? 'col-spotlight' : ''}" style="color:${d.missedAnc > 0 ? '#e11d48' : '#64748b'}; font-weight:700;">${d.missedAnc.toLocaleString()}</td>
-                    <td class="${facilitySortCol === 'deliveryOverdue' ? 'col-spotlight' : ''}" style="color:${d.deliveryOverdue > 0 ? '#dc2626' : '#64748b'}; font-weight:700;">${d.deliveryOverdue.toLocaleString()}</td>
-                    <td class="${facilitySortCol === 'delivered' ? 'col-spotlight' : ''}" style="color:${d.delivered > 0 ? '#059669' : '#64748b'}; font-weight:700;">${d.delivered.toLocaleString()}</td>
-                    <td class="${facilitySortCol === 'abortion' ? 'col-spotlight' : ''}" style="color:${d.abortion > 0 ? '#d97706' : '#64748b'}; font-weight:700;">${d.abortion.toLocaleString()}</td>
-                    <td class="${facilitySortCol === 'death' ? 'col-spotlight' : ''}" style="color:${d.death > 0 ? '#dc2626' : '#64748b'}; font-weight:700;">${d.death.toLocaleString()}</td>
-                </tr>`;
-            }).join('');
-
-            tbodyFacility.innerHTML = facilityRowsHtml;
-
-            tfootFacility.innerHTML = `<tr class="anmol-total-row">
-                <td colspan="2" style="text-align:center; font-weight:800;">Total</td>
-                <td class="${facilitySortCol === 'totalReg' ? 'col-spotlight' : ''}">${grandTotalReg.toLocaleString()}</td>
-                <td class="${facilitySortCol === 'activePreg' ? 'col-spotlight' : ''}">${grandActivePreg.toLocaleString()}</td>
-                <td class="${facilitySortCol === 'missedAnc' ? 'col-spotlight' : ''}">${grandMissedAnc.toLocaleString()}</td>
-                <td class="${facilitySortCol === 'deliveryOverdue' ? 'col-spotlight' : ''}">${grandDeliveryOverdue.toLocaleString()}</td>
-                <td class="${facilitySortCol === 'delivered' ? 'col-spotlight' : ''}">${grandDelivered.toLocaleString()}</td>
-                <td class="${facilitySortCol === 'abortion' ? 'col-spotlight' : ''}">${grandAbortion.toLocaleString()}</td>
-                <td class="${facilitySortCol === 'death' ? 'col-spotlight' : ''}">${grandDeath.toLocaleString()}</td>
             </tr>`;
         }
 
@@ -2953,22 +2877,35 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Table 4 Sorting Header Clicks
-        const sortHeaders = document.querySelectorAll('#table-anmol-facility-kpi th.sortable');
-        sortHeaders.forEach(th => {
+        // Table 1 Sorting Header Clicks
+        document.querySelectorAll('#table-anmol-anc-yoy th.sortable').forEach(th => {
             th.addEventListener('click', () => {
                 const col = th.getAttribute('data-col');
-                if (facilitySortCol === col) {
-                    facilitySortAsc = !facilitySortAsc;
+                if (!col) return;
+                if (ancYoySortCol === col) {
+                    ancYoySortAsc = !ancYoySortAsc;
                 } else {
-                    facilitySortCol = col;
-                    facilitySortAsc = (col === 'sno' || col === 'name');
+                    ancYoySortCol = col;
+                    ancYoySortAsc = (col === 'sno' || col === 'unitName');
                 }
                 renderDpmuOfficialTables();
             });
         });
 
-// Table 4 Management View Scope Toggle removed (now automatic dynamic sync)
+        // Table 2 Sorting Header Clicks
+        document.querySelectorAll('#table-anmol-4anc th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.getAttribute('data-col');
+                if (!col) return;
+                if (anc4SortCol === col) {
+                    anc4SortAsc = !anc4SortAsc;
+                } else {
+                    anc4SortCol = col;
+                    anc4SortAsc = (col === 'sno' || col === 'unitName');
+                }
+                renderDpmuOfficialTables();
+            });
+        });
 
         // Export to CSV for HRP Table
         const btnExpUhrp = document.getElementById('btn-export-uhrp-csv');
@@ -3006,17 +2943,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btnCopyAncYoY.addEventListener('click', () => copyTableToClipboard('table-anmol-anc-yoy', btnCopyAncYoY));
         }
 
-        // Export to CSV for Facility Table
-        const btnExpFacility = document.getElementById('btn-export-facility-csv');
-        if (btnExpFacility) {
-            btnExpFacility.addEventListener('click', () => exportTableToCsv('table-anmol-facility-kpi', `Facility_Performance_Review_${dpmuSelectedYear}.csv`));
-        }
-
-        // Copy Table for Facility Table
-        const btnCopyFacility = document.getElementById('btn-copy-facility-table');
-        if (btnCopyFacility) {
-            btnCopyFacility.addEventListener('click', () => copyTableToClipboard('table-anmol-facility-kpi', btnCopyFacility));
-        }
     }
 
     function exportTableToCsv(tableId, filename) {
@@ -3928,7 +3854,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let trimesterFilteredPatients = kpiFilteredPatients;
         if (trimesterFilter) {
-            trimesterFilteredPatients = kpiFilteredPatients.filter(p => getPatientTrimester(p) === trimesterFilter);
+            if (trimesterFilter.startsWith('anc')) {
+                trimesterFilteredPatients = kpiFilteredPatients.filter(p => isPatientAncWindowDue(p, trimesterFilter));
+            } else {
+                trimesterFilteredPatients = kpiFilteredPatients.filter(p => getPatientTrimester(p) === trimesterFilter);
+            }
         }
 
         renderAncVisitKpiCards(trimesterFilteredPatients);
@@ -4561,10 +4491,133 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'T3';
     }
 
-    // Render 3 Trimester KPI Cards (Clickable Filters)
+    // Helper: Check if an active pregnant woman has crossed an ANC window without an updated visit
+    function isPatientAncWindowDue(p, windowKey) {
+        if (!p) return false;
+        const isDead = isMaternalDeath(p);
+        const isAb = (p.del === 2 || p.del === '2' || p.is_abortion === 1);
+        const isDel = (!isDead && !isAb && (p.del === 1 || p.del === '1' || (p.del_date && p.del_date !== '-')));
+        if (isDead || isAb || isDel) return false;
+
+        const ga = getPatientCurrentGaWeeks(p);
+        if (ga === null) return false;
+
+        const gaCheck = check4AncByGestationalAge(p);
+        const hasC1 = (p.c1 === 1 || gaCheck.c1 === 1);
+        const hasC2 = (p.c2 === 1 || gaCheck.c2 === 1);
+        const hasC3 = (p.c3 === 1 || gaCheck.c3 === 1);
+        const hasC4 = (p.c4 === 1 || gaCheck.c4 === 1);
+
+        if (windowKey === 'anc1_due') return ga > 12.0 && !hasC1;
+        if (windowKey === 'anc2_due') return ga > 26.0 && !hasC2;
+        if (windowKey === 'anc3_due') return ga > 34.0 && !hasC3;
+        if (windowKey === 'anc4_due') return ga >= 35.0 && !hasC4;
+        return false;
+    }
+
+    // Render 4 ANC Due KPI Cards (Total ANC tab) OR 3 Trimester KPI Cards (Risk Factor tabs)
     function renderTrimesterKpiCards(tabPatients) {
         const container = document.getElementById(elementIds.trimesterContainer);
         if (!container) return;
+
+        if (currentTab === 'anc') {
+            let due1 = 0, due2 = 0, due3 = 0, due4 = 0;
+            tabPatients.forEach(p => {
+                if (isPatientAncWindowDue(p, 'anc1_due')) due1++;
+                if (isPatientAncWindowDue(p, 'anc2_due')) due2++;
+                if (isPatientAncWindowDue(p, 'anc3_due')) due3++;
+                if (isPatientAncWindowDue(p, 'anc4_due')) due4++;
+            });
+
+            const ancDueLabels = {
+                anc1_due: '1st ANC due (0–12 Wks)',
+                anc2_due: '2nd ANC due (13–26 Wks)',
+                anc3_due: '3rd ANC due (27–34 Wks)',
+                anc4_due: '4th ANC due (35–Delivery)'
+            };
+            const activeAncLabel = trimesterFilter && ancDueLabels[trimesterFilter] ? ` (Filtering for ${ancDueLabels[trimesterFilter]})` : '';
+
+            container.innerHTML = `
+                <div class="trimester-kpi-header">
+                    <span>🗓️ 4 ANC Due Status (Crossed Gestation Window Without ANC Visit)${activeAncLabel}</span>
+                    ${trimesterFilter !== null ? `<span style="color:#0284c7; font-weight:800; cursor:pointer;" id="clear-trimester-filter-btn">Clear ANC Due Filter ✖</span>` : ''}
+                </div>
+                <div class="trimester-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));">
+                    <div class="trimester-kpi-card card-t1 ${trimesterFilter === 'anc1_due' ? 'active-trimester-filter' : ''}" data-trimester="anc1_due" title="Active pregnancies > 12 weeks GA with no 1st ANC visit (0–12 Wks)">
+                        <div class="trimester-title-row">
+                            <span class="trimester-title">1️⃣ 1st ANC due</span>
+                            <span class="trimester-weeks-badge">0–12 Wks</span>
+                        </div>
+                        <div class="trimester-val-row">
+                            <div class="trimester-stat-col">
+                                <span class="trimester-stat-label">Due (&gt;12w)</span>
+                                <span class="trimester-value">${due1.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="trimester-kpi-card card-t2 ${trimesterFilter === 'anc2_due' ? 'active-trimester-filter' : ''}" data-trimester="anc2_due" title="Active pregnancies > 26 weeks GA with no 2nd ANC visit (13–26 Wks)">
+                        <div class="trimester-title-row">
+                            <span class="trimester-title">2️⃣ 2nd ANC due</span>
+                            <span class="trimester-weeks-badge">13–26 Wks</span>
+                        </div>
+                        <div class="trimester-val-row">
+                            <div class="trimester-stat-col">
+                                <span class="trimester-stat-label">Due (&gt;26w)</span>
+                                <span class="trimester-value">${due2.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="trimester-kpi-card card-t3 ${trimesterFilter === 'anc3_due' ? 'active-trimester-filter' : ''}" data-trimester="anc3_due" title="Active pregnancies > 34 weeks GA with no 3rd ANC visit (27–34 Wks)">
+                        <div class="trimester-title-row">
+                            <span class="trimester-title">3️⃣ 3rd ANC due</span>
+                            <span class="trimester-weeks-badge">27–34 Wks</span>
+                        </div>
+                        <div class="trimester-val-row">
+                            <div class="trimester-stat-col">
+                                <span class="trimester-stat-label">Due (&gt;34w)</span>
+                                <span class="trimester-value">${due3.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="trimester-kpi-card card-t3 ${trimesterFilter === 'anc4_due' ? 'active-trimester-filter' : ''}" data-trimester="anc4_due" style="border-left-color:#be123c;" title="Active pregnancies ≥ 35 weeks GA with no 4th ANC visit (35–Delivery)">
+                        <div class="trimester-title-row">
+                            <span class="trimester-title">4️⃣ 4th ANC due</span>
+                            <span class="trimester-weeks-badge">35–Deliv.</span>
+                        </div>
+                        <div class="trimester-val-row">
+                            <div class="trimester-stat-col">
+                                <span class="trimester-stat-label">Due (≥35w)</span>
+                                <span class="trimester-value">${due4.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const clearBtn = document.getElementById('clear-trimester-filter-btn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    trimesterFilter = null;
+                    renderLineList();
+                    scrollToLinelistOnMobile();
+                });
+            }
+
+            container.querySelectorAll('.trimester-kpi-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const t = card.getAttribute('data-trimester');
+                    trimesterFilter = (trimesterFilter === t) ? null : t;
+                    currentPage = 1;
+                    renderLineList();
+                    scrollToLinelistOnMobile();
+                });
+            });
+            return;
+        }
 
         let countT1 = 0, countT2 = 0, countT3 = 0;
         let diagT1 = 0, diagT2 = 0, diagT3 = 0;
@@ -4711,7 +4764,17 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (kpiFilter === 'uncontrolled') activeKpiLabel = ' • BP Uncontrolled Cohort';
         }
         if (trimesterFilter) {
-            activeKpiLabel += ` • ${trimesterFilter === 'T1' ? '1st' : trimesterFilter === 'T2' ? '2nd' : '3rd'} Trimester`;
+            const ancDueLabelMap = {
+                anc1_due: '1st ANC Due (0–12 Wks)',
+                anc2_due: '2nd ANC Due (13–26 Wks)',
+                anc3_due: '3rd ANC Due (27–34 Wks)',
+                anc4_due: '4th ANC Due (35–Delivery)'
+            };
+            if (ancDueLabelMap[trimesterFilter]) {
+                activeKpiLabel += ` • ${ancDueLabelMap[trimesterFilter]}`;
+            } else {
+                activeKpiLabel += ` • ${trimesterFilter === 'T1' ? '1st' : trimesterFilter === 'T2' ? '2nd' : '3rd'} Trimester`;
+            }
         }
 
         const activeVisitLabel = visitFilter !== null ? ` (Filtering for Visit ${visitFilter})` : '';
@@ -4986,7 +5049,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (trimesterFilter) {
-            exportData = exportData.filter(p => getPatientTrimester(p) === trimesterFilter);
+            if (trimesterFilter.startsWith('anc')) {
+                exportData = exportData.filter(p => isPatientAncWindowDue(p, trimesterFilter));
+            } else {
+                exportData = exportData.filter(p => getPatientTrimester(p) === trimesterFilter);
+            }
         }
 
         if (visitFilter !== null) {

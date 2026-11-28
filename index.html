@@ -826,14 +826,14 @@
                             <table class="anmol-table" id="table-anmol-anc-yoy" style="max-width: 1060px; margin: 0 auto;">
                                 <thead>
                                     <tr>
-                                        <th class="th-main-dark" style="width:45px;">S.No.</th>
-                                        <th class="th-main-dark th-loc-unit" id="th-anc-yoy-loc-label" style="text-align:left; padding-left:14px;">BLOCK</th>
-                                        <th class="th-main-dark" style="width:130px;" id="th-anc-yoy-prev-label">Last Year (FY 2025-26)</th>
-                                        <th class="th-main-dark" style="width:130px;">Current Year (FY 2026-27)</th>
-                                        <th class="th-main-dark" style="width:115px;">Difference (+ / -)</th>
-                                        <th class="th-main-dark" style="width:125px;">% YoY Change</th>
-                                        <th class="th-main-dark" style="width:120px;">Early ANC Reg.</th>
-                                        <th class="th-main-dark" style="width:120px;">% Early ANC</th>
+                                        <th class="th-main-dark sortable" data-col="sno" style="width:45px;">S.No.</th>
+                                        <th class="th-main-dark th-loc-unit sortable" data-col="unitName" id="th-anc-yoy-loc-label" style="text-align:left; padding-left:14px;">BLOCK</th>
+                                        <th class="th-main-dark sortable" data-col="pCount" style="width:130px;" id="th-anc-yoy-prev-label">Last Year (FY 2025-26)</th>
+                                        <th class="th-main-dark sortable" data-col="cCount" style="width:130px;">Current Year (FY 2026-27)</th>
+                                        <th class="th-main-dark sortable" data-col="diff" style="width:115px;">Difference (+ / -)</th>
+                                        <th class="th-main-dark sortable" data-col="pctChange" style="width:125px;">% YoY Change</th>
+                                        <th class="th-main-dark sortable" data-col="earlyCount" style="width:120px;">Early ANC Reg.</th>
+                                        <th class="th-main-dark sortable" data-col="earlyPct" style="width:120px;">% Early ANC</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbody-anmol-anc-yoy">
@@ -897,11 +897,11 @@
                             <table class="anmol-table" id="table-anmol-4anc" style="max-width: 900px; margin: 0 auto;">
                                 <thead>
                                     <tr>
-                                        <th class="th-main-dark" style="width:60px;">S.No.</th>
-                                        <th class="th-main-dark th-loc-unit" id="th-4anc-loc-label" style="text-align:left; padding-left:16px;">BLOCK</th>
-                                        <th class="th-main-dark" style="width:140px;" id="th-4anc-pw-label">Total PW</th>
-                                        <th class="th-main-dark" style="width:160px;">4 ANC CHECKUP</th>
-                                        <th class="th-main-dark" style="width:140px;">% coverage</th>
+                                        <th class="th-main-dark sortable" data-col="sno" style="width:60px;">S.No.</th>
+                                        <th class="th-main-dark th-loc-unit sortable" data-col="unitName" id="th-4anc-loc-label" style="text-align:left; padding-left:16px;">BLOCK</th>
+                                        <th class="th-main-dark sortable" data-col="eligibleCount" style="width:140px;" id="th-4anc-pw-label">Total PW</th>
+                                        <th class="th-main-dark sortable" data-col="fourAncCount" style="width:160px;">4 ANC CHECKUP</th>
+                                        <th class="th-main-dark sortable" data-col="covPct" style="width:140px;">% coverage</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbody-anmol-4anc">
@@ -997,60 +997,6 @@
                         </div>
                         <div class="anmol-footnote" id="footnote-anmol-uhrp">
                             Data Source :- Anmol 2.0 Report - Ultra High-Risk Pregnancy EDD Registration
-                        </div>
-                    </div>
-
-                    <!-- Table 4: PHC Facility Performance Review Table -->
-                    <div class="anmol-report-card">
-                        <div class="anmol-table-header-banner banner-facility-perf">
-                            <div class="anmol-title-group">
-                                <span style="font-size:1.35rem;">🏥</span>
-                                <h3 id="facility-table-title">PHC Facility Performance & Clinical Review</h3>
-                                <span style="font-size:1.35rem;">🏥</span>
-                            </div>
-                            <div class="anmol-table-actions">
-                                <button type="button" class="anmol-btn-action" id="btn-export-facility-csv" title="Export Facility Table to CSV">📥 CSV</button>
-                                <button type="button" class="anmol-btn-action" id="btn-copy-facility-table" title="Copy table to clipboard">📋 Copy</button>
-                            </div>
-                        </div>
-
-                        <div class="anmol-table-subbanner">
-                            <div>
-                                <span class="anmol-subbanner-stat" style="color:#0f172a;" id="facility-table-summary">
-                                    Facilities: <span id="facility-count-stat" style="font-weight:800; color:#0f766e;">0</span> | Total Active Pregnancies: <span id="facility-active-stat" style="font-weight:800; color:#2563eb;">0</span>
-                                </span>
-                            </div>
-                            <div class="anmol-subbanner-right">
-                                <span class="anmol-chip-pill" style="font-weight:700; color:#475569;">📊 Registration, Outcomes & Clinical Review</span>
-                            </div>
-                        </div>
-                        </div>
-
-                        <div class="anmol-table-responsive">
-                            <table class="anmol-table" id="table-anmol-facility-kpi" style="max-width: 1100px; margin: 0 auto;">
-                                <thead>
-                                    <tr>
-                                        <th class="th-main-dark sortable" data-col="sno" style="width:45px;">S.No.</th>
-                                        <th class="th-main-dark sortable th-loc-unit" data-col="name" id="th-facility-name-col" style="text-align:left; padding-left:14px;">PHC FACILITY</th>
-                                        <th class="th-main-dark sortable" data-col="totalReg" style="width:125px;">Total Registration</th>
-                                        <th class="th-main-dark sortable" data-col="activePreg" style="width:115px;">Active Pregnancy</th>
-                                        <th class="th-main-dark sortable" data-col="missedAnc" style="width:130px;">Missed 2+ ANC Visits</th>
-                                        <th class="th-main-dark sortable" data-col="deliveryOverdue" style="width:120px;">Delivery Overdue</th>
-                                        <th class="th-main-dark sortable" data-col="delivered" style="width:105px;">Delivered</th>
-                                        <th class="th-main-dark sortable" data-col="abortion" style="width:100px;">Abortion</th>
-                                        <th class="th-main-dark sortable" data-col="death" style="width:95px;">Death</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbody-anmol-facility-kpi">
-                                    <!-- Dynamically generated rows -->
-                                </tbody>
-                                <tfoot id="tfoot-anmol-facility-kpi">
-                                    <!-- Dynamically generated total row -->
-                                </tfoot>
-                            </table>
-                        </div>
-                        <div class="anmol-footnote" id="footnote-anmol-facility">
-                            Facility Review Line List Data • Sorted dynamically by active KPI card selection • Synchronized with location hierarchy filters
                         </div>
                     </div>
                 </div>
