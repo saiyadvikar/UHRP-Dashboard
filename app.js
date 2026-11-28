@@ -1993,6 +1993,26 @@ document.addEventListener('DOMContentLoaded', () => {
         return diffDays >= 0 && (diffDays / 7.0) <= 12.0;
     }
 
+    // Calculate 4 ANC by Gestational Age (GA) from LMP across all 12 ANC checkup visits (Canonical Helper)
+    // 1st ANC Checkup (0–12 Wks), 2nd (13–26 Wks), 3rd (27–34 Wks), 4th (35–Delivery)
+    function check4AncByGestationalAge(p) {
+        const lmpDate = parseDateDDMMYYYY(p.lmp);
+        if (!lmpDate) return { c1: 0, c2: 0, c3: 0, c4: 0, all4: 0 };
+        const vDates = (p.v_dates || []).map(parseDateDDMMYYYY).filter(Boolean);
+        let c1 = 0, c2 = 0, c3 = 0, c4 = 0;
+        vDates.forEach(vd => {
+            const diffDays = (vd - lmpDate) / (1000 * 60 * 60 * 24);
+            if (diffDays >= 0) {
+                const gaWeeks = diffDays / 7.0;
+                if (gaWeeks <= 12.0) c1 = 1;
+                else if (gaWeeks > 12.0 && gaWeeks <= 26.0) c2 = 1;
+                else if (gaWeeks > 26.0 && gaWeeks <= 34.0) c3 = 1;
+                else if (gaWeeks > 34.0) c4 = 1;
+            }
+        });
+        return { c1, c2, c3, c4, all4: (c1 && c2 && c3 && c4) ? 1 : 0 };
+    }
+
     function renderDpmuOfficialTables() {
         const topYearSelect = document.getElementById(elementIds.year);
         if (topYearSelect && topYearSelect.value && topYearSelect.value !== 'All') {
@@ -2025,30 +2045,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const yrPatients = patients.filter(p => p.y === dpmuSelectedYear);
         const yrAncPatients = ancPatients.filter(p => p.y === dpmuSelectedYear);
 
-        // Canonical verification helpers inherited from module scope (isSaManaged, isMaManaged, isPiManaged)
-
-        // Calculate 4 ANC by Gestational Age (GA) from LMP across all 12 ANC checkup visits:
-        // 1st ANC Checkup (0–12 Wks)
-        // 2nd ANC Checkup (13–26 Wks) 
-        // 3rd ANC Checkup (27–34 Wks)
-        // 4th ANC Checkup (35–Delivery)
-        function check4AncByGestationalAge(p) {
-            const lmpDate = parseDateDDMMYYYY(p.lmp);
-            if (!lmpDate) return { c1: 0, c2: 0, c3: 0, c4: 0, all4: 0 };
-            const vDates = (p.v_dates || []).map(parseDateDDMMYYYY).filter(Boolean);
-            let c1 = 0, c2 = 0, c3 = 0, c4 = 0;
-            vDates.forEach(vd => {
-                const diffDays = (vd - lmpDate) / (1000 * 60 * 60 * 24);
-                if (diffDays >= 0) {
-                    const gaWeeks = diffDays / 7.0;
-                    if (gaWeeks <= 12.0) c1 = 1;
-                    else if (gaWeeks > 12.0 && gaWeeks <= 26.0) c2 = 1;
-                    else if (gaWeeks > 26.0 && gaWeeks <= 34.0) c3 = 1;
-                    else if (gaWeeks > 34.0) c4 = 1;
-                }
-            });
-            return { c1, c2, c3, c4, all4: (c1 && c2 && c3 && c4) ? 1 : 0 };
-        }
+        // Canonical verification helpers inherited from module scope (isSaManaged, isMaManaged, isPiManaged, check4AncByGestationalAge)
 
         // Clean colour conditional formatting scale matching Anmol 2.0 reference Excel reports (Green - Lime - Yellow - Peach - Red)
         function getExcelScaleClass(val, minVal, maxVal) {
@@ -2627,6 +2624,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const refDate = new Date();
         refDate.setHours(0, 0, 0, 0);
+
+        const dData = typeof DASHBOARD_DATA !== 'undefined' ? DASHBOARD_DATA : (window.DASHBOARD_DATA || {});
+        const ancPatients = dData.anc_patients || [];
 
         const pool = ancPatients.filter(p => {
             if (yearVal !== 'All' && p.y !== yearVal) return false;
