@@ -2567,6 +2567,12 @@ document.addEventListener('DOMContentLoaded', () => {
             shc,
             totalReg: 0,
             activePreg: 0,
+            abortion: 0,
+            delivered: 0,
+            delPreterm: 0,
+            delPostDated: 0,
+            deliveryOverdue: 0,
+            missedAnc: 0,
             earlyCount: 0,
             anc1Due: 0,
             anc2Due: 0,
@@ -2574,13 +2580,12 @@ document.addEventListener('DOMContentLoaded', () => {
             anc4Due: 0,
             eligible4Anc: 0,
             fourAncDone: 0,
-            deliveryOverdue: 0,
-            abortion: 0,
-            delivered: 0,
-            death: 0,
             modAnemiaDue: 0,
+            modAnemiaTotal: 0,
             sevAnemiaDue: 0,
-            pihDue: 0
+            sevAnemiaTotal: 0,
+            pihDue: 0,
+            pihTotal: 0
         });
 
         // Seed shcMap with all Location Hierarchy SHCs passing active top filters
@@ -2622,33 +2627,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const isDelivered = (!isDead && !isAb && (p.del === 1 || p.del === '1' || (p.del_date && p.del_date !== '-')));
 
             if (isDead) {
-                rec.death++;
+                // Maternal deaths excluded from active, abortion, and delivered counts
             } else if (isAb) {
                 rec.abortion++;
             } else if (isDelivered) {
                 rec.delivered++;
+                const gaDel = getPatientCurrentGaWeeks(p);
+                if (gaDel !== null) {
+                    if (gaDel < 34.0) rec.delPreterm++;
+                    else if (gaDel > 42.0) rec.delPostDated++;
+                }
             } else {
                 rec.activePreg++;
+                if (isPatientAncWindowDue(p, 'anc1_due')) rec.anc1Due++;
+                if (isPatientAncWindowDue(p, 'anc2_due')) rec.anc2Due++;
+                if (isPatientAncWindowDue(p, 'anc3_due')) rec.anc3Due++;
+                if (isPatientAncWindowDue(p, 'anc4_due')) rec.anc4Due++;
+            }
 
-                // Check 4 ANC Due by current GA window for Active Pregnancies
-                const ga = getPatientCurrentGaWeeks(p);
-                const gaCheck = check4AncByGestationalAge(p);
-                const hasC1 = (p.c1 === 1 || gaCheck.c1 === 1);
-                const hasC2 = (p.c2 === 1 || gaCheck.c2 === 1);
-                const hasC3 = (p.c3 === 1 || gaCheck.c3 === 1);
-                const hasC4 = (p.c4 === 1 || gaCheck.c4 === 1);
-
-                if (ga !== null) {
-                    if (ga <= 12.0) {
-                        if (!hasC1) rec.anc1Due++;
-                    } else if (ga <= 26.0) {
-                        if (!hasC2) rec.anc2Due++;
-                    } else if (ga <= 34.0) {
-                        if (!hasC3) rec.anc3Due++;
-                    } else {
-                        if (!hasC4) rec.anc4Due++;
-                    }
-                }
+            if (!isDead && !isAb) {
+                if (checkConsecutiveMissedAnc(p).hasMissed) rec.missedAnc++;
             }
 
             if (isEddOverdue(p)) {
@@ -2670,11 +2668,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Management Due (Mod Anemia, Severe Anemia, PIH)
+            // Management Pending / Total (Mod Anemia, Severe Anemia, PIH)
             if (!isDead && !isAb) {
-                if (p.ma === 1 && !isMaManaged(p)) rec.modAnemiaDue++;
-                if (p.sa === 1 && !isSaManaged(p)) rec.sevAnemiaDue++;
-                if (p.pi === 1 && !isPiManaged(p)) rec.pihDue++;
+                if (p.ma === 1) {
+                    rec.modAnemiaTotal++;
+                    if (!isMaManaged(p)) rec.modAnemiaDue++;
+                }
+                if (p.sa === 1) {
+                    rec.sevAnemiaTotal++;
+                    if (!isSaManaged(p)) rec.sevAnemiaDue++;
+                }
+                if (p.pi === 1) {
+                    rec.pihTotal++;
+                    if (!isPiManaged(p)) rec.pihDue++;
+                }
             }
         });
 
@@ -2707,16 +2714,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const tot = {
-            totalReg: 0, activePreg: 0, earlyCount: 0,
+            totalReg: 0, activePreg: 0, abortion: 0,
+            delivered: 0, delPreterm: 0, delPostDated: 0,
+            deliveryOverdue: 0, missedAnc: 0, earlyCount: 0,
             anc1Due: 0, anc2Due: 0, anc3Due: 0, anc4Due: 0,
             eligible4Anc: 0, fourAncDone: 0,
-            deliveryOverdue: 0, abortion: 0, delivered: 0, death: 0,
-            modAnemiaDue: 0, sevAnemiaDue: 0, pihDue: 0
+            modAnemiaDue: 0, modAnemiaTotal: 0,
+            sevAnemiaDue: 0, sevAnemiaTotal: 0,
+            pihDue: 0, pihTotal: 0
         };
 
         rows.forEach(r => {
             tot.totalReg += r.totalReg;
             tot.activePreg += r.activePreg;
+            tot.abortion += r.abortion;
+            tot.delivered += r.delivered;
+            tot.delPreterm += r.delPreterm;
+            tot.delPostDated += r.delPostDated;
+            tot.deliveryOverdue += r.deliveryOverdue;
+            tot.missedAnc += r.missedAnc;
             tot.earlyCount += r.earlyCount;
             tot.anc1Due += r.anc1Due;
             tot.anc2Due += r.anc2Due;
@@ -2724,39 +2740,38 @@ document.addEventListener('DOMContentLoaded', () => {
             tot.anc4Due += r.anc4Due;
             tot.eligible4Anc += r.eligible4Anc;
             tot.fourAncDone += r.fourAncDone;
-            tot.deliveryOverdue += r.deliveryOverdue;
-            tot.abortion += r.abortion;
-            tot.delivered += r.delivered;
-            tot.death += r.death;
             tot.modAnemiaDue += r.modAnemiaDue;
+            tot.modAnemiaTotal += r.modAnemiaTotal;
             tot.sevAnemiaDue += r.sevAnemiaDue;
+            tot.sevAnemiaTotal += r.sevAnemiaTotal;
             tot.pihDue += r.pihDue;
+            tot.pihTotal += r.pihTotal;
         });
 
-        const sp = (col) => (sankalpSortCol === col ? 'col-spotlight' : '');
-
         if (rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="18" style="text-align:center; padding:1.5rem; color:#64748b; font-weight:600;">No SHC records found for the selected filters.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="20" style="text-align:center; padding:1.5rem; color:#64748b; font-weight:600;">No SHC records found for the selected filters.</td></tr>`;
         } else {
             tbody.innerHTML = rows.map(r => `<tr>
-                <td class="col-txt-left ${sp('block')}" title="${r.block}">${r.block}</td>
-                <td class="col-txt-left ${sp('sector')}" title="${r.sector}">${r.sector}</td>
-                <td class="col-txt-left ${sp('shc')}" style="font-weight:700;" title="${r.shc}">${r.shc}</td>
-                <td class="${sp('totalReg')}"><strong>${r.totalReg.toLocaleString()}</strong></td>
-                <td class="${sp('activePreg')}">${r.activePreg.toLocaleString()}</td>
-                <td class="${sp('earlyPct')}" style="color:${r.earlyPct >= 80 ? '#059669' : '#d97706'}; font-weight:700;">${r.earlyPct.toFixed(1)}%</td>
-                <td class="${sp('anc1Due')}" style="color:${r.anc1Due > 0 ? '#0369a1' : '#64748b'};">${r.anc1Due.toLocaleString()}</td>
-                <td class="${sp('anc2Due')}" style="color:${r.anc2Due > 0 ? '#0369a1' : '#64748b'};">${r.anc2Due.toLocaleString()}</td>
-                <td class="${sp('anc3Due')}" style="color:${r.anc3Due > 0 ? '#0369a1' : '#64748b'};">${r.anc3Due.toLocaleString()}</td>
-                <td class="${sp('anc4Due')}" style="color:${r.anc4Due > 0 ? '#0369a1' : '#64748b'};">${r.anc4Due.toLocaleString()}</td>
-                <td class="${sp('fourAncPct')}" style="color:${r.fourAncPct >= 75 ? '#059669' : '#dc2626'}; font-weight:700;">${r.fourAncPct.toFixed(1)}%</td>
-                <td class="${sp('deliveryOverdue')}" style="color:${r.deliveryOverdue > 0 ? '#dc2626' : '#64748b'}; font-weight:700;">${r.deliveryOverdue.toLocaleString()}</td>
-                <td class="${sp('abortion')}" style="color:${r.abortion > 0 ? '#d97706' : '#64748b'};">${r.abortion.toLocaleString()}</td>
-                <td class="${sp('delivered')}" style="color:${r.delivered > 0 ? '#059669' : '#64748b'}; font-weight:700;">${r.delivered.toLocaleString()}</td>
-                <td class="${sp('death')}" style="color:${r.death > 0 ? '#991b1b' : '#64748b'}; font-weight:700;">${r.death.toLocaleString()}</td>
-                <td class="${sp('modAnemiaDue')}" style="color:${r.modAnemiaDue > 0 ? '#be123c' : '#64748b'}; font-weight:700;">${r.modAnemiaDue.toLocaleString()}</td>
-                <td class="${sp('sevAnemiaDue')}" style="color:${r.sevAnemiaDue > 0 ? '#dc2626' : '#64748b'}; font-weight:700;">${r.sevAnemiaDue.toLocaleString()}</td>
-                <td class="${sp('pihDue')}" style="color:${r.pihDue > 0 ? '#ea580c' : '#64748b'}; font-weight:700;">${r.pihDue.toLocaleString()}</td>
+                <td class="col-txt-left" title="${r.block}">${r.block}</td>
+                <td class="col-txt-left" title="${r.sector}">${r.sector}</td>
+                <td class="col-txt-left" style="font-weight:700;" title="${r.shc}">${r.shc}</td>
+                <td><strong>${r.totalReg.toLocaleString()}</strong></td>
+                <td>${r.activePreg.toLocaleString()}</td>
+                <td style="color:${r.abortion > 0 ? '#d97706' : '#64748b'};">${r.abortion.toLocaleString()}</td>
+                <td style="color:${r.delivered > 0 ? '#059669' : '#64748b'}; font-weight:700;">${r.delivered.toLocaleString()}</td>
+                <td style="color:${r.delPreterm > 0 ? '#dc2626' : '#64748b'};">${r.delPreterm.toLocaleString()}</td>
+                <td style="color:${r.delPostDated > 0 ? '#b45309' : '#64748b'};">${r.delPostDated.toLocaleString()}</td>
+                <td style="color:${r.deliveryOverdue > 0 ? '#dc2626' : '#64748b'}; font-weight:700;">${r.deliveryOverdue.toLocaleString()}</td>
+                <td style="color:${r.missedAnc > 0 ? '#e11d48' : '#64748b'}; font-weight:700;">${r.missedAnc.toLocaleString()}</td>
+                <td style="color:${r.earlyPct >= 80 ? '#059669' : '#d97706'}; font-weight:700;">${r.earlyPct.toFixed(1)}%</td>
+                <td style="color:${r.anc1Due > 0 ? '#0369a1' : '#64748b'};">${r.anc1Due.toLocaleString()}</td>
+                <td style="color:${r.anc2Due > 0 ? '#0369a1' : '#64748b'};">${r.anc2Due.toLocaleString()}</td>
+                <td style="color:${r.anc3Due > 0 ? '#0369a1' : '#64748b'};">${r.anc3Due.toLocaleString()}</td>
+                <td style="color:${r.anc4Due > 0 ? '#0369a1' : '#64748b'};">${r.anc4Due.toLocaleString()}</td>
+                <td style="color:${r.fourAncPct >= 75 ? '#059669' : '#dc2626'}; font-weight:700;">${r.fourAncPct.toFixed(1)}%</td>
+                <td style="color:${r.modAnemiaDue > 0 ? '#be123c' : '#64748b'}; font-weight:700;">${r.modAnemiaDue}/${r.modAnemiaTotal}</td>
+                <td style="color:${r.sevAnemiaDue > 0 ? '#dc2626' : '#64748b'}; font-weight:700;">${r.sevAnemiaDue}/${r.sevAnemiaTotal}</td>
+                <td style="color:${r.pihDue > 0 ? '#ea580c' : '#64748b'}; font-weight:700;">${r.pihDue}/${r.pihTotal}</td>
             </tr>`).join('');
         }
 
@@ -2765,21 +2780,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tfoot.innerHTML = `<tr class="anmol-total-row">
             <td colspan="3" style="text-align:center; font-weight:800;">Total (${rows.length} SHCs)</td>
-            <td class="${sp('totalReg')}">${tot.totalReg.toLocaleString()}</td>
-            <td class="${sp('activePreg')}">${tot.activePreg.toLocaleString()}</td>
-            <td class="${sp('earlyPct')}">${totEarlyPct.toFixed(1)}%</td>
-            <td class="${sp('anc1Due')}">${tot.anc1Due.toLocaleString()}</td>
-            <td class="${sp('anc2Due')}">${tot.anc2Due.toLocaleString()}</td>
-            <td class="${sp('anc3Due')}">${tot.anc3Due.toLocaleString()}</td>
-            <td class="${sp('anc4Due')}">${tot.anc4Due.toLocaleString()}</td>
-            <td class="${sp('fourAncPct')}">${totFourAncPct.toFixed(1)}%</td>
-            <td class="${sp('deliveryOverdue')}">${tot.deliveryOverdue.toLocaleString()}</td>
-            <td class="${sp('abortion')}">${tot.abortion.toLocaleString()}</td>
-            <td class="${sp('delivered')}">${tot.delivered.toLocaleString()}</td>
-            <td class="${sp('death')}">${tot.death.toLocaleString()}</td>
-            <td class="${sp('modAnemiaDue')}">${tot.modAnemiaDue.toLocaleString()}</td>
-            <td class="${sp('sevAnemiaDue')}">${tot.sevAnemiaDue.toLocaleString()}</td>
-            <td class="${sp('pihDue')}">${tot.pihDue.toLocaleString()}</td>
+            <td>${tot.totalReg.toLocaleString()}</td>
+            <td>${tot.activePreg.toLocaleString()}</td>
+            <td>${tot.abortion.toLocaleString()}</td>
+            <td>${tot.delivered.toLocaleString()}</td>
+            <td>${tot.delPreterm.toLocaleString()}</td>
+            <td>${tot.delPostDated.toLocaleString()}</td>
+            <td>${tot.deliveryOverdue.toLocaleString()}</td>
+            <td>${tot.missedAnc.toLocaleString()}</td>
+            <td>${totEarlyPct.toFixed(1)}%</td>
+            <td>${tot.anc1Due.toLocaleString()}</td>
+            <td>${tot.anc2Due.toLocaleString()}</td>
+            <td>${tot.anc3Due.toLocaleString()}</td>
+            <td>${tot.anc4Due.toLocaleString()}</td>
+            <td>${totFourAncPct.toFixed(1)}%</td>
+            <td>${tot.modAnemiaDue}/${tot.modAnemiaTotal}</td>
+            <td>${tot.sevAnemiaDue}/${tot.sevAnemiaTotal}</td>
+            <td>${tot.pihDue}/${tot.pihTotal}</td>
         </tr>`;
 
         bindSankalpEventsOnce();

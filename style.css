@@ -5362,16 +5362,13 @@ th.sortable.sort-desc::after {
     color: #38bdf8;
 }
 
-/* Column Spotlight */
+/* Column Spotlight disabled — preserve original column/cell colors when sorting */
 td.col-spotlight {
-    background: rgba(254, 243, 199, 0.85) !important;
-    font-weight: 800 !important;
-    box-shadow: inset 0 0 0 1.5px #f59e0b !important;
+    background: inherit;
 }
 
 th.col-spotlight {
-    background: #0f172a !important;
-    border-bottom: 3px solid #f59e0b !important;
+    background: inherit;
 }
 
 .anmol-footnote {
@@ -5994,8 +5991,8 @@ th.col-spotlight {
     position: sticky;
     top: 0;
     z-index: 5;
-    padding: 5px 3px !important;
-    font-size: 0.65rem !important;
+    padding: 4px 2px !important;
+    font-size: 0.62rem !important;
     line-height: 1.15;
     white-space: nowrap;
     cursor: pointer;
@@ -6003,21 +6000,21 @@ th.col-spotlight {
 }
 
 .sankalp-compact-table thead tr:nth-child(2) th {
-    top: 24px;
+    top: 22px;
     z-index: 4;
 }
 
 .sankalp-compact-table tbody td,
 .sankalp-compact-table tfoot td {
-    padding: 4px 3px !important;
-    font-size: 0.68rem !important;
+    padding: 3px 2px !important;
+    font-size: 0.65rem !important;
     text-align: center;
     white-space: nowrap;
 }
 
 .sankalp-compact-table tbody td.col-txt-left {
     text-align: left !important;
-    max-width: 110px;
+    max-width: 95px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -6038,13 +6035,6 @@ th.col-spotlight {
     content: ' ▼';
     opacity: 1;
     color: #fde047;
-}
-
-.sankalp-compact-table th.col-spotlight,
-.sankalp-compact-table td.col-spotlight,
-.anmol-table th.col-spotlight,
-.anmol-table td.col-spotlight {
-    background-color: rgba(254, 240, 138, 0.28) !important;
 }
 
 .anmol-table th.sortable {

@@ -1033,24 +1033,27 @@
                                     <th rowspan="2" class="th-main-dark sortable" data-col="sector" title="PHC / Sector Name">Sector</th>
                                     <th rowspan="2" class="th-main-dark sortable" data-col="shc" title="Sub Health Centre (SHC) Name">SHC</th>
                                     <th rowspan="2" class="th-main-dark sortable" data-col="totalReg" title="Total ANC Registrations">Tot Reg</th>
-                                    <th rowspan="2" class="th-main-dark sortable" data-col="activePreg" title="Active Pregnant Women (Not Delivered / Aborted / Dead)">Active</th>
-                                    <th rowspan="2" class="th-main-dark sortable" data-col="earlyPct" title="% Early ANC Registration (<= 12 Weeks / 84 Days from LMP)">Early %</th>
-                                    <th colspan="4" class="th-group-anc" style="background:#0f766e; color:#ffffff;">4 ANC Due (Active PW by GA Window)</th>
-                                    <th rowspan="2" class="th-main-dark sortable" data-col="fourAncPct" title="Complete 4 ANC % Coverage (Eligible Matured PW)">4ANC %</th>
-                                    <th rowspan="2" class="th-main-dark sortable" data-col="deliveryOverdue" title="Delivery Overdue (EDD < Today & Still Pregnant)">Overdue</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="activePreg" title="Active Pregnant Women">Active</th>
                                     <th rowspan="2" class="th-main-dark sortable" data-col="abortion" title="Abortion Cases">Abort</th>
-                                    <th rowspan="2" class="th-main-dark sortable" data-col="delivered" title="Delivered Cases">Deliv</th>
-                                    <th rowspan="2" class="th-main-dark sortable" data-col="death" title="Maternal Deaths">Death</th>
-                                    <th colspan="3" class="th-group-mgmt" style="background:#9f1239; color:#ffffff;">Management Due</th>
+                                    <th colspan="3" class="th-group-del" style="background:#047857; color:#ffffff;">Delivered</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="deliveryOverdue" title="Delivery Overdue (EDD < Today & Still Pregnant)">Overdue</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="missedAnc" title="2+ Consecutive ANC Visits Missed / >70 Days Inactive">2+ Missed</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="earlyPct" title="% Early ANC Registration (<= 12 Weeks from LMP)">Early %</th>
+                                    <th colspan="4" class="th-group-anc" style="background:#0f766e; color:#ffffff;">4 ANC Due</th>
+                                    <th rowspan="2" class="th-main-dark sortable" data-col="fourAncPct" title="Complete 4 ANC % Coverage (Eligible Matured PW)">4ANC %</th>
+                                    <th colspan="3" class="th-group-mgmt" style="background:#9f1239; color:#ffffff;">Mgmt Pending (Due/Tot)</th>
                                 </tr>
                                 <tr>
-                                    <th class="th-sub-header sortable" data-col="anc1Due" style="background:#115e59; color:#ffffff;" title="1st ANC Due (0–12 Weeks GA)">1st (0-12w)</th>
-                                    <th class="th-sub-header sortable" data-col="anc2Due" style="background:#115e59; color:#ffffff;" title="2nd ANC Due (13–26 Weeks GA)">2nd (13-26w)</th>
-                                    <th class="th-sub-header sortable" data-col="anc3Due" style="background:#115e59; color:#ffffff;" title="3rd ANC Due (27–34 Weeks GA)">3rd (27-34w)</th>
-                                    <th class="th-sub-header sortable" data-col="anc4Due" style="background:#115e59; color:#ffffff;" title="4th ANC Due (35–Delivery GA)">4th (35+w)</th>
-                                    <th class="th-sub-header sortable" data-col="modAnemiaDue" style="background:#be123c; color:#ffffff;" title="Moderate Anemia Management Due (<3 IS doses, no FCM/BT)">Mod</th>
-                                    <th class="th-sub-header sortable" data-col="sevAnemiaDue" style="background:#be123c; color:#ffffff;" title="Severe Anemia Management Due (<3 IS doses, no FCM/BT)">Sev</th>
-                                    <th class="th-sub-header sortable" data-col="pihDue" style="background:#be123c; color:#ffffff;" title="PIH Management Due (No antihypertensive documented)">PIH</th>
+                                    <th class="th-sub-header sortable" data-col="delivered" style="background:#065f46; color:#ffffff;" title="Total Delivered">Tot</th>
+                                    <th class="th-sub-header sortable" data-col="delPreterm" style="background:#065f46; color:#ffffff;" title="Pre-term Deliveries (<34 Weeks GA)">&lt;34w</th>
+                                    <th class="th-sub-header sortable" data-col="delPostDated" style="background:#065f46; color:#ffffff;" title="Post-dated Deliveries (>42 Weeks GA)">&gt;42w</th>
+                                    <th class="th-sub-header sortable" data-col="anc1Due" style="background:#115e59; color:#ffffff;" title="1st ANC Due (0–12 Weeks GA)">1st</th>
+                                    <th class="th-sub-header sortable" data-col="anc2Due" style="background:#115e59; color:#ffffff;" title="2nd ANC Due (13–26 Weeks GA)">2nd</th>
+                                    <th class="th-sub-header sortable" data-col="anc3Due" style="background:#115e59; color:#ffffff;" title="3rd ANC Due (27–34 Weeks GA)">3rd</th>
+                                    <th class="th-sub-header sortable" data-col="anc4Due" style="background:#115e59; color:#ffffff;" title="4th ANC Due (35–Delivery GA)">4th</th>
+                                    <th class="th-sub-header sortable" data-col="modAnemiaDue" style="background:#be123c; color:#ffffff;" title="Moderate Anemia: Management Pending / Total Moderate Anemia">Mod</th>
+                                    <th class="th-sub-header sortable" data-col="sevAnemiaDue" style="background:#be123c; color:#ffffff;" title="Severe Anemia: Management Pending / Total Severe Anemia">Sev</th>
+                                    <th class="th-sub-header sortable" data-col="pihDue" style="background:#be123c; color:#ffffff;" title="PIH: Management Pending / Total PIH Cases">PIH</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody-sankalp-shc">
@@ -1062,7 +1065,7 @@
                         </table>
                     </div>
                     <div class="anmol-footnote" id="footnote-sankalp-shc">
-                        Sankalp SHC Tracker • 4 ANC Due evaluates active pregnancies in each GA window without that checkup • Complete 4 ANC % evaluates eligible matured PW (excluding abortions &amp; &lt;35w preterm) • Mgmt Due counts active/delivered HRP cases pending ≥3 IS doses / FCM / BT (Anemia) or antihypertensive regimen (PIH).
+                        Sankalp SHC Tracker • Delivered (&lt;34w Pre-term, &gt;42w Post-dated) • 4 ANC Due evaluates active pregnancies that crossed each GA window without an updated visit • Mgmt Pending shows Pending / Total cases.
                     </div>
                 </div>
             </section>
